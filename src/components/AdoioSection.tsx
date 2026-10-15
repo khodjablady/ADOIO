@@ -88,7 +88,7 @@ export const AdoioSection: React.FC<AdoioSectionProps> = ({ onOpenAdhesion }) =>
               <div className="flex items-center justify-between pb-3 border-b border-[#FAF7F2]/15">
                 <h3 className="font-serif text-xl font-bold text-[#FAF7F2]">Siège & Permanence</h3>
                 <span className="text-xs font-mono text-[#E6AB3C] bg-[#FAF7F2]/10 px-2 py-0.5 rounded">
-                  Seddouk Centre
+                  CAW de Béjaïa
                 </span>
               </div>
 

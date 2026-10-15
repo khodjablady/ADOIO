@@ -49,7 +49,7 @@ export const VarietiesGuide: React.FC = () => {
                 <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
                   isSelected ? 'bg-[#FAF7F2]/15 text-[#E6AB3C]' : 'bg-[#FAF7F2] text-[#567B34]'
                 }`}>
-                  {v.category === 'oil' ? 'À Huile' : v.category === 'table' ? 'Table' : 'Mixte'}
+                  {v.category === 'oil' ? 'À Huile' : 'Huile & Table'}
                 </span>
               </button>
             );

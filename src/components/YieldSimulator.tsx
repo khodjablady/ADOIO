@@ -28,10 +28,12 @@ export const YieldSimulator: React.FC = () => {
 
   // Base yields by variety (liters per quintal)
   const varietyBaseYields: Record<string, number> = {
-    chemlal: 20.5,
-    bouchouk: 18.0,
+    chemlal: 18.0,
+    bouchouk: 22.5,
     aberkane: 19.5,
-    limli: 19.0,
+    limli: 22.5,
+    azeradj: 22.5,
+    autres: 20.0,
     assemblage: 19.8,
   };
 
@@ -206,10 +208,11 @@ export const YieldSimulator: React.FC = () => {
                 onChange={(e) => setSelectedVariety(e.target.value)}
                 className="w-full px-3 py-2 text-xs rounded-xl border border-[#E6DEC9] focus:outline-none focus:border-[#31491E] bg-[#FAF7F2] font-medium"
               >
-                <option value="chemlal">Chemlal de Kabylie (Rendement élevé 20-24%)</option>
-                <option value="bouchouk">Bouchouk El Ghalia (Fruité fin 17-20%)</option>
+                <option value="chemlal">Chemlal de Kabylie (Rendement moyen 16-20%)</option>
+                <option value="bouchouk">Bouchouk (Fruité fin 20-25%)</option>
                 <option value="aberkane">Aberkane Noire (Rond & Velouté 19-23%)</option>
-                <option value="limli">Limli de la Haute-Soummam (Herbacé vif 18-22%)</option>
+                <option value="azeradj">Azeradt/Adjeraz de la Haute-Soummam (Herbacé vif 20-25%)</option>
+                <option value="autres">Autres / Exotique (18-22%)</option>
                 <option value="assemblage">Assemblage Traditionnel Kabyle (Moyenne 20%)</option>
               </select>
             </div>
