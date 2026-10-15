@@ -61,6 +61,21 @@ export const Jubile25Logo: React.FC<Jubile25LogoProps> = ({
           <stop offset="100%" stopColor="#784E0C" />
         </linearGradient>
 
+        <linearGradient id="numberSilverFill" x1="160" y1="230" x2="280" y2="410" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#FFFFFF" />
+          <stop offset="25%" stopColor="#EFF3F7" />
+          <stop offset="55%" stopColor="#BAC6D2" />
+          <stop offset="80%" stopColor="#E2E8EE" />
+          <stop offset="100%" stopColor="#7B8B9B" />
+        </linearGradient>
+
+        <linearGradient id="numberGoldOutline" x1="150" y1="220" x2="290" y2="420" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#FFF9D0" />
+          <stop offset="30%" stopColor="#DCA436" />
+          <stop offset="65%" stopColor="#8C5C13" />
+          <stop offset="100%" stopColor="#FDE484" />
+        </linearGradient>
+
         <linearGradient id="numberSilverOutline" x1="160" y1="200" x2="450" y2="400" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#FFFFFF" />
           <stop offset="30%" stopColor="#D5DEE5" />
@@ -281,8 +296,8 @@ export const Jubile25Logo: React.FC<Jubile25LogoProps> = ({
              C 260 285 266 299 260 312 
              L 282 319 
              C 291 297 282 266 258 253 Z"
-          fill="url(#numberGoldFill)"
-          stroke="url(#numberSilverOutline)"
+          fill="url(#numberSilverFill)"
+          stroke="url(#numberGoldOutline)"
           strokeWidth="6"
         />
 

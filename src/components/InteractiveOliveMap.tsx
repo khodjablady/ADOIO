@@ -365,7 +365,7 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
             </span>
             <button
               onClick={zoomToSeddouk}
-              className="px-2.5 py-1 rounded-lg bg-[#FEF5DB] border border-[#E6AB3C]/40 text-[#B47A16] font-bold hover:bg-[#E6AB3C] hover:text-white transition-colors cursor-pointer"
+              className="px-2.5 py-1 rounded-lg bg-[#FEF5DB] border border-[#E6AB3C]/40 text-[#B47A16] font-bold hover:bg-[#E6AB3C] hover:text-white hover:scale-105 hover:shadow-md transition-all duration-200 cursor-pointer"
             >
               ⭐ Seddouk (Siège ADOIO)
             </button>
@@ -373,7 +373,7 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
               <button
                 key={c}
                 onClick={() => zoomToCommune(c)}
-                className="px-2.5 py-1 rounded-lg bg-[#FAF7F2] border border-[#E6DEC9] text-[#242A20] font-medium hover:border-[#8CBE5D] hover:bg-[#E8F4D9] transition-colors cursor-pointer"
+                className="px-2.5 py-1 rounded-lg bg-[#FAF7F2] border border-[#E6DEC9] text-[#242A20] font-medium hover:border-[#8CBE5D] hover:bg-[#E8F4D9] hover:scale-105 hover:shadow-md transition-all duration-200 cursor-pointer"
               >
                 {c}
               </button>
