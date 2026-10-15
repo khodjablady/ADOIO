@@ -1,0 +1,6 @@
+{
+  "name": "Olive Béjaïa - Portail Oléicole & ADOIO",
+  "description": "Portail d'information et de référence sur la filière oléicole de la wilaya de Béjaïa, l'huile d'olive de Kabylie et les missions de l'ADOIO.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
