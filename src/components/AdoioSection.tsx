@@ -1,5 +1,6 @@
 import React from 'react';
 import { ADOIO_INFO } from '../data/bejaiaOliveData';
+import { Jubile25Logo } from './Jubile25Logo';
 import { 
   Award, 
   MapPin, 
@@ -32,20 +33,31 @@ export const AdoioSection: React.FC<AdoioSectionProps> = ({ onOpenAdhesion }) =>
     <section id="adoio" className="py-16 sm:py-24 bg-[#F4EEE1] border-b border-[#E6DEC9] relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section title */}
-        <div className="max-w-3xl mb-12">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#567B34] mb-2">
-            <Award className="w-4 h-4 text-[#E6AB3C]" />
-            <span>Organisation Institutionnelle & Professionnelle</span>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+          <div className="max-w-2xl">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#567B34] mb-2">
+              <Award className="w-4 h-4 text-[#E6AB3C]" />
+              <span>Organisation Institutionnelle & Professionnelle</span>
+            </div>
+            <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#18230F] tracking-tight">
+              L'Association ADOIO de Béjaïa
+            </h2>
+            <p className="font-serif italic text-sm text-[#567B34] mt-1">
+              « {ADOIO_INFO.tamazightTitle} »
+            </p>
+            <p className="mt-3 text-base text-[#436229] leading-relaxed">
+              L'<strong>Association pour le Développement de l'Oléiculture et des Industries Oléicoles (ADOIO)</strong> célèbre son <strong>25ᵉ Jubilé d'Argent</strong> et rassemble l'ensemble des acteurs de la filière pour hisser la réputation de l'huile kabyle sur les scènes nationale et internationale.
+            </p>
           </div>
-          <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#18230F] tracking-tight">
-            L'Association ADOIO de Béjaïa
-          </h2>
-          <p className="font-serif italic text-sm text-[#567B34] mt-1">
-            « {ADOIO_INFO.tamazightTitle} »
-          </p>
-          <p className="mt-3 text-base text-[#436229] leading-relaxed">
-            Fondée en 2004 avec son siège historique à Seddouk, l'<strong>Association pour le Développement de l'Oléiculture et des Industries Oléicoles (ADOIO)</strong> rassemble l'ensemble des acteurs de la filière pour hisser la réputation de l'huile kabyle sur les scènes nationale et internationale.
-          </p>
+
+          <div className="shrink-0 flex items-center gap-3.5 bg-white p-3.5 sm:p-4 rounded-2xl border border-[#E6DEC9] shadow-xs hover:border-[#8CBE5D] transition-all">
+            <Jubile25Logo size={85} />
+            <div className="text-xs">
+              <span className="font-bold text-[#18230F] block font-serif text-sm">25ᵉ Jubilé d'Argent</span>
+              <span className="text-[#567B34] block font-medium">24ᵉ Fête de l'Olive de Béjaïa</span>
+              <span className="text-[#E6AB3C] font-bold block mt-0.5">6 au 8 avril 2026</span>
+            </div>
+          </div>
         </div>
 
         {/* President's vision & Association profile */}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Droplets, MapPin, Sparkles, ChevronRight, Calculator, ShieldCheck } from 'lucide-react';
 import { BEJAIA_GLOBAL_STATS } from '../data/bejaiaOliveData';
+import { Jubile25Badge } from './Jubile25Badge';
 
 interface HeroSectionProps {
   onSearch: (query: string) => void;
@@ -53,9 +54,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               L'Or Vert de Béjaïa & l'Excellence Oléicole de Kabylie
             </h1>
             
-            <p className="text-base sm:text-lg text-[#E8F4D9]/90 max-w-2xl font-normal leading-relaxed">
-              Bienvenue sur le portail de référence dédié aux potentialités oléicoles de la wilaya de Béjaïa et aux missions de l’<strong>ADOIO</strong>. De la cueillette ancestrale aux huileries modernes à chaîne continue, découvrez la richesse de notre patrimoine oléicole.
-            </p>
+            <div className="flex flex-col sm:flex-row items-center sm:items-center gap-6 max-w-3xl">
+              <p className="text-base sm:text-lg text-[#E8F4D9]/90 font-normal leading-relaxed flex-1">
+                Bienvenue sur le portail de référence dédié aux potentialités oléicoles de la wilaya de Béjaïa et aux missions de l’<strong>ADOIO</strong>. De la cueillette ancestrale aux huileries modernes à chaîne continue, découvrez la richesse de notre patrimoine oléicole.
+              </p>
+
+              {/* Logo officiel du 25e Jubilé d'Argent ADOIO */}
+              <Jubile25Badge size={150} onClick={onExploreAdoio} />
+            </div>
 
             {/* Quick interactive search */}
             <form onSubmit={handleSubmit} className="max-w-xl">
