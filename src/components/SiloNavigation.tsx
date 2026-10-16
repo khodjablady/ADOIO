@@ -119,8 +119,8 @@ export const SILOS_CONFIG: SiloItem[] = [
       {
         id: 'pratiques',
         slug: 'calendrier-agronomique',
-        title: 'Calendrier Saisonnier',
-        description: 'Guide technique, taille, fertilisation et récolte optimale au filet.',
+        title: 'Météo & Calendrier Saisonnier',
+        description: 'Météo en direct à Béjaïa, indice récolte, guide technique et taille.',
       },
       {
         id: 'faq-oleiculture',
