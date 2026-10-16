@@ -87,6 +87,14 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick, onOpenAdhesion, onOp
                       Potentialités & Chiffres Clés
                     </button>
                   </li>
+                  <li>
+                    <button
+                      onClick={() => onNavClick('galerie-paysages')}
+                      className="hover:text-white transition-colors cursor-pointer text-left"
+                    >
+                      Galerie des Paysages Oléicoles
+                    </button>
+                  </li>
                 </ul>
               </div>
 
@@ -160,6 +168,14 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick, onOpenAdhesion, onOp
                       className="hover:text-white transition-colors cursor-pointer text-left"
                     >
                       Calendrier & Bonnes Pratiques
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      onClick={() => onNavClick('faq-oleiculture')}
+                      className="hover:text-white transition-colors cursor-pointer text-left"
+                    >
+                      FAQ Taille, Bio & Récolte
                     </button>
                   </li>
                 </ul>

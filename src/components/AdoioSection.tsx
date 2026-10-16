@@ -206,7 +206,7 @@ export const AdoioSection: React.FC<AdoioSectionProps> = ({ onOpenAdhesion }) =>
                 <span>Label Indication Géographique (IG)</span>
               </div>
               <p className="text-xs text-[#436229] leading-relaxed">
-                Constitution du cahier des charges officiel pour la labellisation de l'<strong>« Huile d'Olive de Kabylie - Terroir Béjaïa »</strong>, garantissant l'origine variétale (Chemlal & Bouchouk) et des critères organoleptiques stricts.
+                Constitution du cahier des charges officiel pour la labellisation de l'<strong>« Huile d'Olive de Kabylie - Terroir Béjaïa »</strong>, garantissant l'origine variétale (Chemlal & Azeradj) et des critères organoleptiques stricts.
               </p>
             </div>
 
@@ -226,7 +226,7 @@ export const AdoioSection: React.FC<AdoioSectionProps> = ({ onOpenAdhesion }) =>
                 <span>Fête de l'Olivier & Salons Professionnels</span>
               </div>
               <p className="text-xs text-[#436229] leading-relaxed">
-                Organisation annuelle des rencontres oléicoles de Seddouk et participation aux salons internationaux (SIAL, Djazagro, Salon de l'Agriculture) pour valoriser nos producteurs auprès des importateurs.
+                Organisation annuelle des rencontres oléicoles à Béjaia et en Algérie et participation aux salons internationaux (SIAL, Djazagro, Salon de l'Agriculture) pour valoriser nos producteurs auprès des importateurs.
               </p>
             </div>
           </div>

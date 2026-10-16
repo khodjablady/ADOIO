@@ -8,6 +8,7 @@ import { Navbar } from './components/Navbar';
 import { SiloNavigation } from './components/SiloNavigation';
 import { HeroSection } from './components/HeroSection';
 import { StatsAndPotential } from './components/StatsAndPotential';
+import { OliveLandscapesGallery } from './components/OliveLandscapesGallery';
 import { InteractiveOliveMap } from './components/InteractiveOliveMap';
 import { AdoioSection } from './components/AdoioSection';
 import { MillsDirectory } from './components/MillsDirectory';
@@ -15,6 +16,7 @@ import { VarietiesGuide } from './components/VarietiesGuide';
 import { YieldSimulator } from './components/YieldSimulator';
 import { TastingAndQuality } from './components/TastingAndQuality';
 import { CalendarAndPractices } from './components/CalendarAndPractices';
+import { FaqOleiculture } from './components/FaqOleiculture';
 import { AdhesionModal } from './components/AdhesionModal';
 import { SitemapModal } from './components/SitemapModal';
 import { Footer } from './components/Footer';
@@ -34,6 +36,8 @@ export default function App() {
       'terroir-adoio': 'adoio',
       'missions-adoio': 'adoio',
       'chiffres-verger': 'potential',
+      'paysages-oleicoles': 'galerie-paysages',
+      'galerie': 'galerie-paysages',
       'carte-moulins': 'carte-interactive',
       'carte-bassins': 'carte-interactive',
       'annuaire-huileries': 'annuaire',
@@ -43,6 +47,8 @@ export default function App() {
       'outils-pratiques': 'simulateur',
       'simulateur-recolte': 'simulateur',
       'calendrier-agronomique': 'pratiques',
+      'faq-pratiques': 'faq-oleiculture',
+      'faq': 'faq-oleiculture',
     };
 
     const targetId = slugMap[sectionId] || sectionId;
@@ -69,12 +75,14 @@ export default function App() {
     const sectionIds = [
       'adoio',
       'potential',
+      'galerie-paysages',
       'carte-interactive',
       'annuaire',
       'varietes',
       'degustation',
       'simulateur',
       'pratiques',
+      'faq-oleiculture',
     ];
 
     const observer = new IntersectionObserver(
@@ -142,6 +150,9 @@ export default function App() {
 
           {/* Potentialities & Official Figures (Verger, 52 communes) */}
           <StatsAndPotential />
+
+          {/* Olive Landscapes Gallery of Béjaïa */}
+          <OliveLandscapesGallery />
         </div>
 
         {/* ============================================================ */}
@@ -175,6 +186,12 @@ export default function App() {
 
           {/* Seasonal Calendar & Best Agricultural Practices */}
           <CalendarAndPractices />
+
+          {/* Interactive FAQ on Pruning, Bio Treatments, and Harvesting */}
+          <FaqOleiculture
+            onOpenAdhesion={() => setIsAdhesionOpen(true)}
+            onOpenSimulator={() => scrollToSection('simulateur')}
+          />
         </div>
       </main>
 

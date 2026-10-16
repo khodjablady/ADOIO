@@ -50,6 +50,12 @@ export const SILOS_CONFIG: SiloItem[] = [
         title: 'Potentiel & Chiffres Clés',
         description: '5,35 millions d’arbres, 52 communes oléicoles et statistiques officielles.',
       },
+      {
+        id: 'galerie-paysages',
+        slug: 'paysages-oleicoles',
+        title: 'Galerie des Paysages',
+        description: 'Mosaïque de terroirs : vallée de la Soummam, terrasses et arbres centenaires.',
+      },
     ],
   },
   {
@@ -115,6 +121,12 @@ export const SILOS_CONFIG: SiloItem[] = [
         slug: 'calendrier-agronomique',
         title: 'Calendrier Saisonnier',
         description: 'Guide technique, taille, fertilisation et récolte optimale au filet.',
+      },
+      {
+        id: 'faq-oleiculture',
+        slug: 'faq-pratiques',
+        title: 'FAQ Taille, Bio & Récolte',
+        description: 'Réponses techniques d’experts sur la taille, les traitements bio et la récolte.',
       },
     ],
   },
