@@ -26,8 +26,27 @@ import {
   ChevronUp,
   Scale,
   Clock,
-  Warehouse
+  Warehouse,
+  Navigation,
+  Route,
+  LocateFixed,
+  Car
 } from 'lucide-react';
+
+// Distance calculation (Haversine formula in km)
+function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c * 10) / 10;
+}
 
 interface InteractiveOliveMapProps {
   onSelectMill?: (mill: OliveMill) => void;
@@ -37,11 +56,16 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
+  const userMarkerRef = useRef<L.Marker | null>(null);
+  const routePolylineRef = useRef<L.Polyline | null>(null);
 
   const [activeLayer, setActiveLayer] = useState<'all' | 'mills' | 'zones_culture' | 'points_collecte'>('all');
   const [selectedMillType, setSelectedMillType] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [isLegendOpen, setIsLegendOpen] = useState(true);
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [isLocating, setIsLocating] = useState<boolean>(false);
+  const [routeInfo, setRouteInfo] = useState<{ millName: string; distanceKm: number; durationMin: number } | null>(null);
   const [selectedItem, setSelectedItem] = useState<{
     type: 'commune' | 'mill' | 'collection_point';
     data: CommuneStat | OliveMill | CollectionPoint;
@@ -248,21 +272,61 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
             ? 'Domaine Oléicole'
             : 'Coopérative';
 
+        const distanceToMill = userLocation
+          ? calculateDistanceKm(userLocation[0], userLocation[1], mill.lat, mill.lng)
+          : null;
+        const travelTimeMin = distanceToMill ? Math.round((distanceToMill / 45) * 60) : null;
+
+        const googleDirectionsUrl = userLocation
+          ? `https://www.google.com/maps/dir/?api=1&origin=${userLocation[0]},${userLocation[1]}&destination=${mill.lat},${mill.lng}&travelmode=driving`
+          : `https://www.google.com/maps/dir/?api=1&destination=${mill.lat},${mill.lng}&travelmode=driving`;
+
         // Hover tooltip before clicking
         marker.bindTooltip(
           `
-          <div style="font-family: 'Plus Jakarta Sans', system-ui, sans-serif; padding: 2px 4px; text-align: left; min-width: 140px;">
+          <div style="font-family: 'Plus Jakarta Sans', system-ui, sans-serif; padding: 3px 2px; text-align: left; min-width: 170px;">
             <div style="font-size: 9px; font-weight: 800; color: ${pinColor}; text-transform: uppercase; letter-spacing: 0.5px;">
               ${millTypeBadge}
             </div>
-            <div style="font-size: 13px; font-weight: 800; color: #18230F; margin: 1px 0;">
+            <div style="font-size: 13px; font-weight: 800; color: #18230F; margin: 2px 0 1px 0;">
               ${mill.name}
             </div>
             <div style="font-size: 10px; color: #31491E; font-weight: 600;">
               📍 ${mill.commune} · ${mill.capacityQxPerDay} qx/j
             </div>
-            <div style="font-size: 9px; color: #7B8B9B; margin-top: 2px;">
-              Cliquez pour afficher la fiche
+            ${distanceToMill !== null ? `
+            <div style="font-size: 10px; color: #B47A16; font-weight: 700; margin-top: 2px; display: flex; align-items: center; gap: 4px;">
+              <span>🚗</span>
+              <span>À <strong>${distanceToMill} km</strong> (~${travelTimeMin} min)</span>
+            </div>
+            ` : ''}
+            <div style="margin-top: 6px; padding-top: 5px; border-top: 1px solid #E6DEC9;">
+              <a
+                href="${googleDirectionsUrl}"
+                target="_blank"
+                rel="noopener noreferrer"
+                style="
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  gap: 5px;
+                  width: 100%;
+                  padding: 5px 8px;
+                  background: #31491E;
+                  color: #FAF7F2;
+                  border-radius: 8px;
+                  font-size: 10px;
+                  font-weight: 700;
+                  text-decoration: none;
+                  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+                  cursor: pointer;
+                "
+                onmouseover="this.style.background='#233416'"
+                onmouseout="this.style.background='#31491E'"
+                onclick="event.stopPropagation();"
+              >
+                <span>🧭 Calculer l'itinéraire</span>
+              </a>
             </div>
           </div>
           `,
@@ -270,6 +334,7 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
             direction: 'top',
             offset: [0, -20],
             opacity: 0.98,
+            interactive: true,
             className: 'custom-map-tooltip',
           }
         );
@@ -280,17 +345,40 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
         });
 
         marker.bindPopup(`
-          <div style="font-family: system-ui, sans-serif; padding: 4px; max-width: 200px;">
+          <div style="font-family: system-ui, sans-serif; padding: 4px; max-width: 210px;">
             <div style="font-size: 9px; color: #567B34; font-weight: 700; text-transform: uppercase;">
-              ${mill.commune} · ${mill.type === 'modern' ? 'Moderne Continu' : mill.type === 'traditional' ? 'Presse Traditionnelle' : mill.type === 'domaine' ? 'Domaine' : 'Coopérative'}
+              ${mill.commune} · ${millTypeBadge}
             </div>
             <div style="font-size: 13px; font-weight: 800; color: #18230F; margin: 2px 0 4px 0;">
               ${mill.name}
             </div>
-            <div style="font-size: 11px; color: #436229; line-height: 1.4;">
+            <div style="font-size: 11px; color: #436229; line-height: 1.4; margin-bottom: 6px;">
               Capacité : <strong>${mill.capacityQxPerDay} qx/j</strong><br/>
               Tel : <strong>${mill.phone.split('/')[0]}</strong>
+              ${distanceToMill !== null ? `<br/><span style="color:#B47A16; font-weight:700;">Distance : ~${distanceToMill} km (${travelTimeMin} min)</span>` : ''}
             </div>
+            <a
+              href="${googleDirectionsUrl}"
+              target="_blank"
+              rel="noopener noreferrer"
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 5px;
+                width: 100%;
+                padding: 6px 10px;
+                background: #31491E;
+                color: #FAF7F2;
+                border-radius: 8px;
+                font-size: 11px;
+                font-weight: 700;
+                text-decoration: none;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+              "
+            >
+              🧭 Calculer l'itinéraire GPS
+            </a>
           </div>
         `);
 
@@ -387,7 +475,94 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
         layerGroup.addLayer(marker);
       });
     }
-  }, [activeLayer, selectedMillType, searchTerm]);
+  }, [activeLayer, selectedMillType, searchTerm, userLocation]);
+
+  // Request user geolocation and optionally draw route to mill
+  const locateUser = (targetMill?: OliveMill) => {
+    if (!navigator.geolocation) {
+      if (targetMill) {
+        window.open(
+          `https://www.google.com/maps/dir/?api=1&destination=${targetMill.lat},${targetMill.lng}&travelmode=driving`,
+          '_blank'
+        );
+      }
+      return;
+    }
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setIsLocating(false);
+        const userCoords: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+        setUserLocation(userCoords);
+
+        if (mapInstanceRef.current) {
+          // Remove existing user marker if present
+          if (userMarkerRef.current) {
+            userMarkerRef.current.remove();
+          }
+
+          // Create pulse user marker
+          const userIcon = L.divIcon({
+            className: 'custom-user-marker',
+            html: `
+              <div style="position: relative; width: 24px; height: 24px;">
+                <div style="position: absolute; inset: 0; background: #2563EB; border-radius: 9999px; opacity: 0.4; animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+                <div style="position: absolute; inset: 3px; background: #2563EB; border: 2.5px solid white; border-radius: 9999px; box-shadow: 0 3px 8px rgba(0,0,0,0.35);"></div>
+              </div>
+            `,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12],
+          });
+
+          const marker = L.marker(userCoords, { icon: userIcon }).addTo(mapInstanceRef.current);
+          marker.bindTooltip("📍 Votre position actuelle", { permanent: false, direction: 'top' });
+          userMarkerRef.current = marker;
+
+          if (targetMill) {
+            drawRouteBetween(userCoords, [targetMill.lat, targetMill.lng], targetMill);
+          } else {
+            mapInstanceRef.current.setView(userCoords, 12, { animate: true });
+          }
+        }
+      },
+      () => {
+        setIsLocating(false);
+        if (targetMill) {
+          window.open(
+            `https://www.google.com/maps/dir/?api=1&destination=${targetMill.lat},${targetMill.lng}&travelmode=driving`,
+            '_blank'
+          );
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  // Draw polyline route between user and mill
+  const drawRouteBetween = (fromCoords: [number, number], toCoords: [number, number], mill: OliveMill) => {
+    if (!mapInstanceRef.current) return;
+
+    if (routePolylineRef.current) {
+      routePolylineRef.current.remove();
+    }
+
+    const dist = calculateDistanceKm(fromCoords[0], fromCoords[1], toCoords[0], toCoords[1]);
+    const duration = Math.round((dist / 45) * 60);
+    setRouteInfo({ millName: mill.name, distanceKm: dist, durationMin: duration });
+
+    const polyline = L.polyline([fromCoords, toCoords], {
+      color: '#31491E',
+      weight: 4,
+      dashArray: '8, 8',
+      opacity: 0.85,
+    }).addTo(mapInstanceRef.current);
+
+    routePolylineRef.current = polyline;
+
+    const bounds = L.latLngBounds([fromCoords, toCoords]);
+    mapInstanceRef.current.fitBounds(bounds, { padding: [60, 60], animate: true });
+  };
 
   // Center on a specific commune
   const zoomToCommune = (communeName: string) => {
@@ -409,6 +584,11 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
       mapInstanceRef.current.setView(INITIAL_CENTER, INITIAL_ZOOM, { animate: true });
       setSelectedItem(null);
       setSearchTerm('');
+      setRouteInfo(null);
+      if (routePolylineRef.current) {
+        routePolylineRef.current.remove();
+        routePolylineRef.current = null;
+      }
     }
   };
 
@@ -554,6 +734,23 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
                 </select>
               )}
 
+              {/* Geolocation Button */}
+              <button
+                type="button"
+                onClick={() => locateUser()}
+                className={`p-2 rounded-xl border transition-all cursor-pointer shrink-0 flex items-center gap-1.5 text-xs font-semibold ${
+                  userLocation
+                    ? 'bg-[#E8F4D9] border-[#8CBE5D] text-[#233416] shadow-2xs'
+                    : 'bg-[#FAF7F2] hover:bg-[#E8F4D9] text-[#31491E] border-[#E6DEC9]'
+                }`}
+                title={userLocation ? 'Position GPS active' : 'Détecter ma position actuelle'}
+              >
+                <LocateFixed className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin text-[#E6AB3C]' : userLocation ? 'text-[#567B34]' : 'text-[#31491E]'}`} />
+                <span className="hidden sm:inline">
+                  {isLocating ? 'Recherche GPS...' : userLocation ? 'GPS actif' : 'Ma position'}
+                </span>
+              </button>
+
               <button
                 onClick={resetView}
                 className="p-2 rounded-xl bg-[#FAF7F2] hover:bg-[#E8F4D9] text-[#31491E] border border-[#E6DEC9] transition-colors cursor-pointer shrink-0"
@@ -598,6 +795,39 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
               className="w-full h-full min-h-[480px] rounded-2xl z-10"
               style={{ background: '#e5e3df' }}
             ></div>
+
+            {/* Active Itinerary Banner */}
+            {routeInfo && (
+              <div className="absolute top-6 left-6 z-[400] max-w-sm bg-white/95 backdrop-blur-md rounded-2xl border border-[#8CBE5D] shadow-xl p-3 text-xs pointer-events-auto animate-in fade-in">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-[#E8F4D9] text-[#31491E] flex items-center justify-center shrink-0">
+                      <Navigation className="w-4 h-4 text-[#567B34]" />
+                    </div>
+                    <div>
+                      <strong className="block text-[#18230F] font-bold text-xs">{routeInfo.millName}</strong>
+                      <span className="text-[#567B34] text-[11px]">
+                        Itinéraire : <strong>{routeInfo.distanceKm} km</strong> (~{routeInfo.durationMin} min)
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRouteInfo(null);
+                      if (routePolylineRef.current) {
+                        routePolylineRef.current.remove();
+                        routePolylineRef.current = null;
+                      }
+                    }}
+                    className="p-1 rounded-lg hover:bg-gray-100 text-gray-500 cursor-pointer"
+                    title="Effacer l'itinéraire"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Floating Stylized Legend */}
             <div className="absolute top-6 right-6 z-[400] max-w-[280px] sm:max-w-[300px] transition-all duration-300 pointer-events-auto">
@@ -845,6 +1075,59 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
                         <p className="text-[#567B34]">
                           <strong>Adresse :</strong> {mill.address}
                         </p>
+                      </div>
+
+                      {/* Itinéraire depuis la position actuelle */}
+                      <div className="bg-[#FAF7F2] p-3.5 rounded-xl border border-[#E6DEC9] space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-[#18230F] flex items-center gap-1.5">
+                            <Navigation className="w-3.5 h-3.5 text-[#E6AB3C]" />
+                            <span>Itinéraire vers le moulin</span>
+                          </span>
+                          <span className="text-[10px] font-mono text-[#567B34] bg-white px-2 py-0.5 rounded border border-[#E6DEC9]">
+                            {mill.lat.toFixed(4)}°N, {mill.lng.toFixed(4)}°E
+                          </span>
+                        </div>
+
+                        {userLocation ? (
+                          <div className="flex items-center justify-between text-xs text-[#31491E] bg-[#E8F4D9] p-2.5 rounded-lg border border-[#8CBE5D]/30">
+                            <span className="flex items-center gap-1.5 font-semibold">
+                              <Car className="w-4 h-4 text-[#567B34]" />
+                              <span>Depuis votre position :</span>
+                            </span>
+                            <strong className="font-mono text-xs text-[#18230F]">
+                              {calculateDistanceKm(userLocation[0], userLocation[1], mill.lat, mill.lng)} km (~{Math.round((calculateDistanceKm(userLocation[0], userLocation[1], mill.lat, mill.lng) / 45) * 60)} min)
+                            </strong>
+                          </div>
+                        ) : (
+                          <p className="text-[11px] text-[#567B34] leading-tight">
+                            Calcul automatique de l'itinéraire routier et du temps de trajet depuis votre position actuelle.
+                          </p>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <a
+                            href={userLocation
+                              ? `https://www.google.com/maps/dir/?api=1&origin=${userLocation[0]},${userLocation[1]}&destination=${mill.lat},${mill.lng}&travelmode=driving`
+                              : `https://www.google.com/maps/dir/?api=1&destination=${mill.lat},${mill.lng}&travelmode=driving`
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="py-2.5 px-2 rounded-xl bg-[#31491E] hover:bg-[#233416] text-[#FAF7F2] font-bold text-xs uppercase tracking-wider text-center flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                          >
+                            <Navigation className="w-3.5 h-3.5 text-[#E6AB3C]" />
+                            <span>GPS Direct</span>
+                          </a>
+
+                          <button
+                            type="button"
+                            onClick={() => locateUser(mill)}
+                            className="py-2.5 px-2 rounded-xl bg-white hover:bg-[#E8F4D9] text-[#31491E] border border-[#E6DEC9] hover:border-[#8CBE5D] font-bold text-xs uppercase tracking-wider text-center flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                          >
+                            <Route className="w-3.5 h-3.5 text-[#567B34]" />
+                            <span>Tracer Carte</span>
+                          </button>
+                        </div>
                       </div>
 
                       <a

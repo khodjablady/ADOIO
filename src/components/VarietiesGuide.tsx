@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { OLIVE_VARIETIES, OliveVariety } from '../data/bejaiaOliveData';
 import { 
   Droplets, 
@@ -8,11 +8,39 @@ import {
   Utensils, 
   Check, 
   ArrowRight,
-  Info
+  Info,
+  Share2
 } from 'lucide-react';
+import { ShareVarietyModal } from './ShareVarietyModal';
 
 export const VarietiesGuide: React.FC = () => {
   const [selectedVariety, setSelectedVariety] = useState<OliveVariety>(OLIVE_VARIETIES[0]);
+  const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
+  const [varietyToShare, setVarietyToShare] = useState<OliveVariety>(OLIVE_VARIETIES[0]);
+
+  // Read URL hash or search param to automatically select shared variety
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash;
+      if (hash.startsWith('#varietes-')) {
+        const id = hash.replace('#varietes-', '');
+        const found = OLIVE_VARIETIES.find((v) => v.id === id);
+        if (found) setSelectedVariety(found);
+      }
+    };
+
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
+
+  const handleOpenShare = (variety?: OliveVariety) => {
+    const target = variety || selectedVariety;
+    setVarietyToShare(target);
+    setIsShareModalOpen(true);
+    // Keep URL in sync with selected variety
+    window.history.replaceState(null, '', `#varietes-${target.id}`);
+  };
 
   return (
     <section id="varietes" className="py-16 sm:py-24 bg-[#F4EEE1] border-b border-[#E6DEC9]">
@@ -62,13 +90,25 @@ export const VarietiesGuide: React.FC = () => {
             {/* Left overview */}
             <div className="lg:col-span-7 space-y-6">
               <div>
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-xs font-bold text-[#567B34] bg-[#E8F4D9] px-2.5 py-1 rounded">
-                    Nom en Tamazight : {selectedVariety.kabyleName}
-                  </span>
-                  <span className="text-xs text-[#6F9D44] font-medium">
-                    {selectedVariety.proportionKabylie}
-                  </span>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <span className="font-mono text-xs font-bold text-[#567B34] bg-[#E8F4D9] px-2.5 py-1 rounded">
+                      Nom en Tamazight : {selectedVariety.kabyleName}
+                    </span>
+                    <span className="text-xs text-[#6F9D44] font-medium">
+                      {selectedVariety.proportionKabylie}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleOpenShare(selectedVariety)}
+                    className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#FAF7F2] hover:bg-[#E8F4D9] text-[#233416] border border-[#E6DEC9] hover:border-[#8CBE5D] text-xs font-bold transition-all shadow-xs hover:shadow-sm cursor-pointer group"
+                    title={`Partager la fiche de ${selectedVariety.name}`}
+                  >
+                    <Share2 className="w-3.5 h-3.5 text-[#E6AB3C] group-hover:scale-110 transition-transform" />
+                    <span>Partager la fiche</span>
+                  </button>
                 </div>
                 <h3 className="font-serif text-3xl font-bold text-[#18230F] mt-2">
                   {selectedVariety.name}
@@ -165,6 +205,52 @@ export const VarietiesGuide: React.FC = () => {
                     </li>
                   </ul>
                 </div>
+
+                {/* Quick Social Share Bar */}
+                <div className="pt-3 border-t border-[#E6DEC9] space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-[#18230F]">
+                    <span className="flex items-center gap-1.5">
+                      <Share2 className="w-3.5 h-3.5 text-[#E6AB3C]" />
+                      <span>Partager cette fiche technique :</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenShare(selectedVariety)}
+                      className="text-[11px] font-bold text-[#31491E] hover:text-[#567B34] underline cursor-pointer"
+                    >
+                      Plus d'options
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <a
+                      href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Fiche Oléicole : ${selectedVariety.name} (${selectedVariety.kabyleName}) · Rendement : ${selectedVariety.oilYieldPercent}\n${typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}#varietes-${selectedVariety.id}` : ''}`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="py-2 px-2 rounded-xl bg-[#25D366] hover:bg-[#1EBE5D] text-white text-[11px] font-bold flex items-center justify-center gap-1 shadow-xs transition-transform active:scale-95 cursor-pointer"
+                      title="Partager sur WhatsApp"
+                    >
+                      <span>WhatsApp</span>
+                    </a>
+                    <a
+                      href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}#varietes-${selectedVariety.id}` : '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="py-2 px-2 rounded-xl bg-[#1877F2] hover:bg-[#1464D2] text-white text-[11px] font-bold flex items-center justify-center gap-1 shadow-xs transition-transform active:scale-95 cursor-pointer"
+                      title="Partager sur Facebook"
+                    >
+                      <span>Facebook</span>
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenShare(selectedVariety)}
+                      className="py-2 px-2 rounded-xl bg-[#31491E] hover:bg-[#233416] text-[#FAF7F2] text-[11px] font-bold flex items-center justify-center gap-1 shadow-xs transition-transform active:scale-95 cursor-pointer"
+                      title="Copier le lien & options"
+                    >
+                      <Share2 className="w-3 h-3 text-[#E6AB3C]" />
+                      <span>Diffuser</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -172,13 +258,18 @@ export const VarietiesGuide: React.FC = () => {
 
         {/* Variety Comparison Matrix */}
         <div className="bg-white rounded-3xl border border-[#E6DEC9] p-6 sm:p-8 shadow-sm">
-          <div className="mb-6">
-            <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#18230F]">
-              Tableau Comparatif des Variétés de la Wilaya
-            </h3>
-            <p className="text-xs text-[#567B34] mt-1">
-              Repères techniques pour les oléiculteurs et pépiniéristes de Béjaïa
-            </p>
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#18230F]">
+                Tableau Comparatif des Variétés de la Wilaya
+              </h3>
+              <p className="text-xs text-[#567B34] mt-1">
+                Repères techniques pour les oléiculteurs et pépiniéristes de Béjaïa
+              </p>
+            </div>
+            <span className="text-[11px] text-[#6F9D44] font-medium">
+              Cliquez sur l'icône de partage pour diffuser une variété
+            </span>
           </div>
 
           <div className="overflow-x-auto">
@@ -191,6 +282,7 @@ export const VarietiesGuide: React.FC = () => {
                   <th className="py-3 px-4">Rendement Huile</th>
                   <th className="py-3 px-4">Période Récolte</th>
                   <th className="py-3 px-4">Profil Principal</th>
+                  <th className="py-3 px-4 text-center">Partager</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E6DEC9]">
@@ -206,12 +298,32 @@ export const VarietiesGuide: React.FC = () => {
                     <td className="py-3.5 px-4 font-bold text-[#E6AB3C]">{v.oilYieldPercent}</td>
                     <td className="py-3.5 px-4">{v.harvestWindow}</td>
                     <td className="py-3.5 px-4 text-[#436229]">{v.flavorProfile[0]}</td>
+                    <td className="py-3.5 px-4 text-center">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenShare(v);
+                        }}
+                        className="p-1.5 rounded-lg bg-[#FAF7F2] hover:bg-[#E8F4D9] text-[#31491E] border border-[#E6DEC9] hover:border-[#8CBE5D] transition-colors cursor-pointer inline-flex items-center justify-center shadow-2xs"
+                        title={`Partager la fiche de ${v.name}`}
+                      >
+                        <Share2 className="w-3.5 h-3.5 text-[#E6AB3C]" />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </div>
+
+        {/* Social Share Modal */}
+        <ShareVarietyModal
+          variety={varietyToShare}
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+        />
       </div>
     </section>
   );

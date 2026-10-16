@@ -99,14 +99,14 @@ body {
 
 /* Custom Leaflet Tooltip */
 .leaflet-tooltip.custom-map-tooltip {
-  background: rgba(255, 255, 255, 0.96) !important;
+  background: rgba(255, 255, 255, 0.98) !important;
   backdrop-filter: blur(8px);
   border: 1.5px solid #E6DEC9 !important;
   border-radius: 12px !important;
   box-shadow: 0 12px 28px -4px rgba(24, 35, 15, 0.28), 0 4px 6px -2px rgba(0, 0, 0, 0.1) !important;
   color: #18230F !important;
   padding: 6px 10px !important;
-  pointer-events: none;
+  pointer-events: auto !important;
   font-family: inherit;
   transition: transform 0.15s ease, opacity 0.15s ease;
 }
