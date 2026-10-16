@@ -673,3 +673,134 @@ export const AGRICULTURAL_CALENDAR = [
     ]
   }
 ];
+
+export interface CollectionPoint {
+  id: string;
+  name: string;
+  commune: string;
+  daira: string;
+  lat: number;
+  lng: number;
+  capacityTonnes: number;
+  manager: string;
+  phone: string;
+  operatingDays: string;
+  features: string[];
+  description: string;
+}
+
+export const BEJAIA_COLLECTION_POINTS: CollectionPoint[] = [
+  {
+    id: "cp-seddouk",
+    name: "Point de Collecte & Pesage Central de Seddouk",
+    commune: "Seddouk",
+    daira: "Seddouk",
+    lat: 36.556,
+    lng: 4.688,
+    capacityTonnes: 280,
+    manager: "Coopérative Oléicole de la Haute-Soummam",
+    phone: "+213 661630658",
+    operatingDays: "Tous les jours en saison (7h - 19h)",
+    features: ["Pont-bascule électronique certifié", "Tri et effeuillage automatisé", "Caisses plastiques ajourées normalisées", "Contrôle d'acidité préalable"],
+    description: "Plateforme centrale de collecte et de pesage de référence de la daïra de Seddouk, directement rattachée au réseau des huileries partenaires de l'ADOIO."
+  },
+  {
+    id: "cp-akbou",
+    name: "Hub de Collecte & Transit Oléicole d'Akbou",
+    commune: "Akbou",
+    daira: "Akbou",
+    lat: 36.462,
+    lng: 4.548,
+    capacityTonnes: 450,
+    manager: "Groupement des Producteurs de la Soummam",
+    phone: "+213 34 35 22 10",
+    operatingDays: "Lundi au Samedi (6h30 - 20h)",
+    features: ["Pesage gros tonnage (camions & tracteurs)", "Zone de stockage ventilée sous abri", "Logistique directe vers huileries continues"],
+    description: "Principal hub de regroupement des récoltes du grand bassin d'Akbou, de la plaine alluviale et des vergers étagés de l'Ighram."
+  },
+  {
+    id: "cp-tazmalt",
+    name: "Point de Collecte & Pesage de Tazmalt",
+    commune: "Tazmalt",
+    daira: "Tazmalt",
+    lat: 36.386,
+    lng: 4.398,
+    capacityTonnes: 220,
+    manager: "Association Agricole de Tazmalt",
+    phone: "+213 34 38 14 55",
+    operatingDays: "Tous les jours en récolte (7h - 18h30)",
+    features: ["Pesage numérique individuel", "Fourniture de caisses alimentaires", "Acheminement quotidien vers les moulins"],
+    description: "Centre de collecte stratégique pour les vergers de piémont du Djurdjura oriental et les exploitants familiaux de Tazmalt et Beni Mellikeche."
+  },
+  {
+    id: "cp-sidi-aich",
+    name: "Centre de Réception & Collecte de Sidi Aïch",
+    commune: "Sidi Aïch",
+    daira: "Sidi Aïch",
+    lat: 36.615,
+    lng: 4.692,
+    capacityTonnes: 260,
+    manager: "Coopérative Agricole de Sidi Aïch",
+    phone: "+213 34 29 40 88",
+    operatingDays: "7j/7 en période de cueillette",
+    features: ["Pont-bascule 30 tonnes", "Bande de tri et soufflerie pour feuilles", "Enregistrement numérique des lots"],
+    description: "Plateforme de convergence des récoltes de la moyenne vallée de la Soummam, garantissant un délai court (moins de 24h) avant trituration."
+  },
+  {
+    id: "cp-el-kseur",
+    name: "Point de Collecte de la Basse-Vallée (El Kseur)",
+    commune: "El Kseur",
+    daira: "El Kseur",
+    lat: 36.688,
+    lng: 4.858,
+    capacityTonnes: 240,
+    manager: "Antenne Oléicole d'El Kseur",
+    phone: "+213 34 25 11 02",
+    operatingDays: "Lundi au Samedi (7h - 18h)",
+    features: ["Pesage électronique", "Stockage isotherme aéré", "Assistance technique aux oléiculteurs"],
+    description: "Point de ralliement des récoltes des vergers intensifs et traditionnels situés à la charnière de la vallée et du golfe de Béjaïa."
+  },
+  {
+    id: "cp-adekar",
+    name: "Station de Collecte d'Altitude d'Adekar",
+    commune: "Adekar",
+    daira: "Adekar",
+    lat: 36.738,
+    lng: 4.662,
+    capacityTonnes: 140,
+    manager: "Collectif des Oléiculteurs de l'Akfadou",
+    phone: "+213 34 32 80 15",
+    operatingDays: "Mardi au Dimanche (8h - 17h30)",
+    features: ["Pesage de montagne", "Conditionnement en caisses rigides", "Spécialité variété Chemlal d'altitude"],
+    description: "Station dédiée aux oliveraies de haute altitude des crêtes boisées de l'Akfadou, réputées pour des huiles à forte teneur en antioxydants."
+  },
+  {
+    id: "cp-amizour",
+    name: "Point de Collecte & Pesage d'Amizour",
+    commune: "Amizour",
+    daira: "Amizour",
+    lat: 36.642,
+    lng: 4.908,
+    capacityTonnes: 190,
+    manager: "Groupement Agricole d'Amizour",
+    phone: "+213 34 27 50 44",
+    operatingDays: "Tous les jours en saison",
+    features: ["Contrôle sanitaire visuel", "Pesée certifiée", "Transport groupé vers les huileries"],
+    description: "Centre de transit assurant la collecte des oliveraies bordant l'Oued Soummam et le massif de Merdj Ouamane."
+  },
+  {
+    id: "cp-tichy",
+    name: "Point de Collecte Littoral & Babors (Tichy / Aokas)",
+    commune: "Tichy",
+    daira: "Tichy",
+    lat: 36.668,
+    lng: 5.158,
+    capacityTonnes: 110,
+    manager: "Relais Oléicole de la Côte Est",
+    phone: "+213 34 23 72 30",
+    operatingDays: "Lundi au Samedi (8h - 17h)",
+    features: ["Pesée numérique", "Caisses de transport sécurisées", "Traitement des olives de côte"],
+    description: "Service de proximité pour les oliveraies des versants maritimes et des contreforts nord des Babors."
+  }
+];
+

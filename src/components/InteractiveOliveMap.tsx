@@ -3,8 +3,10 @@ import L from 'leaflet';
 import { 
   BEJAIA_COMMUNES_DATA, 
   REPRESENTATIVE_MILLS, 
+  BEJAIA_COLLECTION_POINTS,
   CommuneStat, 
-  OliveMill 
+  OliveMill,
+  CollectionPoint
 } from '../data/bejaiaOliveData';
 import { 
   MapPin, 
@@ -19,7 +21,12 @@ import {
   CheckCircle2, 
   Award,
   Sparkles,
-  Info
+  Info,
+  ChevronDown,
+  ChevronUp,
+  Scale,
+  Clock,
+  Warehouse
 } from 'lucide-react';
 
 interface InteractiveOliveMapProps {
@@ -31,12 +38,13 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
 
-  const [activeLayer, setActiveLayer] = useState<'all' | 'mills' | 'communes'>('all');
+  const [activeLayer, setActiveLayer] = useState<'all' | 'mills' | 'zones_culture' | 'points_collecte'>('all');
   const [selectedMillType, setSelectedMillType] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [isLegendOpen, setIsLegendOpen] = useState(true);
   const [selectedItem, setSelectedItem] = useState<{
-    type: 'commune' | 'mill';
-    data: CommuneStat | OliveMill;
+    type: 'commune' | 'mill' | 'collection_point';
+    data: CommuneStat | OliveMill | CollectionPoint;
   } | null>(null);
 
   // Initial center on Béjaïa Soummam Valley
@@ -55,11 +63,12 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
       scrollWheelZoom: true,
     });
 
-    // Warm, highly readable CartoDB Voyager tiles
+    // CARTO Voyager tiles with clean typography, roads and terroir relief (https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png)
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd',
       attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      maxZoom: 18,
+        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank">CARTO</a>',
+      maxZoom: 19,
       minZoom: 8,
     }).addTo(map);
 
@@ -80,8 +89,8 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
     const layerGroup = markersLayerRef.current;
     layerGroup.clearLayers();
 
-    // 1. Add Communes markers
-    if (activeLayer === 'all' || activeLayer === 'communes') {
+    // 1. Add Communes markers (Zones de culture)
+    if (activeLayer === 'all' || activeLayer === 'zones_culture') {
       const filteredCommunes = BEJAIA_COMMUNES_DATA.filter((c) =>
         c.commune.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.daira.toLowerCase().includes(searchTerm.toLowerCase())
@@ -128,6 +137,32 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
 
         const marker = L.marker([commune.lat, commune.lng], { icon: communeIcon });
         
+        // Hover tooltip before clicking
+        marker.bindTooltip(
+          `
+          <div style="font-family: 'Plus Jakarta Sans', system-ui, sans-serif; padding: 2px 4px; text-align: left;">
+            <div style="font-size: 9px; font-weight: 800; color: #567B34; text-transform: uppercase; letter-spacing: 0.5px;">
+              ${isSeddouk ? '⭐ Siège ADOIO' : `Bassin Oléicole · Daïra de ${commune.daira}`}
+            </div>
+            <div style="font-size: 13px; font-weight: 800; color: #18230F; margin: 1px 0;">
+              ${commune.commune}
+            </div>
+            <div style="font-size: 10px; color: #31491E; font-weight: 600;">
+              🫒 ${(commune.avgProductionLiters / 1000000).toFixed(1)}M L · ${commune.millsCount} moulins
+            </div>
+            <div style="font-size: 9px; color: #7B8B9B; margin-top: 2px;">
+              Cliquez pour voir la fiche détaillée
+            </div>
+          </div>
+          `,
+          {
+            direction: 'top',
+            offset: [0, -14],
+            opacity: 0.98,
+            className: 'custom-map-tooltip',
+          }
+        );
+
         marker.on('click', () => {
           setSelectedItem({ type: 'commune', data: commune });
           mapInstanceRef.current?.setView([commune.lat, commune.lng], 12, { animate: true });
@@ -204,6 +239,41 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
 
         const marker = L.marker([mill.lat, mill.lng], { icon: millIcon });
 
+        const millTypeBadge =
+          mill.type === 'modern'
+            ? 'Moderne Continu (Inox)'
+            : mill.type === 'traditional'
+            ? 'Presse Traditionnelle'
+            : mill.type === 'domaine'
+            ? 'Domaine Oléicole'
+            : 'Coopérative';
+
+        // Hover tooltip before clicking
+        marker.bindTooltip(
+          `
+          <div style="font-family: 'Plus Jakarta Sans', system-ui, sans-serif; padding: 2px 4px; text-align: left; min-width: 140px;">
+            <div style="font-size: 9px; font-weight: 800; color: ${pinColor}; text-transform: uppercase; letter-spacing: 0.5px;">
+              ${millTypeBadge}
+            </div>
+            <div style="font-size: 13px; font-weight: 800; color: #18230F; margin: 1px 0;">
+              ${mill.name}
+            </div>
+            <div style="font-size: 10px; color: #31491E; font-weight: 600;">
+              📍 ${mill.commune} · ${mill.capacityQxPerDay} qx/j
+            </div>
+            <div style="font-size: 9px; color: #7B8B9B; margin-top: 2px;">
+              Cliquez pour afficher la fiche
+            </div>
+          </div>
+          `,
+          {
+            direction: 'top',
+            offset: [0, -20],
+            opacity: 0.98,
+            className: 'custom-map-tooltip',
+          }
+        );
+
         marker.on('click', () => {
           setSelectedItem({ type: 'mill', data: mill });
           mapInstanceRef.current?.setView([mill.lat, mill.lng], 13, { animate: true });
@@ -220,6 +290,96 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
             <div style="font-size: 11px; color: #436229; line-height: 1.4;">
               Capacité : <strong>${mill.capacityQxPerDay} qx/j</strong><br/>
               Tel : <strong>${mill.phone.split('/')[0]}</strong>
+            </div>
+          </div>
+        `);
+
+        layerGroup.addLayer(marker);
+      });
+    }
+
+    // 3. Add Collection Points markers (Points de collecte)
+    if (activeLayer === 'all' || activeLayer === 'points_collecte') {
+      const filteredCPs = BEJAIA_COLLECTION_POINTS.filter((cp) =>
+        cp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        cp.commune.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        cp.daira.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        cp.manager.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+
+      filteredCPs.forEach((cp) => {
+        const cpIcon = L.divIcon({
+          className: 'custom-cp-marker',
+          html: `
+            <div style="
+              width: 30px;
+              height: 30px;
+              background: #D97706;
+              border: 2px solid white;
+              border-radius: 8px;
+              transform: rotate(45deg) translate(-50%, -50%);
+              box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              cursor: pointer;
+            ">
+              <span style="
+                transform: rotate(-45deg);
+                font-size: 13px;
+                line-height: 1;
+              ">⚖️</span>
+            </div>
+          `,
+          iconSize: [30, 30],
+          iconAnchor: [15, 30],
+        });
+
+        const marker = L.marker([cp.lat, cp.lng], { icon: cpIcon });
+
+        // Hover tooltip before clicking
+        marker.bindTooltip(
+          `
+          <div style="font-family: 'Plus Jakarta Sans', system-ui, sans-serif; padding: 2px 4px; text-align: left; min-width: 140px;">
+            <div style="font-size: 9px; font-weight: 800; color: #D97706; text-transform: uppercase; letter-spacing: 0.5px;">
+              Point de Collecte & Pesage
+            </div>
+            <div style="font-size: 13px; font-weight: 800; color: #18230F; margin: 1px 0;">
+              ${cp.name}
+            </div>
+            <div style="font-size: 10px; color: #31491E; font-weight: 600;">
+              📍 ${cp.commune} · Capacité : ${cp.capacityTonnes} Tonnes
+            </div>
+            <div style="font-size: 9px; color: #7B8B9B; margin-top: 2px;">
+              Cliquez pour voir les services
+            </div>
+          </div>
+          `,
+          {
+            direction: 'top',
+            offset: [0, -20],
+            opacity: 0.98,
+            className: 'custom-map-tooltip',
+          }
+        );
+
+        marker.on('click', () => {
+          setSelectedItem({ type: 'collection_point', data: cp });
+          mapInstanceRef.current?.setView([cp.lat, cp.lng], 13, { animate: true });
+        });
+
+        marker.bindPopup(`
+          <div style="font-family: system-ui, sans-serif; padding: 4px; max-width: 220px;">
+            <div style="font-size: 9px; color: #D97706; font-weight: 700; text-transform: uppercase;">
+              Point de Collecte · ${cp.commune}
+            </div>
+            <div style="font-size: 13px; font-weight: 800; color: #18230F; margin: 2px 0 4px 0;">
+              ${cp.name}
+            </div>
+            <div style="font-size: 11px; color: #436229; line-height: 1.4;">
+              Capacité : <strong>${cp.capacityTonnes} Tonnes</strong><br/>
+              Gestion : <strong>${cp.manager}</strong><br/>
+              Tel : <strong>${cp.phone}</strong>
             </div>
           </div>
         `);
@@ -280,79 +440,126 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
           </div>
         </div>
 
-        {/* Controls Toolbar */}
-        <div className="bg-white p-4 rounded-2xl border border-[#E6DEC9] shadow-xs mb-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-            {/* Search Input */}
-            <div className="md:col-span-4 relative">
-              <Search className="w-4 h-4 text-[#6F9D44] absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Filtrer la carte (commune, huilerie, daïra)..."
-                className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-[#E6DEC9] focus:outline-none focus:border-[#31491E] bg-[#FAF7F2]"
-              />
-            </div>
+        {/* Thematic Filter Bar Above the Map */}
+        <div className="bg-white p-3 sm:p-4 rounded-2xl border border-[#E6DEC9] shadow-sm mb-6 space-y-3">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            {/* Primary Category Filter Tabs */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold text-[#18230F] mr-1 hidden sm:inline-flex items-center gap-1.5">
+                <Filter className="w-3.5 h-3.5 text-[#E6AB3C]" />
+                Afficher :
+              </span>
 
-            {/* Layer Filter (All, Mills, Communes) */}
-            <div className="md:col-span-4 flex bg-[#FAF7F2] p-1 rounded-xl border border-[#E6DEC9]">
+              {/* Tous les repères */}
               <button
+                type="button"
                 onClick={() => setActiveLayer('all')}
-                className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                   activeLayer === 'all'
-                    ? 'bg-[#31491E] text-white shadow-xs'
-                    : 'text-[#31491E] hover:text-[#18230F]'
+                    ? 'bg-[#18230F] text-white shadow-md scale-[1.02]'
+                    : 'bg-[#FAF7F2] text-[#436229] hover:bg-[#E8F4D9] border border-[#E6DEC9]'
                 }`}
               >
-                Tout afficher
+                <Layers className="w-3.5 h-3.5 text-[#E6AB3C]" />
+                <span>Tous les repères</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                  activeLayer === 'all' ? 'bg-white/20 text-white' : 'bg-[#E6DEC9] text-[#18230F]'
+                }`}>
+                  {BEJAIA_COMMUNES_DATA.length + REPRESENTATIVE_MILLS.length + BEJAIA_COLLECTION_POINTS.length}
+                </span>
               </button>
+
+              {/* Moulins */}
               <button
+                type="button"
                 onClick={() => setActiveLayer('mills')}
-                className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                   activeLayer === 'mills'
-                    ? 'bg-[#31491E] text-white shadow-xs'
-                    : 'text-[#31491E] hover:text-[#18230F]'
+                    ? 'bg-[#31491E] text-white shadow-md scale-[1.02]'
+                    : 'bg-[#FAF7F2] text-[#31491E] hover:bg-[#E8F4D9] border border-[#E6DEC9]'
                 }`}
               >
-                Huileries
+                <span>🏭</span>
+                <span>Moulins</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                  activeLayer === 'mills' ? 'bg-white/20 text-white' : 'bg-[#E8F4D9] text-[#233416]'
+                }`}>
+                  {REPRESENTATIVE_MILLS.length}
+                </span>
               </button>
+
+              {/* Zones de culture */}
               <button
-                onClick={() => setActiveLayer('communes')}
-                className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  activeLayer === 'communes'
-                    ? 'bg-[#31491E] text-white shadow-xs'
-                    : 'text-[#31491E] hover:text-[#18230F]'
+                type="button"
+                onClick={() => setActiveLayer('zones_culture')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeLayer === 'zones_culture'
+                    ? 'bg-[#233416] text-white shadow-md scale-[1.02]'
+                    : 'bg-[#FAF7F2] text-[#233416] hover:bg-[#E8F4D9] border border-[#E6DEC9]'
                 }`}
               >
-                Communes
+                <span>🫒</span>
+                <span>Zones de culture</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                  activeLayer === 'zones_culture' ? 'bg-white/20 text-white' : 'bg-[#E8F4D9] text-[#233416]'
+                }`}>
+                  {BEJAIA_COMMUNES_DATA.length}
+                </span>
+              </button>
+
+              {/* Points de collecte */}
+              <button
+                type="button"
+                onClick={() => setActiveLayer('points_collecte')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  activeLayer === 'points_collecte'
+                    ? 'bg-[#B45309] text-white shadow-md scale-[1.02]'
+                    : 'bg-[#FAF7F2] text-[#B45309] hover:bg-[#FEF5DB] border border-[#E6DEC9]'
+                }`}
+              >
+                <span>⚖️</span>
+                <span>Points de collecte</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                  activeLayer === 'points_collecte' ? 'bg-white/20 text-white' : 'bg-[#FEF5DB] text-[#B47A16]'
+                }`}>
+                  {BEJAIA_COLLECTION_POINTS.length}
+                </span>
               </button>
             </div>
 
-            {/* Mill Type Filter */}
-            <div className="md:col-span-3">
-              <select
-                value={selectedMillType}
-                onChange={(e) => setSelectedMillType(e.target.value)}
-                disabled={activeLayer === 'communes'}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-[#E6DEC9] focus:outline-none focus:border-[#31491E] bg-[#FAF7F2] font-medium text-[#18230F] disabled:opacity-40"
-              >
-                <option value="all">Tous les types de moulins</option>
-                <option value="modern">Moderne Continu (Inox)</option>
-                <option value="traditional">Presse Traditionnelle</option>
-                <option value="domaine">Domaine Intégré</option>
-                <option value="cooperative">Coopérative</option>
-              </select>
-            </div>
+            {/* Search Input, Sub-filters & Reset Button */}
+            <div className="flex items-center gap-2 w-full lg:w-auto">
+              <div className="relative flex-1 lg:w-60">
+                <Search className="w-3.5 h-3.5 text-[#6F9D44] absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Rechercher moulin, bassin..."
+                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-[#E6DEC9] focus:outline-none focus:border-[#31491E] bg-[#FAF7F2]"
+                />
+              </div>
 
-            {/* Reset Button */}
-            <div className="md:col-span-1 flex justify-end">
+              {activeLayer === 'mills' && (
+                <select
+                  value={selectedMillType}
+                  onChange={(e) => setSelectedMillType(e.target.value)}
+                  className="px-2.5 py-1.5 text-xs rounded-xl border border-[#E6DEC9] focus:outline-none focus:border-[#31491E] bg-[#FAF7F2] font-medium text-[#18230F]"
+                >
+                  <option value="all">Tous types</option>
+                  <option value="modern">Continu (Inox)</option>
+                  <option value="traditional">Traditionnel</option>
+                  <option value="domaine">Domaine</option>
+                  <option value="cooperative">Coopérative</option>
+                </select>
+              )}
+
               <button
                 onClick={resetView}
-                className="p-2 rounded-xl bg-[#FAF7F2] hover:bg-[#E8F4D9] text-[#31491E] border border-[#E6DEC9] transition-colors cursor-pointer"
-                title="Recentrer la carte sur la wilaya"
+                className="p-2 rounded-xl bg-[#FAF7F2] hover:bg-[#E8F4D9] text-[#31491E] border border-[#E6DEC9] transition-colors cursor-pointer shrink-0"
+                title="Recentrer la carte"
               >
-                <RotateCcw className="w-4 h-4" />
+                <RotateCcw className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -392,24 +599,110 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
               style={{ background: '#e5e3df' }}
             ></div>
 
+            {/* Floating Stylized Legend */}
+            <div className="absolute top-6 right-6 z-[400] max-w-[280px] sm:max-w-[300px] transition-all duration-300 pointer-events-auto">
+              <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-[#E6DEC9] shadow-xl p-3 sm:p-3.5 text-xs text-[#242A20]">
+                <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-[#E6DEC9]/70">
+                  <div className="flex items-center gap-1.5 font-bold text-[#18230F]">
+                    <Layers className="w-3.5 h-3.5 text-[#E6AB3C]" />
+                    <span className="font-serif text-xs font-bold uppercase tracking-wider">Légende des Marqueurs</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsLegendOpen(!isLegendOpen)}
+                    className="p-1 rounded-md text-[#567B34] hover:bg-[#FAF7F2] transition-colors cursor-pointer"
+                    title={isLegendOpen ? 'Masquer la légende' : 'Afficher la légende'}
+                  >
+                    {isLegendOpen ? (
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
+
+                {isLegendOpen && (
+                  <div className="space-y-2 animate-in fade-in-50 duration-200">
+                    <div className="text-[10px] text-[#6F9D44] font-bold uppercase tracking-wider">
+                      1. Bassins Oléicoles (Formes Pilule)
+                    </div>
+                    <div className="space-y-1.5 text-[11px]">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#233416] text-white text-[10px] font-bold border border-white shadow-xs shrink-0">
+                          🫒 Akbou
+                        </span>
+                        <span className="text-[#31491E]">Commune / Bassin oléicole</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#B47A16] text-white text-[10px] font-bold border border-white shadow-xs shrink-0">
+                          ⭐ Seddouk
+                        </span>
+                        <span className="text-[#31491E]">Centre & Siège ADOIO</span>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-[#E6DEC9]/60 text-[10px] text-[#6F9D44] font-bold uppercase tracking-wider">
+                      2. Huileries & Moulins (Pins Orientés)
+                    </div>
+                    <div className="grid grid-cols-1 gap-1.5 text-[11px]">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-tr-lg rounded-tl-lg rounded-br-lg bg-[#31491E] text-white text-[9px] flex items-center justify-center border border-white shadow-xs shrink-0">
+                          🏭
+                        </span>
+                        <span><strong>Moderne Continu</strong> (Chaîne Inox)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-tr-lg rounded-tl-lg rounded-br-lg bg-[#AF4D24] text-white text-[9px] flex items-center justify-center border border-white shadow-xs shrink-0">
+                          🏺
+                        </span>
+                        <span><strong>Presse Traditionnelle</strong> (Scourtins)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-tr-lg rounded-tl-lg rounded-br-lg bg-[#B47A16] text-white text-[9px] flex items-center justify-center border border-white shadow-xs shrink-0">
+                          🏆
+                        </span>
+                        <span><strong>Domaine Intégré</strong> (Verger & Huilerie)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-tr-lg rounded-tl-lg rounded-br-lg bg-[#2A52BE] text-white text-[9px] flex items-center justify-center border border-white shadow-xs shrink-0">
+                          🤝
+                        </span>
+                        <span><strong>Coopérative</strong> (Mise en commun)</span>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-[#E6DEC9]/60 text-[10px] text-[#6F9D44] font-bold uppercase tracking-wider">
+                      3. Points de Collecte (Losanges Ambrés)
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px]">
+                      <span className="w-5 h-5 rounded-md bg-[#D97706] text-white text-[10px] flex items-center justify-center border border-white shadow-xs shrink-0">
+                        ⚖️
+                      </span>
+                      <span><strong>Point de collecte & pesage</strong> (Transit & Réception)</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Map Legend Overlay */}
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3 px-2 text-[11px] text-[#436229]">
               <div className="flex flex-wrap items-center gap-4">
                 <span className="flex items-center gap-1.5 font-medium">
                   <span className="w-3 h-3 rounded-full bg-[#233416] inline-block border border-white shadow-xs"></span>
-                  Commune Oléicole
+                  Zone de culture (Commune)
                 </span>
                 <span className="flex items-center gap-1.5 font-medium">
                   <span className="w-3 h-3 rounded-full bg-[#31491E] inline-block border border-white shadow-xs"></span>
-                  Moulin Moderne Continu
+                  Moulin Continu (Inox)
                 </span>
                 <span className="flex items-center gap-1.5 font-medium">
                   <span className="w-3 h-3 rounded-full bg-[#AF4D24] inline-block border border-white shadow-xs"></span>
                   Presse Traditionnelle
                 </span>
                 <span className="flex items-center gap-1.5 font-medium">
-                  <span className="w-3 h-3 rounded-full bg-[#B47A16] inline-block border border-white shadow-xs"></span>
-                  Domaine Oléicole
+                  <span className="w-3 h-3 rounded-md bg-[#D97706] inline-block border border-white shadow-xs"></span>
+                  Point de Collecte (Pesage)
                 </span>
               </div>
               <span className="text-gray-400 text-[10px]">
@@ -509,7 +802,7 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
                     </div>
                   );
                 })()
-              ) : (
+              ) : selectedItem.type === 'mill' ? (
                 // Mill Detail
                 (() => {
                   const mill = selectedItem.data as OliveMill;
@@ -564,7 +857,78 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
                     </div>
                   );
                 })()
-              )
+              ) : selectedItem.type === 'collection_point' ? (
+                // Collection Point Detail
+                (() => {
+                  const cp = selectedItem.data as CollectionPoint;
+                  return (
+                    <div className="space-y-5 animate-in fade-in-50 duration-200">
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold uppercase tracking-wider text-[#D97706] flex items-center gap-1.5">
+                            <Scale className="w-3.5 h-3.5 text-[#D97706]" />
+                            Point de Collecte & Pesage
+                          </span>
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#FEF5DB] text-[#B47A16]">
+                            {cp.capacityTonnes} Tonnes
+                          </span>
+                        </div>
+                        <h3 className="font-serif text-2xl font-bold text-[#18230F] mt-1">
+                          {cp.name}
+                        </h3>
+                        <p className="text-xs text-[#567B34] mt-0.5">
+                          {cp.commune} · Daïra de {cp.daira}
+                        </p>
+                      </div>
+
+                      <div className="space-y-2.5 text-xs bg-[#FAF7F2] p-4 rounded-xl border border-[#E6DEC9]">
+                        <div>
+                          <span className="text-[#6F9D44] block text-[10px] uppercase font-bold">Capacité de réception</span>
+                          <span className="font-serif text-lg font-bold text-[#18230F]">{cp.capacityTonnes} Tonnes / saison</span>
+                        </div>
+                        <div>
+                          <span className="text-[#6F9D44] block text-[10px] uppercase font-bold">Gestionnaire de la station</span>
+                          <span className="font-semibold text-[#18230F]">{cp.manager}</span>
+                        </div>
+                        <div>
+                          <span className="text-[#6F9D44] block text-[10px] uppercase font-bold">Horaires d'ouverture</span>
+                          <span className="text-[#31491E] flex items-center gap-1 mt-0.5">
+                            <Clock className="w-3.5 h-3.5 text-[#E6AB3C]" />
+                            {cp.operatingDays}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Equipment Features */}
+                      <div className="space-y-1.5">
+                        <span className="text-xs font-bold text-[#18230F] block">
+                          Équipements & Services disponibles :
+                        </span>
+                        <div className="space-y-1">
+                          {cp.features.map((feat, idx) => (
+                            <div key={idx} className="flex items-center gap-2 text-xs text-[#31491E]">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-[#567B34] shrink-0" />
+                              <span>{feat}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-[#567B34] leading-relaxed bg-[#E8F4D9]/60 p-3 rounded-xl border border-[#8CBE5D]/20">
+                        {cp.description}
+                      </p>
+
+                      <a
+                        href={`tel:${cp.phone.split('/')[0].trim()}`}
+                        className="w-full py-3 px-4 rounded-xl bg-[#D97706] hover:bg-[#B45309] text-white font-bold text-xs uppercase tracking-wider text-center flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer"
+                      >
+                        <Phone className="w-4 h-4 text-white" />
+                        <span>Appeler la station : {cp.phone.split('/')[0]}</span>
+                      </a>
+                    </div>
+                  );
+                })()
+              ) : null
             ) : (
               // Default state when nothing selected
               <div className="py-10 text-center space-y-4">

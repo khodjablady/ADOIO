@@ -51,18 +51,21 @@ body {
 
 /* Interactive Map Markers & Selection Hover Animations */
 .custom-commune-marker,
-.custom-mill-marker {
+.custom-mill-marker,
+.custom-cp-marker {
   transition: z-index 0.2s ease;
 }
 
 .custom-commune-marker > div,
-.custom-mill-marker > div {
+.custom-mill-marker > div,
+.custom-cp-marker > div {
   transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.28s ease, filter 0.28s ease !important;
   will-change: transform, box-shadow;
 }
 
 .custom-commune-marker:hover,
-.custom-mill-marker:hover {
+.custom-mill-marker:hover,
+.custom-cp-marker:hover {
   z-index: 9999 !important;
 }
 
@@ -78,6 +81,12 @@ body {
   filter: brightness(1.1) drop-shadow(0 4px 12px rgba(230, 171, 60, 0.5));
 }
 
+.custom-cp-marker:hover > div {
+  transform: rotate(45deg) translate(-50%, -50%) scale(1.24) !important;
+  box-shadow: 0 16px 30px -3px rgba(217, 119, 6, 0.55), 0 8px 16px -2px rgba(0, 0, 0, 0.35) !important;
+  filter: brightness(1.1) drop-shadow(0 4px 12px rgba(217, 119, 6, 0.5));
+}
+
 .leaflet-popup {
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
 }
@@ -86,4 +95,22 @@ body {
   border-radius: 16px !important;
   box-shadow: 0 16px 32px -4px rgba(24, 35, 15, 0.35) !important;
   border: 1px solid #E6DEC9;
+}
+
+/* Custom Leaflet Tooltip */
+.leaflet-tooltip.custom-map-tooltip {
+  background: rgba(255, 255, 255, 0.96) !important;
+  backdrop-filter: blur(8px);
+  border: 1.5px solid #E6DEC9 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 12px 28px -4px rgba(24, 35, 15, 0.28), 0 4px 6px -2px rgba(0, 0, 0, 0.1) !important;
+  color: #18230F !important;
+  padding: 6px 10px !important;
+  pointer-events: none;
+  font-family: inherit;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.leaflet-tooltip.custom-map-tooltip::before {
+  border-top-color: rgba(255, 255, 255, 0.96) !important;
 }
