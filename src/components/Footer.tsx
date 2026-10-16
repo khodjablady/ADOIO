@@ -14,9 +14,10 @@ import {
 interface FooterProps {
   onNavClick: (tab: string) => void;
   onOpenAdhesion: () => void;
+  onOpenSitemap?: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onNavClick, onOpenAdhesion }) => {
+export const Footer: React.FC<FooterProps> = ({ onNavClick, onOpenAdhesion, onOpenSitemap }) => {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -26,7 +27,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick, onOpenAdhesion }) =>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 pb-12 border-b border-[#FAF7F2]/10">
           {/* Brand info */}
-          <div className="lg:col-span-5 space-y-4">
+          <div className="lg:col-span-4 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full flex items-center justify-center">
                 <AdoioLogo size={48} className="w-full h-full" />
@@ -48,75 +49,126 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick, onOpenAdhesion }) =>
             <div className="pt-2 text-xs text-[#B0D984] italic font-serif">
               « Zzit uzemmur d lmektub n tmurt nneɣ »
             </div>
+
+            {onOpenSitemap && (
+              <div className="pt-2">
+                <button
+                  onClick={onOpenSitemap}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FAF7F2]/10 hover:bg-[#FAF7F2]/20 text-[#FAF7F2] text-xs font-semibold border border-[#FAF7F2]/15 transition-all cursor-pointer"
+                >
+                  <span>Consulter le Plan du Site & Index</span>
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Quick links */}
-          <div className="lg:col-span-3 space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#E6AB3C]">
-              Navigation du Portail
-            </h4>
-            <ul className="space-y-2 text-xs text-[#E8F4D9]/80">
-              <li>
-                <button
-                  onClick={() => onNavClick('potential')}
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  Potentialités & Verger de Béjaïa
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => onNavClick('carte-interactive')}
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  Carte Interactive des Bassins & Moulins
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => onNavClick('adoio')}
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  Missions & Gouvernance ADOIO
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => onNavClick('annuaire')}
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  Annuaire des 448 Huileries
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => onNavClick('varietes')}
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  Guide Variétal (Chemlal, Bouchouk...)
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => onNavClick('simulateur')}
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  Simulateur de Rendement & Récolte
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => onNavClick('pratiques')}
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  Calendrier & Bonnes Pratiques
-                </button>
-              </li>
-            </ul>
+          {/* 4 Thematic Pillars links */}
+          <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {/* Pillar 1 & 2 */}
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#E6AB3C] mb-2">
+                  1. Terroir & Association
+                </h4>
+                <ul className="space-y-1.5 text-xs text-[#E8F4D9]/80">
+                  <li>
+                    <button
+                      onClick={() => onNavClick('adoio')}
+                      className="hover:text-white transition-colors cursor-pointer text-left"
+                    >
+                      Missions & 25 ans ADOIO
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      onClick={() => onNavClick('potential')}
+                      className="hover:text-white transition-colors cursor-pointer text-left"
+                    >
+                      Potentialités & Chiffres Clés
+                    </button>
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#E6AB3C] mb-2">
+                  2. Cartographie & Huileries
+                </h4>
+                <ul className="space-y-1.5 text-xs text-[#E8F4D9]/80">
+                  <li>
+                    <button
+                      onClick={() => onNavClick('carte-interactive')}
+                      className="hover:text-white transition-colors cursor-pointer text-left"
+                    >
+                      Carte Interactive & Bassins
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      onClick={() => onNavClick('annuaire')}
+                      className="hover:text-white transition-colors cursor-pointer text-left"
+                    >
+                      Annuaire des 448 Huileries
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Pillar 3 & 4 */}
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#E6AB3C] mb-2">
+                  3. Variétés & Dégustation
+                </h4>
+                <ul className="space-y-1.5 text-xs text-[#E8F4D9]/80">
+                  <li>
+                    <button
+                      onClick={() => onNavClick('varietes')}
+                      className="hover:text-white transition-colors cursor-pointer text-left"
+                    >
+                      Guide Variétal (Chemlal...)
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      onClick={() => onNavClick('degustation')}
+                      className="hover:text-white transition-colors cursor-pointer text-left"
+                    >
+                      Dégustation & Normes COI
+                    </button>
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#E6AB3C] mb-2">
+                  4. Outils & Bonnes Pratiques
+                </h4>
+                <ul className="space-y-1.5 text-xs text-[#E8F4D9]/80">
+                  <li>
+                    <button
+                      onClick={() => onNavClick('simulateur')}
+                      className="hover:text-white transition-colors cursor-pointer text-left"
+                    >
+                      Simulateur de Rendement & Carbone
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      onClick={() => onNavClick('pratiques')}
+                      className="hover:text-white transition-colors cursor-pointer text-left"
+                    >
+                      Calendrier & Bonnes Pratiques
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
 
           {/* Contact Details */}
-          <div className="lg:col-span-4 space-y-3">
+          <div className="lg:col-span-3 space-y-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-[#E6AB3C]">
               Coordonnées de l'Association
             </h4>

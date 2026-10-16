@@ -221,18 +221,37 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                 </div>
 
                 <div className="mt-5 pt-3 border-t border-[#E6DEC9] flex items-center justify-between">
-                  <span className="text-xs font-bold text-[#31491E] group-hover:underline flex items-center gap-1">
-                    <span>Voir la fiche complète</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </span>
-                  <a
-                    href={`tel:${mill.phone.split('/')[0].trim()}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="p-2 rounded-lg bg-[#FAF7F2] hover:bg-[#E8F4D9] text-[#31491E] transition-colors"
-                    title="Appeler l'huilerie"
+                  <button
+                    onClick={() => setActiveModalMill(mill)}
+                    className="text-xs font-bold text-[#31491E] hover:underline flex items-center gap-1 cursor-pointer"
                   >
-                    <Phone className="w-3.5 h-3.5" />
-                  </a>
+                    <span>Voir la fiche</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const mapEl = document.getElementById('carte-interactive');
+                        if (mapEl) {
+                          mapEl.scrollIntoView({ behavior: 'smooth' });
+                        }
+                      }}
+                      className="p-1.5 px-2 rounded-lg bg-[#E8F4D9] hover:bg-[#D4E8BF] text-[#233416] text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                      title="Localiser sur la carte interactive"
+                    >
+                      <MapPin className="w-3 h-3 text-[#436229]" />
+                      <span className="hidden sm:inline">Sur la carte</span>
+                    </button>
+                    <a
+                      href={`tel:${mill.phone.split('/')[0].trim()}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="p-2 rounded-lg bg-[#FAF7F2] hover:bg-[#E8F4D9] text-[#31491E] transition-colors"
+                      title="Appeler l'huilerie"
+                    >
+                      <Phone className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
                 </div>
               </div>
             ))}

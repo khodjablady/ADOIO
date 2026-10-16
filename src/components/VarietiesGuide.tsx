@@ -251,6 +251,23 @@ export const VarietiesGuide: React.FC = () => {
                     </button>
                   </div>
                 </div>
+
+                {/* Cross-linking to Yield Simulator */}
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const simEl = document.getElementById('simulateur');
+                      if (simEl) {
+                        simEl.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }}
+                    className="w-full py-2.5 px-3 rounded-xl bg-[#E8F4D9] hover:bg-[#D4E8BF] text-[#233416] text-xs font-bold border border-[#8CBE5D]/40 flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <span>Simuler le rendement de la {selectedVariety.name}</span>
+                    <ArrowRight className="w-3.5 h-3.5 text-[#436229]" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
