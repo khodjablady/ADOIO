@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#233416"/>
+      <stop offset="100%" stop-color="#18230F"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F5C05E"/>
+      <stop offset="100%" stop-color="#E6AB3C"/>
+    </linearGradient>
+    <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A4D173"/>
+      <stop offset="100%" stop-color="#567B34"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background Base with subtle border -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
+  <rect x="12" y="12" width="488" height="488" rx="100" fill="none" stroke="#E6AB3C" stroke-opacity="0.3" stroke-width="4"/>
+
+  <!-- Stylized Olive Branch Leaves -->
+  <!-- Left Leaf -->
+  <path d="M 256 240 C 200 160 140 170 110 230 C 130 290 200 280 256 240 Z" fill="url(#leafGrad)"/>
+  <path d="M 125 220 Q 180 230 245 240" stroke="#FAF7F2" stroke-opacity="0.4" stroke-width="3" fill="none"/>
+
+  <!-- Right Leaf -->
+  <path d="M 256 240 C 312 160 372 170 402 230 C 382 290 312 280 256 240 Z" fill="url(#leafGrad)"/>
+  <path d="M 387 220 Q 332 230 267 240" stroke="#FAF7F2" stroke-opacity="0.4" stroke-width="3" fill="none"/>
+
+  <!-- Stem -->
+  <path d="M 256 160 Q 256 210 256 250" stroke="#FAF7F2" stroke-opacity="0.5" stroke-width="6" stroke-linecap="round" fill="none"/>
+
+  <!-- Central Golden Olive Oil Droplet (Symbol of Pure Virgin Extra) -->
+  <path d="M 256 200 C 256 200 176 300 176 360 C 176 404 212 440 256 440 C 300 440 336 404 336 360 C 336 300 256 200 256 200 Z" fill="url(#goldGrad)"/>
+  
+  <!-- Droplet Gloss/Shine Highlight -->
+  <path d="M 226 330 C 220 345 220 375 235 395 C 225 385 220 365 224 345 C 226 335 232 325 240 315 C 233 320 228 325 226 330 Z" fill="#FAF7F2" fill-opacity="0.7"/>
+
+  <!-- Tiny golden spark -->
+  <circle cx="286" cy="340" r="8" fill="#FAF7F2" fill-opacity="0.8"/>
+</svg>

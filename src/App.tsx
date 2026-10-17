@@ -20,6 +20,7 @@ import { FaqOleiculture } from './components/FaqOleiculture';
 import { AdhesionModal } from './components/AdhesionModal';
 import { SitemapModal } from './components/SitemapModal';
 import { Footer } from './components/Footer';
+import { OfflineIndicator } from './components/OfflineIndicator';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('adoio');
@@ -214,6 +215,9 @@ export default function App() {
         onClose={() => setIsSitemapOpen(false)}
         onNavigate={scrollToSection}
       />
+
+      {/* Offline Status & Cached Information Indicator for Isolated Rural Zones */}
+      <OfflineIndicator />
     </div>
   );
 }

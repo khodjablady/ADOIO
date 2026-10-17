@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Menu, X, Droplets, MapPin, Phone, Award, Calculator, BookOpen, Layers, Building2, ListOrdered } from 'lucide-react';
 import { AdoioLogo } from './AdoioLogo';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface NavbarProps {
   activeTab: string;
@@ -126,6 +127,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>Index & Silos</span>
               </button>
             )}
+            <PWAInstallButton variant="navbar" />
             <button
               onClick={onOpenSimulator}
               className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#E8F4D9] hover:bg-[#D4E8BF] text-[#233416] text-xs font-bold border border-[#8CBE5D]/40 transition-colors shadow-xs"
@@ -187,6 +189,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           <div className="pt-4 border-t border-[#E6DEC9] flex flex-col gap-2">
+            <PWAInstallButton variant="banner" className="mb-1" />
             {onOpenSitemap && (
               <button
                 onClick={() => {

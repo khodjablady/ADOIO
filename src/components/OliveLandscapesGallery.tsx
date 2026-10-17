@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Camera, 
   MapPin, 
@@ -16,7 +16,10 @@ import {
   Share2,
   Check,
   Calendar,
-  Layers
+  Layers,
+  Upload,
+  ImageIcon,
+  RefreshCcw
 } from 'lucide-react';
 
 export interface LandscapeItem {
@@ -32,6 +35,9 @@ export interface LandscapeItem {
   description: string;
   agronomicNote: string;
   accentColor: string;
+  imageFileName: string;
+  imageAlt: string;
+  photoCredit: string;
   svgType: 'soummam_valley' | 'mountain_terraces' | 'centennial_tree' | 'harvest_season' | 'aokas_sea' | 'seddouk_plateau';
 }
 
@@ -49,6 +55,9 @@ export const LANDSCAPES_DATA: LandscapeItem[] = [
     description: 'Une vaste mer d’oliviers s’étendant à perte de vue le long des méandres de l’oued Soummam. Ce couloir alluvionnaire fertile bénéficie d’un microclimat doux et de brouillards matinaux réguliers favorisant une floraison généreuse.',
     agronomicNote: 'Zone de haute productivité bénéficiant des alluvions riches. Densité moyenne de 120 à 150 arbres par hectare avec plusieurs huileries modernes à chaîne continue.',
     accentColor: '#3B5323',
+    imageFileName: '1-Plein-akbou.jpg',
+    imageAlt: 'Plaine oléicole d’Akbou et les rangées d’oliviers sur terre labourée rouge',
+    photoCredit: 'Terroir d’Akbou · Vallée de la Soummam',
     svgType: 'soummam_valley'
   },
   {
@@ -64,6 +73,9 @@ export const LANDSCAPES_DATA: LandscapeItem[] = [
     description: 'Chef-d’œuvre d’ingénierie paysanne kabyle, les terrasses empierrées épousent les pentes abruptes pour retenir la terre végétale et les pluies d’orage. L’ensoleillement d’altitude confère aux fruits une concentration oléique exceptionnelle.',
     agronomicNote: 'Pentes supérieures à 35% protégées de l’érosion hydrique. Arbres rustiques produisant une huile aux notes herbacées intenses et forte teneur en polyphénols.',
     accentColor: '#6B8E23',
+    imageFileName: '2-Banquettes.jpg',
+    imageAlt: 'Banquettes en pierre sèche et terrasses d’oliviers plongeant vers la mer à Chemini',
+    photoCredit: 'Terrasses de Chemini · Versants du Djurdjura',
     svgType: 'mountain_terraces'
   },
   {
@@ -79,6 +91,9 @@ export const LANDSCAPES_DATA: LandscapeItem[] = [
     description: 'Des troncs sculpturaux et torsadés de plus de 400 ans, témoins vivants de générations d’oléiculteurs. Malgré les sécheresses et les hivers rigoureux, ces arbres vénérables continuent de porter des récoltes régulières grâce à leur enracinement profond.',
     agronomicNote: 'Système racinaire explorant le sous-sol calcaire jusqu’à 6 mètres de profondeur. Cœur historique du mouvement coopératif oléicole de l’ADOIO.',
     accentColor: '#8CBE5D',
+    imageFileName: '3-Verger-Seddouk.jpg',
+    imageAlt: 'Olivier multiséculaire vénérable aux troncs torsadés à Seddouk Ouffella',
+    photoCredit: 'Olivier Centenaire · Seddouk Ouffella',
     svgType: 'centennial_tree'
   },
   {
@@ -94,6 +109,9 @@ export const LANDSCAPES_DATA: LandscapeItem[] = [
     description: 'En novembre et décembre, les collines s’animent des chants traditionnels lors de la « Tiwizi » (entraide communautaire). De grands filets verts sont déployés sous le houppier argenté pour cueillir les olives sans contact avec la terre.',
     agronomicNote: 'Généralisation des filets et caisses ajourées sous l’impulsion de l’ADOIO pour garantir des taux d’acidité Vierge Extra inférieurs à 0,4%.',
     accentColor: '#B47A16',
+    imageFileName: '4-Cueillette.jpg',
+    imageAlt: 'Récolte traditionnelle des olives avec grand filet étalé sous l’arbre à Tazmalt',
+    photoCredit: 'Campagne de récolte sur filets · Tazmalt',
     svgType: 'harvest_season'
   },
   {
@@ -109,6 +127,9 @@ export const LANDSCAPES_DATA: LandscapeItem[] = [
     description: 'Là où les montagnes calcaires plongent dans le bleu de la Méditerranée. Les brises marines chargées d’iode apportent une fraîcheur tempérée qui prolonge la maturation des drupes jusqu’à la mi-janvier.',
     agronomicNote: 'Influence maritime réduisant les amplitudes thermiques extrêmes. Huiles douces avec des notes subtiles de pomme verte et d’amande fraîche.',
     accentColor: '#2563EB',
+    imageFileName: '5-Olive-cote.jpg',
+    imageAlt: 'Oliveraies côtières d’Aokas et Cap Carbon avec singe magot sur l’olivier face à la mer',
+    photoCredit: 'Corniche de Béjaïa · Aokas & Cap Carbon',
     svgType: 'aokas_sea'
   },
   {
@@ -124,6 +145,9 @@ export const LANDSCAPES_DATA: LandscapeItem[] = [
     description: 'Un paysage vallonné de collines moutonnantes où l’olivier cohabite harmonieusement avec le figuier de Barbarie et les amandiers. Ce terroir bénéficie d’un excellent drainage naturel des sols sablo-argileux.',
     agronomicNote: 'Densité de 100 arbres/ha conduite en gobelet traditionnel aéré pour maximiser l’interception de la lumière solaire.',
     accentColor: '#436229',
+    imageFileName: '6-Verger-sidi-aich.jpg',
+    imageAlt: 'Vue panoramique sur le verger oléicole de Sidi-Aïch et la montagne conique en arrière-plan',
+    photoCredit: 'Plateau oléicole de Sidi-Aïch · Moyenne Soummam',
     svgType: 'seddouk_plateau'
   }
 ];
@@ -369,10 +393,104 @@ const LandscapeArtwork: React.FC<{ type: LandscapeItem['svgType']; title: string
   }
 };
 
+interface LandscapePhotoProps {
+  item: LandscapeItem;
+  className?: string;
+  isLarge?: boolean;
+  customSrc?: string;
+}
+
+const LandscapePhoto: React.FC<LandscapePhotoProps> = ({ 
+  item, 
+  className = '', 
+  isLarge = false,
+  customSrc 
+}) => {
+  const [hasError, setHasError] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const primaryPath = customSrc || `/images/paysages/${item.imageFileName}`;
+  const [currentPath, setCurrentPath] = useState(primaryPath);
+
+  useEffect(() => {
+    setCurrentPath(customSrc || `/images/paysages/${item.imageFileName}`);
+    setHasError(false);
+    setIsLoaded(false);
+  }, [item.imageFileName, customSrc]);
+
+  const handleImageError = () => {
+    if (currentPath === `/images/paysages/${item.imageFileName}` && !customSrc) {
+      setCurrentPath(`/${item.imageFileName}`);
+    } else {
+      setHasError(true);
+    }
+  };
+
+  if (hasError && !customSrc) {
+    return (
+      <div className="w-full h-full relative">
+        <LandscapeArtwork type={item.svgType} title={item.title} />
+        <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-[#18230F]/80 text-[#FAF7F2] text-[10px] backdrop-blur-xs flex items-center gap-1 border border-white/10">
+          <ImageIcon className="w-3 h-3 text-[#E6AB3C]" />
+          <span>Illustration terroir</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`w-full h-full relative overflow-hidden bg-[#18230F] ${className}`}>
+      {!isLoaded && (
+        <div className="absolute inset-0 bg-[#233416] animate-pulse flex items-center justify-center">
+          <Camera className="w-6 h-6 text-[#8CBE5D]/40" />
+        </div>
+      )}
+      <img
+        src={currentPath}
+        alt={item.imageAlt}
+        className={`w-full h-full object-cover transition-transform duration-700 ${
+          isLoaded ? 'opacity-100' : 'opacity-0'
+        } ${!isLarge ? 'group-hover:scale-105' : ''}`}
+        onLoad={() => setIsLoaded(true)}
+        onError={handleImageError}
+        referrerPolicy="no-referrer"
+        loading={isLarge ? 'eager' : 'lazy'}
+      />
+    </div>
+  );
+};
+
 export const OliveLandscapesGallery: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'soummam' | 'terrasses' | 'centenaires' | 'recolte'>('all');
   const [activeLandscape, setActiveLandscape] = useState<LandscapeItem | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const [customImages, setCustomImages] = useState<Record<string, string>>(() => {
+    try {
+      const saved = localStorage.getItem('adoio_custom_landscape_photos');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const handleCustomImageUpload = (landscapeId: string, file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (dataUrl) {
+        setCustomImages(prev => {
+          const next = { ...prev, [landscapeId]: dataUrl };
+          try {
+            localStorage.setItem('adoio_custom_landscape_photos', JSON.stringify(next));
+          } catch {
+            // storage quota fallback
+          }
+          return next;
+        });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const filteredLandscapes = LANDSCAPES_DATA.filter(
     item => selectedCategory === 'all' || item.category === selectedCategory
@@ -504,12 +622,15 @@ export const OliveLandscapesGallery: React.FC = () => {
                 key={landscape.id}
                 className="group bg-white rounded-3xl border border-[#E6DEC9] overflow-hidden shadow-xs hover:shadow-md hover:border-[#8CBE5D] transition-all duration-300 flex flex-col justify-between"
               >
-                {/* Visual Artwork Thumbnail */}
+                {/* Visual Photo Thumbnail */}
                 <div 
                   className="relative aspect-[16/10] overflow-hidden cursor-pointer bg-[#233416]"
                   onClick={() => setActiveLandscape(landscape)}
                 >
-                  <LandscapeArtwork type={landscape.svgType} title={landscape.title} />
+                  <LandscapePhoto 
+                    item={landscape} 
+                    customSrc={customImages[landscape.id]} 
+                  />
 
                   {/* Top Badges */}
                   <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 pointer-events-none">
@@ -521,12 +642,35 @@ export const OliveLandscapesGallery: React.FC = () => {
                     </span>
                   </div>
 
-                  {/* Hover Overlay with Magnify Button */}
-                  <div className="absolute inset-0 bg-[#18230F]/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                    <span className="px-4 py-2 rounded-xl bg-white text-[#18230F] text-xs font-bold flex items-center gap-2 shadow-lg transform -translate-y-2 group-hover:translate-y-0 transition-transform">
-                      <Maximize2 className="w-4 h-4 text-[#31491E]" />
-                      <span>Explorer en grand</span>
+                  {/* Hover Overlay with Magnify Button & Quick Replace Photo */}
+                  <div className="absolute inset-0 bg-[#18230F]/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <span className="px-3 py-1.5 rounded-xl bg-white text-[#18230F] text-xs font-bold flex items-center gap-1.5 shadow-lg transform -translate-y-1 group-hover:translate-y-0 transition-transform">
+                      <Maximize2 className="w-3.5 h-3.5 text-[#31491E]" />
+                      <span>Agrandir</span>
                     </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        document.getElementById(`upload-${landscape.id}`)?.click();
+                      }}
+                      className="px-2.5 py-1.5 rounded-xl bg-[#233416]/90 hover:bg-[#233416] text-[#FAF7F2] text-xs font-bold shadow-lg border border-[#8CBE5D]/30 transition-all flex items-center gap-1.5 cursor-pointer transform -translate-y-1 group-hover:translate-y-0"
+                      title="Remplacer par une autre photo locale"
+                    >
+                      <Camera className="w-3.5 h-3.5 text-[#E6AB3C]" />
+                      <span className="text-[11px]">Remplacer</span>
+                    </button>
+                    <input
+                      id={`upload-${landscape.id}`}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        if (e.target.files?.[0]) {
+                          handleCustomImageUpload(landscape.id, e.target.files[0]);
+                        }
+                      }}
+                    />
                   </div>
                 </div>
 
@@ -638,6 +782,25 @@ export const OliveLandscapesGallery: React.FC = () => {
 
               <div className="flex items-center gap-2">
                 <button
+                  onClick={() => document.getElementById(`upload-modal-${activeLandscape.id}`)?.click()}
+                  className="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-[#FAF7F2] text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title="Importer ou remplacer cette photo par une image locale"
+                >
+                  <Camera className="w-3.5 h-3.5 text-[#E6AB3C]" />
+                  <span className="hidden sm:inline">Changer la photo</span>
+                </button>
+                <input
+                  id={`upload-modal-${activeLandscape.id}`}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) {
+                      handleCustomImageUpload(activeLandscape.id, e.target.files[0]);
+                    }
+                  }}
+                />
+                <button
                   onClick={handlePrev}
                   className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-[#FAF7F2] transition-colors cursor-pointer"
                   title="Paysage précédent"
@@ -663,9 +826,22 @@ export const OliveLandscapesGallery: React.FC = () => {
 
             {/* Modal Body */}
             <div className="overflow-y-auto flex-1">
-              {/* Artwork Full Display */}
+              {/* Photo Full Display */}
               <div className="w-full aspect-[16/9] sm:aspect-[21/9] bg-[#18230F] relative">
-                <LandscapeArtwork type={activeLandscape.svgType} title={activeLandscape.title} />
+                <LandscapePhoto 
+                  item={activeLandscape} 
+                  customSrc={customImages[activeLandscape.id]} 
+                  isLarge 
+                />
+                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2 pointer-events-none">
+                  <div className="px-3 py-1 rounded-xl bg-black/60 backdrop-blur-md text-white text-xs flex items-center gap-2 border border-white/10">
+                    <Camera className="w-3.5 h-3.5 text-[#E6AB3C]" />
+                    <span>{activeLandscape.photoCredit}</span>
+                  </div>
+                  <span className="text-[11px] font-mono text-white/80 bg-black/40 px-2.5 py-0.5 rounded-lg backdrop-blur-xs">
+                    {activeLandscape.imageFileName}
+                  </span>
+                </div>
               </div>
 
               <div className="p-6 sm:p-8 space-y-6">
