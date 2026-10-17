@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, X, Droplets, MapPin, Phone, Award, Calculator, BookOpen, Layers, Building2, ListOrdered } from 'lucide-react';
+import { Menu, X, Droplets, MapPin, Phone, Award, Calculator, BookOpen, Layers, Building2, ListOrdered, Bell } from 'lucide-react';
 import { AdoioLogo } from './AdoioLogo';
 import { PWAInstallButton } from './PWAInstallButton';
 
@@ -26,7 +26,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'annuaire', label: 'Huileries & Moulins', icon: Building2, sub: '448 unités' },
     { id: 'varietes', label: 'Guide Variétal', icon: Droplets, sub: 'Chemlal, Bouchouk...' },
     { id: 'degustation', label: 'Qualité & COI', icon: Award, sub: 'Normes & Sensoriel' },
-    { id: 'pratiques', label: 'Bonnes Pratiques', icon: BookOpen, sub: 'Calendrier des soins' },
+    { id: 'pratiques', label: 'Bonnes Pratiques', icon: BookOpen, sub: 'Météo & Alertes Gel' },
   ];
 
   const handleNavClick = (id: string) => {
@@ -127,6 +127,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>Index & Silos</span>
               </button>
             )}
+            <button
+              onClick={() => handleNavClick('pratiques')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-950 text-xs font-semibold border border-amber-200/80 transition-colors cursor-pointer"
+              title="Centre de vigilance agricole et alertes météo push"
+            >
+              <Bell className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+              <span>Vigilance Gel</span>
+            </button>
             <PWAInstallButton variant="navbar" />
             <button
               onClick={onOpenSimulator}
@@ -190,6 +198,16 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <div className="pt-4 border-t border-[#E6DEC9] flex flex-col gap-2">
             <PWAInstallButton variant="banner" className="mb-1" />
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                handleNavClick('pratiques');
+              }}
+              className="w-full py-2.5 px-4 rounded-lg bg-amber-50 text-amber-950 text-sm font-bold flex items-center justify-center gap-2 border border-amber-200"
+            >
+              <Bell className="w-4 h-4 text-amber-600 animate-pulse" />
+              <span>Vigilance Gel & Alertes Push Météo</span>
+            </button>
             {onOpenSitemap && (
               <button
                 onClick={() => {

@@ -119,8 +119,8 @@ export const SILOS_CONFIG: SiloItem[] = [
       {
         id: 'pratiques',
         slug: 'calendrier-agronomique',
-        title: 'Météo & Calendrier Saisonnier',
-        description: 'Météo en direct à Béjaïa, indice récolte, guide technique et taille.',
+        title: 'Météo, Alertes Gel & Calendrier',
+        description: 'Météo en direct à Béjaïa, alertes push gelée du Service Worker, indice récolte et taille.',
       },
       {
         id: 'faq-oleiculture',

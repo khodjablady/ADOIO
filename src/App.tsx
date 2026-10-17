@@ -48,6 +48,8 @@ export default function App() {
       'outils-pratiques': 'simulateur',
       'simulateur-recolte': 'simulateur',
       'calendrier-agronomique': 'pratiques',
+      'alertes-meteo': 'alertes-meteo',
+      'alertes-gel': 'alertes-meteo',
       'faq-pratiques': 'faq-oleiculture',
       'faq': 'faq-oleiculture',
     };

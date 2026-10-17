@@ -17,7 +17,9 @@ import {
   MapPin, 
   ShieldCheck, 
   Leaf, 
-  Gauge
+  Gauge,
+  Bell,
+  ShieldAlert
 } from 'lucide-react';
 
 interface WeatherZone {
@@ -260,6 +262,16 @@ export const BejaiaHarvestWeatherWidget: React.FC = () => {
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse ml-0.5" title="En direct Open-Meteo" />
             )}
           </div>
+
+          <a
+            href="#alertes-meteo"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#E8F4D9] hover:bg-[#D4E8BF] text-[#233416] text-xs font-bold border border-[#8CBE5D]/50 transition-colors shadow-2xs"
+            title="Consulter le centre de vigilance et configurer les alertes push"
+          >
+            <Bell className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+            <span className="hidden sm:inline">Vigilance & Push Gel</span>
+            <span className="sm:hidden">Alertes</span>
+          </a>
 
           <button
             onClick={handleRefresh}

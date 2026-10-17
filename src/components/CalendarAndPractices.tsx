@@ -12,6 +12,7 @@ import {
   Download 
 } from 'lucide-react';
 import { BejaiaHarvestWeatherWidget } from './BejaiaHarvestWeatherWidget';
+import { WeatherAlertCenter } from './WeatherAlertCenter';
 
 export const CalendarAndPractices: React.FC = () => {
   const [selectedSeasonIdx, setSelectedSeasonIdx] = useState<number>(0);
@@ -50,6 +51,9 @@ export const CalendarAndPractices: React.FC = () => {
 
         {/* Real-time Agricultural Weather Widget for Harvest Planning */}
         <BejaiaHarvestWeatherWidget />
+
+        {/* Agricultural Weather & Push Notification Alerts Center */}
+        <WeatherAlertCenter className="mb-10" />
 
         {/* 4 Seasons Tabs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
