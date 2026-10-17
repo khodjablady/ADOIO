@@ -106,7 +106,7 @@ export const SILOS_CONFIG: SiloItem[] = [
     id: 'silo-outils',
     slug: 'outils-pratiques',
     title: 'Outils & Bonnes Pratiques',
-    subtitle: 'Simulateur Recharts & Calendrier',
+    subtitle: 'Simulateurs de Rendement & Fertilisation',
     icon: Calculator,
     color: '#436229',
     subsections: [
@@ -115,6 +115,12 @@ export const SILOS_CONFIG: SiloItem[] = [
         slug: 'simulateur-recolte',
         title: 'Simulateur de Rendement & Carbone',
         description: 'Calcul prévisionnel multi-saisons Recharts et bilan carbone de l’oliveraie.',
+      },
+      {
+        id: 'fertilisation',
+        slug: 'calculateur-fertilisation',
+        title: 'Calculateur Fertilisation Organique',
+        description: 'Besoins en compost et fumure selon la taille de la parcelle et l’âge des oliviers.',
       },
       {
         id: 'pratiques',

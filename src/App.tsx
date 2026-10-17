@@ -14,6 +14,7 @@ import { AdoioSection } from './components/AdoioSection';
 import { MillsDirectory } from './components/MillsDirectory';
 import { VarietiesGuide } from './components/VarietiesGuide';
 import { YieldSimulator } from './components/YieldSimulator';
+import { OrganicFertilizationCalculator } from './components/OrganicFertilizationCalculator';
 import { TastingAndQuality } from './components/TastingAndQuality';
 import { CalendarAndPractices } from './components/CalendarAndPractices';
 import { FaqOleiculture } from './components/FaqOleiculture';
@@ -47,6 +48,8 @@ export default function App() {
       'degustation-qualite': 'degustation',
       'outils-pratiques': 'simulateur',
       'simulateur-recolte': 'simulateur',
+      'calculateur-fertilisation': 'fertilisation',
+      'fertilisation': 'fertilisation',
       'calendrier-agronomique': 'pratiques',
       'alertes-meteo': 'alertes-meteo',
       'alertes-gel': 'alertes-meteo',
@@ -84,6 +87,7 @@ export default function App() {
       'varietes',
       'degustation',
       'simulateur',
+      'fertilisation',
       'pratiques',
       'faq-oleiculture',
     ];
@@ -186,6 +190,11 @@ export default function App() {
         <div id="outils-pratiques" className="scroll-mt-36">
           {/* Harvest & Multi-Season Yield Simulator with Carbon Footprint */}
           <YieldSimulator />
+
+          {/* Organic Fertilization Calculator based on parcel size & olive tree age */}
+          <div id="fertilisation" className="scroll-mt-36 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <OrganicFertilizationCalculator />
+          </div>
 
           {/* Seasonal Calendar & Best Agricultural Practices */}
           <CalendarAndPractices />

@@ -19,7 +19,8 @@ import {
   Recycle,
   Sun,
   Flame,
-  Wind
+  Wind,
+  Sprout
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -1417,6 +1418,17 @@ export const YieldSimulator: React.FC = () => {
                     ? "Exemplaire ! Votre verger incarne l'oléiculture régénératrice kabyle. Il préserve la biodiversité du sol et valorise les sous-produits locaux."
                     : "Pour maximiser la séquestration et obtenir le label Vierge Extra Éco-responsable, l'ADOIO recommande de remplacer les labours profonds par un couvert végétal naturel fauché au printemps."}
                 </p>
+              </div>
+
+              {/* Direct Link to Silo 4 Organic Fertilization Calculator */}
+              <div className="pt-2">
+                <a
+                  href="#fertilisation"
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-[#8CBE5D] hover:bg-[#9ED46D] text-[#18230F] text-xs font-bold transition-all shadow-xs"
+                >
+                  <Sprout className="w-4 h-4 text-[#18230F]" />
+                  <span>Calculer vos Besoins en Fertilisation Organique</span>
+                </a>
               </div>
             </div>
           </div>

@@ -9,7 +9,8 @@ import {
   BookOpen, 
   Leaf, 
   Clock, 
-  Download 
+  Download,
+  ArrowRight 
 } from 'lucide-react';
 import { BejaiaHarvestWeatherWidget } from './BejaiaHarvestWeatherWidget';
 import { WeatherAlertCenter } from './WeatherAlertCenter';
@@ -176,11 +177,20 @@ export const CalendarAndPractices: React.FC = () => {
               </p>
             </div>
 
-            <div className="bg-[#FAF7F2]/10 p-4 rounded-xl border border-[#FAF7F2]/10 space-y-2">
-              <span className="font-bold text-[#E6AB3C] block">3. Compostage & Fertilisation</span>
-              <p className="leading-relaxed">
-                Mélangés aux fumiers locaux et aux feuilles d'olivier, les grignons épuisés créent un compost riche en humus restitué aux oliveraies pour régénérer les sols.
-              </p>
+            <div className="bg-[#FAF7F2]/10 p-4 rounded-xl border border-[#FAF7F2]/10 space-y-2 flex flex-col justify-between">
+              <div>
+                <span className="font-bold text-[#E6AB3C] block">3. Compostage & Fertilisation</span>
+                <p className="leading-relaxed">
+                  Mélangés aux fumiers locaux et aux feuilles d'olivier, les grignons épuisés créent un compost riche en humus restitué aux oliveraies pour régénérer les sols.
+                </p>
+              </div>
+              <a
+                href="#fertilisation"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#8CBE5D] hover:text-[#FAF7F2] transition-colors mt-2"
+              >
+                <span>Calculer vos doses de compost</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </a>
             </div>
           </div>
         </div>
