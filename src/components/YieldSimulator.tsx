@@ -34,6 +34,7 @@ import {
   Legend,
   ReferenceLine
 } from 'recharts';
+import { OptimalHarvestAlertSystem } from './OptimalHarvestAlertSystem';
 
 export const YieldSimulator: React.FC = () => {
   const [inputMode, setInputMode] = useState<'weight' | 'trees'>('weight');
@@ -609,6 +610,12 @@ export const YieldSimulator: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Personalized Harvest Optimal Window Alerts System (PWA Service Worker) */}
+        <OptimalHarvestAlertSystem 
+          selectedVariety={selectedVariety} 
+          onSelectVariety={setSelectedVariety} 
+        />
 
         {/* Multi-Season Recharts Section */}
         <div className="mt-12 bg-white rounded-3xl border border-[#E6DEC9] p-6 sm:p-8 shadow-xs space-y-8">

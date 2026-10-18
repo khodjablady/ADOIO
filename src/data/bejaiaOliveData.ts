@@ -60,6 +60,118 @@ export const BEJAIA_GLOBAL_STATS = {
   registeredFarmers: 24500,
 };
 
+export interface HistoricalCampaignData {
+  campaign: string;
+  shortYear: string;
+  year: number;
+  oilProductionLiters: number;
+  oilProductionMillionLiters: number;
+  olivesCrushedQuintals: number;
+  averageYieldLitersPerQx: number;
+  extraVirginSharePercent: number;
+  tableOlivesQuintals: number;
+  activeMillsCampaign: number;
+  modernMillsActive: number;
+  rainfallMm: number;
+  climateSummary: string;
+  agronomicHighlight: string;
+  cycleType: 'on' | 'off' | 'equilibre';
+  marketPriceDzdPerLiter: number;
+}
+
+export const BEJAIA_HISTORICAL_PRODUCTION_5Y: HistoricalCampaignData[] = [
+  {
+    campaign: "2020 / 2021",
+    shortYear: "2020-21",
+    year: 2021,
+    oilProductionLiters: 19500000,
+    oilProductionMillionLiters: 19.5,
+    olivesCrushedQuintals: 1040000,
+    averageYieldLitersPerQx: 18.75,
+    extraVirginSharePercent: 24,
+    tableOlivesQuintals: 42000,
+    activeMillsCampaign: 418,
+    modernMillsActive: 145,
+    rainfallMm: 540,
+    climateSummary: "Automne doux avec pluies tardives en Soummam. Démarrage de cueillette échelonné.",
+    agronomicHighlight: "Reprise post-sécheresse, début de sensibilisation aux filets de cueillette par l'ADOIO.",
+    cycleType: "equilibre",
+    marketPriceDzdPerLiter: 750
+  },
+  {
+    campaign: "2021 / 2022",
+    shortYear: "2021-22",
+    year: 2022,
+    oilProductionLiters: 24800000,
+    oilProductionMillionLiters: 24.8,
+    olivesCrushedQuintals: 1280000,
+    averageYieldLitersPerQx: 19.38,
+    extraVirginSharePercent: 29,
+    tableOlivesQuintals: 51000,
+    activeMillsCampaign: 432,
+    modernMillsActive: 160,
+    rainfallMm: 610,
+    climateSummary: "Année d'alternance haute ('Année On') avec excellente floraison printanière.",
+    agronomicHighlight: "Volumes records dans les bassins d'Akbou et Seddouk. Saturation temporaire des moulins.",
+    cycleType: "on",
+    marketPriceDzdPerLiter: 700
+  },
+  {
+    campaign: "2022 / 2023",
+    shortYear: "2022-23",
+    year: 2023,
+    oilProductionLiters: 16900000,
+    oilProductionMillionLiters: 16.9,
+    olivesCrushedQuintals: 935000,
+    averageYieldLitersPerQx: 18.07,
+    extraVirginSharePercent: 35,
+    tableOlivesQuintals: 36000,
+    activeMillsCampaign: 425,
+    modernMillsActive: 172,
+    rainfallMm: 420,
+    climateSummary: "Alternance basse ('Année Off') combinée à un déficit pluviométrique estival marqué.",
+    agronomicHighlight: "Fruits de petit calibre mais concentration record en polyphénols et antioxydants naturels.",
+    cycleType: "off",
+    marketPriceDzdPerLiter: 850
+  },
+  {
+    campaign: "2023 / 2024",
+    shortYear: "2023-24",
+    year: 2024,
+    oilProductionLiters: 22400000,
+    oilProductionMillionLiters: 22.4,
+    olivesCrushedQuintals: 1140000,
+    averageYieldLitersPerQx: 19.65,
+    extraVirginSharePercent: 42,
+    tableOlivesQuintals: 48000,
+    activeMillsCampaign: 440,
+    modernMillsActive: 184,
+    rainfallMm: 580,
+    climateSummary: "Pluies salvatrices en octobre-novembre réhydratant les drupes avant cueillette.",
+    agronomicHighlight: "Bond qualitatif majeur : généralisation des caisses plastiques ajourées et délais < 48h.",
+    cycleType: "on",
+    marketPriceDzdPerLiter: 950
+  },
+  {
+    campaign: "2024 / 2025",
+    shortYear: "2024-25",
+    year: 2025,
+    oilProductionLiters: 25600000,
+    oilProductionMillionLiters: 25.6,
+    olivesCrushedQuintals: 1260000,
+    averageYieldLitersPerQx: 20.32,
+    extraVirginSharePercent: 49,
+    tableOlivesQuintals: 54000,
+    activeMillsCampaign: 448,
+    modernMillsActive: 192,
+    rainfallMm: 645,
+    climateSummary: "Hiver froid assainissant, floraison protégée du sirocco et pluviométrie automnale idéale.",
+    agronomicHighlight: "Campagne d'excellence : près de 50% de Vierge Extra, acidité moyenne < 0,38% dans les lignes continues.",
+    cycleType: "on",
+    marketPriceDzdPerLiter: 920
+  }
+];
+
 export const ADOIO_INFO = {
   acronym: "ADOIO",
   fullName: "Association pour le Développement de l'Oléiculture et des Industries Oléicoles de la Wilaya de Béjaïa",
