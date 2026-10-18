@@ -48,6 +48,8 @@ export default function App() {
       'degustation-qualite': 'degustation',
       'outils-pratiques': 'simulateur',
       'simulateur-recolte': 'simulateur',
+      'alertes-recolte': 'alertes-recolte-optimale',
+      'alertes-recolte-optimale': 'alertes-recolte-optimale',
       'calculateur-fertilisation': 'fertilisation',
       'fertilisation': 'fertilisation',
       'calendrier-agronomique': 'pratiques',

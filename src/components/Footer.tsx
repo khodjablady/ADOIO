@@ -164,6 +164,22 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick, onOpenAdhesion, onOp
                   </li>
                   <li>
                     <button
+                      onClick={() => onNavClick('fertilisation')}
+                      className="hover:text-white transition-colors cursor-pointer text-left"
+                    >
+                      Calculateur Fertilisation Organique
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      onClick={() => onNavClick('alertes-recolte')}
+                      className="hover:text-white transition-colors cursor-pointer text-left"
+                    >
+                      Alertes Récolte Optimale PWA
+                    </button>
+                  </li>
+                  <li>
+                    <button
                       onClick={() => onNavClick('pratiques')}
                       className="hover:text-white transition-colors cursor-pointer text-left"
                     >

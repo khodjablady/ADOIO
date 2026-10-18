@@ -114,7 +114,7 @@ export const SILOS_CONFIG: SiloItem[] = [
         id: 'simulateur',
         slug: 'simulateur-recolte',
         title: 'Simulateur de Rendement & Carbone',
-        description: 'Calcul prévisionnel multi-saisons Recharts et bilan carbone de l’oliveraie.',
+        description: 'Calcul prévisionnel multi-saisons Recharts, alertes récolte PWA et bilan carbone.',
       },
       {
         id: 'fertilisation',
