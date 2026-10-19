@@ -84,7 +84,7 @@ export const SILOS_CONFIG: SiloItem[] = [
     id: 'silo-varietes',
     slug: 'varietes-degustation',
     title: 'Variétés & Dégustation',
-    subtitle: 'Patrimoine génétique & Normes COI',
+    subtitle: 'Génétique, Normes COI & Concours 2026',
     icon: Droplets,
     color: '#E6AB3C',
     subsections: [
@@ -100,13 +100,19 @@ export const SILOS_CONFIG: SiloItem[] = [
         title: 'Dégustation & Normes COI',
         description: 'Critères organoleptiques, acidité Vierge Extra et bienfaits nutritionnels.',
       },
+      {
+        id: 'concours',
+        slug: 'concours-huile',
+        title: 'Concours Meilleure Huile 2026',
+        description: 'Fête de l’Olive, règlement COI, analyses chimiques et formulaire officiel.',
+      },
     ],
   },
   {
     id: 'silo-outils',
     slug: 'outils-pratiques',
     title: 'Outils & Bonnes Pratiques',
-    subtitle: 'Simulateurs de Rendement & Fertilisation',
+    subtitle: 'Simulateurs, Fertilisation & Irrigation',
     icon: Calculator,
     color: '#436229',
     subsections: [
@@ -121,6 +127,12 @@ export const SILOS_CONFIG: SiloItem[] = [
         slug: 'calculateur-fertilisation',
         title: 'Calculateur Fertilisation Organique',
         description: 'Besoins en compost et fumure selon la taille de la parcelle et l’âge des oliviers.',
+      },
+      {
+        id: 'irrigation',
+        slug: 'guide-irrigation',
+        title: 'Guide & Calculateur d’Irrigation',
+        description: 'Besoins en eau selon l’âge des oliviers et le type de sol kabyle (RDI ADOIO).',
       },
       {
         id: 'pratiques',

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Droplets, MapPin, Sparkles, ChevronRight, Calculator, ShieldCheck } from 'lucide-react';
+import { Search, Droplets, MapPin, Sparkles, ChevronRight, Calculator, ShieldCheck, Trophy } from 'lucide-react';
 import { BEJAIA_GLOBAL_STATS } from '../data/bejaiaOliveData';
 import { Jubile25Badge } from './Jubile25Badge';
 
@@ -9,6 +9,7 @@ interface HeroSectionProps {
   onExploreMills: () => void;
   onExploreAdoio: () => void;
   onExploreMap?: () => void;
+  onExploreCompetition?: () => void;
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({
@@ -17,6 +18,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   onExploreMills,
   onExploreAdoio,
   onExploreMap,
+  onExploreCompetition,
 }) => {
   const [localSearch, setLocalSearch] = useState('');
 
@@ -41,6 +43,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             <span className="w-2 h-2 rounded-full bg-[#E6AB3C]"></span>
             <span>Wilaya de Béjaïa · Terroir de la Vallée de la Soummam</span>
           </div>
+          {onExploreCompetition && (
+            <button
+              onClick={onExploreCompetition}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E6AB3C] hover:bg-[#D09222] text-[#18230F] text-xs font-bold transition-all shadow-xs cursor-pointer hover:scale-105"
+            >
+              <Trophy className="w-3.5 h-3.5 text-[#18230F]" />
+              <span>Concours Meilleure Huile 2026 : Inscriptions</span>
+            </button>
+          )}
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#8CBE5D]/20 text-[#B0D984] text-xs font-medium">
             <ShieldCheck className="w-3.5 h-3.5 text-[#E6AB3C]" />
             <span>Filière Oléicole & Labellisation Terroir</span>
@@ -127,6 +138,16 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 <Calculator className="w-4 h-4 text-[#E6AB3C]" />
                 <span>Simulateur de Rendement</span>
               </button>
+
+              {onExploreCompetition && (
+                <button
+                  onClick={onExploreCompetition}
+                  className="px-5 py-3 rounded-xl bg-[#FAF7F2]/15 hover:bg-[#FAF7F2]/25 text-[#FAF7F2] font-semibold text-sm border border-[#FAF7F2]/20 backdrop-blur-sm transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <Trophy className="w-4 h-4 text-[#E6AB3C]" />
+                  <span>Concours 2026</span>
+                </button>
+              )}
 
               <button
                 onClick={onExploreAdoio}

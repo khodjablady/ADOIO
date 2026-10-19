@@ -646,6 +646,21 @@ export const OrganicFertilizationCalculator: React.FC = () => {
             <div className="mt-2 pt-2 border-t border-[#E6DEC9] text-[11px] text-[#567B34] italic">
               Note du terroir : {FERTILIZERS_DATA[fertilizerType].adoioNote}
             </div>
+
+            {/* Direct CTA to Irrigation Guide */}
+            <div className="pt-3 border-t border-[#E6DEC9] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-xs text-[#31491E]">
+                <Droplets className="w-4 h-4 text-[#567B34]" />
+                <span>Complétez votre bilan avec le <strong>Guide d'Irrigation Raisonnée</strong></span>
+              </div>
+              <a
+                href="#irrigation"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#31491E] text-white text-xs font-bold hover:bg-[#233416] transition-colors shrink-0"
+              >
+                <span>Calculer les besoins en eau</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </a>
+            </div>
           </div>
 
         </div>

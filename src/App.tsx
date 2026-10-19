@@ -15,7 +15,9 @@ import { MillsDirectory } from './components/MillsDirectory';
 import { VarietiesGuide } from './components/VarietiesGuide';
 import { YieldSimulator } from './components/YieldSimulator';
 import { OrganicFertilizationCalculator } from './components/OrganicFertilizationCalculator';
+import { IrrigationGuide } from './components/IrrigationGuide';
 import { TastingAndQuality } from './components/TastingAndQuality';
+import { OilCompetitionSection } from './components/OilCompetitionSection';
 import { CalendarAndPractices } from './components/CalendarAndPractices';
 import { FaqOleiculture } from './components/FaqOleiculture';
 import { AdhesionModal } from './components/AdhesionModal';
@@ -46,12 +48,19 @@ export default function App() {
       'varietes-degustation': 'varietes',
       'guide-varietal': 'varietes',
       'degustation-qualite': 'degustation',
+      'concours': 'concours',
+      'concours-huile': 'concours',
+      'meilleure-huile': 'concours',
+      'fete-olive': 'concours',
       'outils-pratiques': 'simulateur',
       'simulateur-recolte': 'simulateur',
       'alertes-recolte': 'alertes-recolte-optimale',
       'alertes-recolte-optimale': 'alertes-recolte-optimale',
       'calculateur-fertilisation': 'fertilisation',
       'fertilisation': 'fertilisation',
+      'guide-irrigation': 'irrigation',
+      'irrigation': 'irrigation',
+      'besoins-eau': 'irrigation',
       'calendrier-agronomique': 'pratiques',
       'alertes-meteo': 'alertes-meteo',
       'alertes-gel': 'alertes-meteo',
@@ -88,8 +97,10 @@ export default function App() {
       'annuaire',
       'varietes',
       'degustation',
+      'concours',
       'simulateur',
       'fertilisation',
+      'irrigation',
       'pratiques',
       'faq-oleiculture',
     ];
@@ -148,6 +159,7 @@ export default function App() {
           onExploreMills={() => scrollToSection('annuaire')}
           onExploreAdoio={() => scrollToSection('adoio')}
           onExploreMap={() => scrollToSection('carte-interactive')}
+          onExploreCompetition={() => scrollToSection('concours')}
         />
 
         {/* ============================================================ */}
@@ -184,6 +196,9 @@ export default function App() {
 
           {/* Tasting & Quality Standards (COI Norms, Acidity, Sensory) */}
           <TastingAndQuality />
+
+          {/* Annual Competition for the Best Olive Oil of the Season (Fête de l'Olive) */}
+          <OilCompetitionSection />
         </div>
 
         {/* ============================================================ */}
@@ -197,6 +212,9 @@ export default function App() {
           <div id="fertilisation" className="scroll-mt-36 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <OrganicFertilizationCalculator />
           </div>
+
+          {/* Interactive Irrigation Guide & Water Needs Simulator */}
+          <IrrigationGuide />
 
           {/* Seasonal Calendar & Best Agricultural Practices */}
           <CalendarAndPractices />

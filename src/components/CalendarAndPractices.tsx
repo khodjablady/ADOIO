@@ -184,13 +184,22 @@ export const CalendarAndPractices: React.FC = () => {
                   Mélangés aux fumiers locaux et aux feuilles d'olivier, les grignons épuisés créent un compost riche en humus restitué aux oliveraies pour régénérer les sols.
                 </p>
               </div>
-              <a
-                href="#fertilisation"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#8CBE5D] hover:text-[#FAF7F2] transition-colors mt-2"
-              >
-                <span>Calculer vos doses de compost</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </a>
+              <div className="space-y-1.5 mt-2 pt-2 border-t border-[#FAF7F2]/10 flex flex-col">
+                <a
+                  href="#fertilisation"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#8CBE5D] hover:text-[#FAF7F2] transition-colors"
+                >
+                  <span>Calculer vos doses de compost</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </a>
+                <a
+                  href="#irrigation"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#E6AB3C] hover:text-[#FAF7F2] transition-colors"
+                >
+                  <span>Simulateur d'irrigation selon le sol</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </a>
+              </div>
             </div>
           </div>
         </div>

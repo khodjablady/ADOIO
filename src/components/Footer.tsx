@@ -146,6 +146,14 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick, onOpenAdhesion, onOp
                       Dégustation & Normes COI
                     </button>
                   </li>
+                  <li>
+                    <button
+                      onClick={() => onNavClick('concours')}
+                      className="hover:text-white transition-colors cursor-pointer text-left flex items-center gap-1.5 text-[#E6AB3C] font-semibold"
+                    >
+                      <span>🏆 Concours Meilleure Huile 2026</span>
+                    </button>
+                  </li>
                 </ul>
               </div>
 
@@ -168,6 +176,14 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick, onOpenAdhesion, onOp
                       className="hover:text-white transition-colors cursor-pointer text-left"
                     >
                       Calculateur Fertilisation Organique
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      onClick={() => onNavClick('irrigation')}
+                      className="hover:text-white transition-colors cursor-pointer text-left"
+                    >
+                      Guide & Calculateur d'Irrigation
                     </button>
                   </li>
                   <li>
