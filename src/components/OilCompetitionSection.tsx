@@ -23,6 +23,7 @@ import {
   Share2,
   Info
 } from 'lucide-react';
+import { CompetitionMedalsChartSection } from './CompetitionMedalsChartSection';
 
 export interface ContestRegistration {
   id: string;
@@ -622,26 +623,32 @@ export const OilCompetitionSection: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="bg-white/10 p-3 rounded-2xl border border-white/10">
-                  <div className="w-8 h-8 rounded-full bg-[#E6AB3C] text-[#18230F] font-bold text-xs flex items-center justify-center mx-auto mb-1.5 shadow-md">
-                    Or
-                  </div>
+                <div className="bg-white/10 p-3 rounded-2xl border border-white/10 flex flex-col items-center">
+                  <img
+                    src="/images/medailles/medaille-or.svg"
+                    alt="Médaille d'Or"
+                    className="w-12 h-12 object-contain mx-auto mb-1.5 drop-shadow-md hover:scale-110 transition-transform"
+                  />
                   <span className="font-bold text-xs text-white block">Médaille d'Or</span>
                   <span className="text-[10px] text-[#E8F4D9]/80">Note &ge; 85/100</span>
                 </div>
 
-                <div className="bg-white/10 p-3 rounded-2xl border border-white/10">
-                  <div className="w-8 h-8 rounded-full bg-slate-300 text-[#18230F] font-bold text-xs flex items-center justify-center mx-auto mb-1.5 shadow-md">
-                    Ag
-                  </div>
+                <div className="bg-white/10 p-3 rounded-2xl border border-white/10 flex flex-col items-center">
+                  <img
+                    src="/images/medailles/medaille-argent.svg"
+                    alt="Médaille d'Argent"
+                    className="w-12 h-12 object-contain mx-auto mb-1.5 drop-shadow-md hover:scale-110 transition-transform"
+                  />
                   <span className="font-bold text-xs text-white block">Médaille d'Argent</span>
                   <span className="text-[10px] text-[#E8F4D9]/80">Note 80 à 84</span>
                 </div>
 
-                <div className="bg-white/10 p-3 rounded-2xl border border-white/10">
-                  <div className="w-8 h-8 rounded-full bg-[#B47A16] text-white font-bold text-xs flex items-center justify-center mx-auto mb-1.5 shadow-md">
-                    Br
-                  </div>
+                <div className="bg-white/10 p-3 rounded-2xl border border-white/10 flex flex-col items-center">
+                  <img
+                    src="/images/medailles/medaille-bronze.svg"
+                    alt="Médaille de Bronze"
+                    className="w-12 h-12 object-contain mx-auto mb-1.5 drop-shadow-md hover:scale-110 transition-transform"
+                  />
                   <span className="font-bold text-xs text-white block">Médaille de Bronze</span>
                   <span className="text-[10px] text-[#E8F4D9]/80">Note 75 à 79</span>
                 </div>
@@ -773,6 +780,9 @@ export const OilCompetitionSection: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Recharts Historical 5-Year Medals Evolution & Official 3 Medals Showcase */}
+        <CompetitionMedalsChartSection />
 
       </div>
     </section>

@@ -1,0 +1,431 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
+  <defs>
+    <!-- Metallic rim gradients -->
+    <radialGradient id="rimGrad-gold" cx="40%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#FFF5B8" />
+      <stop offset="45%" stop-color="#D89F15" />
+      <stop offset="85%" stop-color="#785507" />
+      <stop offset="100%" stop-color="#D89F15" />
+    </radialGradient>
+
+    <!-- Ring gradient -->
+    <linearGradient id="ringGrad-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFBE8" />
+      <stop offset="25%" stop-color="#F3C33D" />
+      <stop offset="60%" stop-color="#FFF5B8" />
+      <stop offset="85%" stop-color="#F3C33D" />
+      <stop offset="100%" stop-color="#785507" />
+    </linearGradient>
+
+    <!-- Bevel light highlight -->
+    <linearGradient id="bevelLight-gold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.8" />
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.6" />
+    </linearGradient>
+
+    <!-- Sun rays gradient -->
+    <radialGradient id="sunGrad-gold" cx="50%" cy="60%" r="50%">
+      <stop offset="0%" stop-color="#FFD54F" />
+      <stop offset="70%" stop-color="#FFF9C4" />
+      <stop offset="100%" stop-color="#FFFDE7" />
+    </radialGradient>
+
+    <!-- Text Paths for circular coin typography -->
+    <!-- Top Arc: ADOIO-BEJAIA -->
+    <path id="pathTopArc-gold" d="M 120 230 A 235 235 0 0 1 480 230" fill="none" />
+    
+    <!-- Left Arc: 24e Fête de l'Olive -->
+    <path id="pathLeftArc-gold" d="M 68 320 A 235 235 0 0 1 125 125" fill="none" />
+    
+    <!-- Right Arc: Arabic Text -->
+    <path id="pathRightArc-gold" d="M 475 125 A 235 235 0 0 1 532 320" fill="none" />
+    
+    <!-- Bottom Arc: 6 avril 2026 - Béjaïa -->
+    <path id="pathBottomArc-gold" d="M 135 375 A 235 235 0 0 0 465 375" fill="none" />
+
+    <!-- Drop shadow for relief -->
+    <filter id="medalShadow-gold" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="3" dy="5" stdDeviation="6" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+    <filter id="embossFilter-gold">
+      <feDropShadow dx="1" dy="1" stdDeviation="0.8" flood-color="#FFFFFF" flood-opacity="0.7"/>
+      <feDropShadow dx="-1" dy="-1" stdDeviation="0.8" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Base outer drop shadow -->
+  <circle cx="300" cy="302" r="285" fill="#000000" opacity="0.25" filter="blur(6px)" />
+
+  <!-- Outer Metallic Beaded Rim -->
+  <circle cx="300" cy="300" r="285" fill="url(#rimGrad-gold)" stroke="#785507" stroke-width="3" />
+  <circle cx="300" cy="300" r="283" fill="none" stroke="#FFF5B8" stroke-width="1.5" opacity="0.8" />
+
+  <!-- Beaded circular pearl border -->
+  <g id="beads-gold">
+    
+      <circle cx="575.0" cy="300.0" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="574.0" cy="299.0" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="573.8" cy="325.4" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="572.8" cy="324.4" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="570.3" cy="350.5" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="569.3" cy="349.5" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="564.5" cy="375.3" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="563.5" cy="374.3" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="556.4" cy="399.3" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="555.4" cy="398.3" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="546.2" cy="422.6" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="545.2" cy="421.6" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="533.8" cy="444.8" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="532.8" cy="443.8" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="519.5" cy="465.7" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="518.5" cy="464.7" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="503.2" cy="485.3" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="502.2" cy="484.3" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="485.3" cy="503.2" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="484.3" cy="502.2" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="465.7" cy="519.5" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="464.7" cy="518.5" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="444.8" cy="533.8" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="443.8" cy="532.8" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="422.6" cy="546.2" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="421.6" cy="545.2" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="399.3" cy="556.4" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="398.3" cy="555.4" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="375.3" cy="564.5" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="374.3" cy="563.5" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="350.5" cy="570.3" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="349.5" cy="569.3" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="325.4" cy="573.8" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="324.4" cy="572.8" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="300.0" cy="575.0" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="299.0" cy="574.0" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="274.6" cy="573.8" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="273.6" cy="572.8" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="249.5" cy="570.3" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="248.5" cy="569.3" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="224.7" cy="564.5" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="223.7" cy="563.5" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="200.7" cy="556.4" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="199.7" cy="555.4" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="177.4" cy="546.2" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="176.4" cy="545.2" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="155.2" cy="533.8" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="154.2" cy="532.8" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="134.3" cy="519.5" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="133.3" cy="518.5" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="114.7" cy="503.2" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="113.7" cy="502.2" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="96.8" cy="485.3" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="95.8" cy="484.3" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="80.5" cy="465.7" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="79.5" cy="464.7" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="66.2" cy="444.8" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="65.2" cy="443.8" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="53.8" cy="422.6" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="52.8" cy="421.6" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="43.6" cy="399.3" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="42.6" cy="398.3" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="35.5" cy="375.3" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="34.5" cy="374.3" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="29.7" cy="350.5" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="28.7" cy="349.5" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="26.2" cy="325.4" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="25.2" cy="324.4" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="25.0" cy="300.0" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="24.0" cy="299.0" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="26.2" cy="274.6" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="25.2" cy="273.6" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="29.7" cy="249.5" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="28.7" cy="248.5" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="35.5" cy="224.7" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="34.5" cy="223.7" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="43.6" cy="200.7" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="42.6" cy="199.7" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="53.8" cy="177.4" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="52.8" cy="176.4" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="66.2" cy="155.2" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="65.2" cy="154.2" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="80.5" cy="134.3" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="79.5" cy="133.3" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="96.8" cy="114.7" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="95.8" cy="113.7" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="114.7" cy="96.8" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="113.7" cy="95.8" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="134.3" cy="80.5" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="133.3" cy="79.5" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="155.2" cy="66.2" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="154.2" cy="65.2" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="177.4" cy="53.8" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="176.4" cy="52.8" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="200.7" cy="43.6" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="199.7" cy="42.6" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="224.7" cy="35.5" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="223.7" cy="34.5" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="249.5" cy="29.7" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="248.5" cy="28.7" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="274.6" cy="26.2" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="273.6" cy="25.2" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="300.0" cy="25.0" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="299.0" cy="24.0" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="325.4" cy="26.2" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="324.4" cy="25.2" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="350.5" cy="29.7" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="349.5" cy="28.7" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="375.3" cy="35.5" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="374.3" cy="34.5" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="399.3" cy="43.6" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="398.3" cy="42.6" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="422.6" cy="53.8" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="421.6" cy="52.8" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="444.8" cy="66.2" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="443.8" cy="65.2" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="465.7" cy="80.5" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="464.7" cy="79.5" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="485.3" cy="96.8" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="484.3" cy="95.8" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="503.2" cy="114.7" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="502.2" cy="113.7" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="519.5" cy="134.3" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="518.5" cy="133.3" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="533.8" cy="155.2" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="532.8" cy="154.2" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="546.2" cy="177.4" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="545.2" cy="176.4" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="556.4" cy="200.7" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="555.4" cy="199.7" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="564.5" cy="224.7" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="563.5" cy="223.7" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="570.3" cy="249.5" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="569.3" cy="248.5" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+      <circle cx="573.8" cy="274.6" r="4.2" fill="#FFE57F" stroke="#8C6207" stroke-width="1.2" />
+      <circle cx="572.8" cy="273.6" r="1.5" fill="#ffffff" opacity="0.75" />
+    
+  </g>
+
+  <!-- Inner Coin Ring (Contains the official inscriptions) -->
+  <circle cx="300" cy="300" r="265" fill="none" stroke="#785507" stroke-width="2" />
+  <circle cx="300" cy="300" r="264" fill="url(#ringGrad-gold)" stroke="#FFF5B8" stroke-width="1" />
+  <circle cx="300" cy="300" r="205" fill="none" stroke="#785507" stroke-width="2.5" />
+  <circle cx="300" cy="300" r="207" fill="none" stroke="#FFF5B8" stroke-width="1.2" opacity="0.9" />
+
+  <!-- Concentric fine coin grooves on the ring -->
+  <circle cx="300" cy="300" r="247" fill="none" stroke="#785507" stroke-width="0.75" opacity="0.3" />
+  <circle cx="300" cy="300" r="223" fill="none" stroke="#785507" stroke-width="0.75" opacity="0.3" />
+
+  <!-- CIRCULAR INSCRIPTIONS -->
+  <!-- Top: ADOIO-BEJAIA -->
+  <text font-family="'Playfair Display', Georgia, serif" font-size="28" font-weight="900" fill="#593D03" letter-spacing="4" text-anchor="middle" filter="url(#embossFilter-gold)">
+    <textPath href="#pathTopArc-gold" startOffset="50%" text-anchor="middle">
+      ADOIO-BEJAIA
+    </textPath>
+  </text>
+
+  <!-- Left: 24e Fête de l'Olive -->
+  <text font-family="'Plus Jakarta Sans', sans-serif" font-size="20" font-weight="800" fill="#593D03" letter-spacing="1.5" filter="url(#embossFilter-gold)">
+    <textPath href="#pathLeftArc-gold" startOffset="50%" text-anchor="middle">
+      24ᵉ Fête de l'Olive
+    </textPath>
+  </text>
+
+  <!-- Right: عيد الرابع والعشرين للزيتون (Arabic) -->
+  <text font-family="'Amiri', 'Traditional Arabic', 'Scheherazade New', serif" font-size="23" font-weight="bold" fill="#593D03" letter-spacing="1" filter="url(#embossFilter-gold)">
+    <textPath href="#pathRightArc-gold" startOffset="50%" text-anchor="middle">
+      عيد الرابع والعشرين للزيتون
+    </textPath>
+  </text>
+
+  <!-- Bottom: 6 avril 2026 - Béjaïa -->
+  <text font-family="'Plus Jakarta Sans', sans-serif" font-size="21" font-weight="800" fill="#593D03" letter-spacing="2" filter="url(#embossFilter-gold)">
+    <textPath href="#pathBottomArc-gold" startOffset="50%" text-anchor="middle">
+      6 avril 2026 • Béjaïa
+    </textPath>
+  </text>
+
+  <!-- Separator Stars/Bullets on outer ring -->
+  <circle cx="98" cy="270" r="3.5" fill="#593D03" />
+  <circle cx="502" cy="270" r="3.5" fill="#593D03" />
+
+  <!-- ======================================================== -->
+  <!-- INNER MEDALLION DISC : TERROIR LANDSCAPE & ADOIO EMBLEM -->
+  <!-- ======================================================== -->
+  <g clip-path="url(#innerClip-gold)">
+    <clipPath id="innerClip-gold">
+      <circle cx="300" cy="300" r="200" />
+    </clipPath>
+
+    <!-- Sky Background with radiant sun -->
+    <rect x="100" y="100" width="400" height="400" fill="#FFFDE7" />
+    
+    <!-- Radiating Sunburst Rays -->
+    <g id="sunburst-gold">
+      <path d="M 255.5540246732188 327.0395509268104 L 113.6779088177637 357.2032033228111 L 111.30073897945925 342.19434365557663 Z" fill="#FFD54F" opacity="0.85" /><path d="M 255 320 L 110.1519797344142 327.5979734954605 L 110.1519797344142 312.40202650453955 Z" fill="#FFD54F" opacity="0.85" /><path d="M 255.5540246732188 312.96044907318964 L 111.30073897945925 297.8056563444234 L 113.67790881776367 282.796796677189 Z" fill="#FFD54F" opacity="0.85" /><path d="M 257.2024567667181 306.09423525312735 L 117.09590028777254 268.55983759299016 L 121.79170615358797 254.10763318599902 Z" fill="#FFD54F" opacity="0.85" /><path d="M 259.9047064115234 299.5704275117204 L 127.39476755490563 240.58064636012872 L 134.2935831233295 227.0409584499975 Z" fill="#FFD54F" opacity="0.85" /><path d="M 263.59423525312735 293.5496636468387 L 141.9437484887609 214.5570231916041 L 150.8757020246424 202.26324383032818 Z" fill="#FFD54F" opacity="0.85" /><path d="M 268.18019484660533 288.1801948466054 L 160.38459889344736 191.12975605727897 L 171.12975605727894 180.38459889344742 Z" fill="#FFD54F" opacity="0.85" /><path d="M 273.5496636468387 283.59423525312735 L 182.2632438303281 170.87570202464244 L 194.55702319160403 161.9437484887609 Z" fill="#FFD54F" opacity="0.85" /><path d="M 279.57042751172037 279.9047064115234 L 207.04095844999745 154.29358312332954 L 220.58064636012864 147.39476755490563 Z" fill="#FFD54F" opacity="0.85" /><path d="M 286.09423525312735 277.2024567667181 L 234.10763318599896 141.79170615358797 L 248.5598375929901 137.09590028777254 Z" fill="#FFD54F" opacity="0.85" /><path d="M 292.9604490731896 275.5540246732188 L 262.7967966771889 133.6779088177637 L 277.80565634442337 131.30073897945925 Z" fill="#FFD54F" opacity="0.85" /><path d="M 300 275 L 292.4020265045395 130.1519797344142 L 307.59797349546045 130.1519797344142 Z" fill="#FFD54F" opacity="0.85" /><path d="M 307.03955092681036 275.5540246732188 L 322.1943436555766 131.30073897945925 L 337.203203322811 133.67790881776367 Z" fill="#FFD54F" opacity="0.85" /><path d="M 313.90576474687265 277.2024567667181 L 351.44016240700984 137.09590028777254 L 365.892366814001 141.79170615358794 Z" fill="#FFD54F" opacity="0.85" /><path d="M 320.4295724882796 279.9047064115234 L 379.41935363987125 147.39476755490563 L 392.9590415500025 154.29358312332948 Z" fill="#FFD54F" opacity="0.85" /><path d="M 326.4503363531613 283.59423525312735 L 405.4429768083959 161.9437484887609 L 417.7367561696718 170.8757020246424 Z" fill="#FFD54F" opacity="0.85" /><path d="M 331.81980515339467 288.1801948466054 L 428.8702439427211 180.3845988934475 L 439.61540110655267 191.12975605727905 Z" fill="#FFD54F" opacity="0.85" /><path d="M 336.40576474687265 293.5496636468387 L 449.12429797535754 202.2632438303281 L 458.0562515112391 214.55702319160403 Z" fill="#FFD54F" opacity="0.85" /><path d="M 340.0952935884766 299.57042751172037 L 465.70641687667046 227.04095844999745 L 472.6052324450944 240.58064636012864 Z" fill="#FFD54F" opacity="0.85" /><path d="M 342.7975432332819 306.09423525312735 L 478.20829384641206 254.10763318599896 L 482.90409971222743 268.5598375929901 Z" fill="#FFD54F" opacity="0.85" /><path d="M 344.4459753267812 312.96044907318964 L 486.32209118223636 282.7967966771891 L 488.69926102054075 297.80565634442354 Z" fill="#FFD54F" opacity="0.85" /><path d="M 345 320 L 489.8480202655858 312.40202650453944 L 489.8480202655858 327.59797349546045 Z" fill="#FFD54F" opacity="0.85" />
+    </g>
+
+    <!-- Rising Sun on Horizon -->
+    <ellipse cx="300" cy="335" rx="52" ry="42" fill="#FFFFFF" opacity="0.9" />
+    <ellipse cx="300" cy="335" rx="46" ry="36" fill="#FFD54F" />
+
+    <!-- Mountain Ridges of Djurdjura / Soummam (Soft background hills) -->
+    <path d="M 90 320 Q 180 270 260 295 T 410 280 T 510 320 L 510 510 L 90 510 Z" fill="#A5D6A7" />
+    <path d="M 90 340 Q 220 305 320 335 T 510 330 L 510 510 L 90 510 Z" fill="#81C784" />
+
+    <!-- Terraced cultivated agricultural fields (Golden-yellow & green striped bands) -->
+    <path d="M 90 355 Q 260 330 510 365 L 510 510 L 90 510 Z" fill="#FFF176" opacity="0.85" />
+    <path d="M 90 380 Q 280 355 510 395 L 510 510 L 90 510 Z" fill="#E8D568" />
+    
+    <!-- Terraced field furrows / murets -->
+    <path d="M 120 375 Q 300 350 480 390" stroke="#B8860B" stroke-width="2.5" fill="none" opacity="0.6" />
+    <path d="M 110 395 Q 290 370 490 410" stroke="#8B6508" stroke-width="2" fill="none" opacity="0.5" />
+    <path d="M 100 420 Q 300 395 500 435" stroke="#556B2F" stroke-width="3" fill="none" opacity="0.5" />
+
+    <!-- Small Olive Trees in landscape -->
+    <g transform="translate(370, 310) scale(0.6)">
+      <path d="M 0 0 L 0 -18" stroke="#3E2723" stroke-width="4" />
+      <circle cx="0" cy="-22" r="14" fill="#2E4A1F" />
+      <circle cx="-6" cy="-24" r="10" fill="#4B6F2D" />
+      <circle cx="6" cy="-22" r="9" fill="#6B9638" />
+    </g>
+    <g transform="translate(430, 325) scale(0.75)">
+      <path d="M 0 0 L 0 -22" stroke="#3E2723" stroke-width="4" />
+      <circle cx="0" cy="-26" r="16" fill="#2E4A1F" />
+      <circle cx="-7" cy="-28" r="11" fill="#4B6F2D" />
+      <circle cx="7" cy="-25" r="10" fill="#6B9638" />
+    </g>
+    <g transform="translate(300, 335) scale(0.55)">
+      <path d="M 0 0 L 0 -16" stroke="#3E2723" stroke-width="4" />
+      <circle cx="0" cy="-20" r="13" fill="#2E4A1F" />
+      <circle cx="-5" cy="-22" r="9" fill="#5E8339" />
+    </g>
+
+    <!-- ======================================================== -->
+    <!-- FOREGROUND EMBLEM : OLIVE BRANCH & 2 STYLIZED OLIVES     -->
+    <!-- ======================================================== -->
+    <!-- Central Large Olive Leaf Left -->
+    <path d="M 175 110 C 145 155 120 250 145 320 C 185 320 220 225 180 110 Z" fill="#1B5E20" />
+    <path d="M 172 118 C 148 160 128 245 148 310 C 180 310 210 225 176 118 Z" fill="#558B2F" />
+    <path d="M 172 125 C 158 175 142 245 152 295" stroke="#FFFFFF" stroke-width="2.5" stroke-opacity="0.35" fill="none" />
+
+    <!-- Center Olive Leaves Cluster -->
+    <path d="M 195 210 C 230 195 320 210 335 295 C 295 330 210 280 195 210 Z" fill="#1B5E20" />
+    <path d="M 200 215 C 232 202 312 215 325 290 C 290 320 215 275 200 215 Z" fill="#558B2F" />
+    
+    <!-- Small Leaf Right -->
+    <path d="M 250 250 C 280 235 340 255 350 310 C 315 330 265 295 250 250 Z" fill="#1B5E20" />
+    <path d="M 253 254 C 278 242 332 258 340 305 C 310 322 267 292 253 254 Z" fill="#8BC34A" />
+
+    <!-- Two Iconic Foreground Olives (Curved spiral drops) -->
+    <!-- Front Olive 1 (Left & Central) -->
+    <g transform="translate(145, 305) scale(1.05)">
+      <!-- Outer dark green spiral shell -->
+      <path d="M 40 45 C 10 70 5 110 35 135 C 75 160 120 135 125 90 C 130 50 85 20 50 30 C 35 35 30 45 40 55 C 50 65 65 60 70 50 C 75 35 55 30 45 40 Z" fill="#1B5E20" />
+      <!-- Inner vibrant olive green meat -->
+      <ellipse cx="68" cy="85" rx="42" ry="48" fill="#8BC34A" stroke="#1B5E20" stroke-width="5" transform="rotate(-15, 68, 85)" />
+      <!-- Light reflection on olive skin -->
+      <ellipse cx="58" cy="68" rx="16" ry="24" fill="#FFFFFF" opacity="0.3" transform="rotate(-25, 58, 68)" />
+    </g>
+
+    <!-- Front Olive 2 (Right smaller) -->
+    <g transform="translate(230, 335) scale(0.85)">
+      <path d="M 35 40 C 10 65 5 100 32 125 C 70 150 110 125 115 85 C 120 50 80 20 45 30 C 30 35 25 45 35 55 Z" fill="#1B5E20" />
+      <ellipse cx="62" cy="78" rx="36" ry="42" fill="#8BC34A" stroke="#1B5E20" stroke-width="4.5" transform="rotate(-10, 62, 78)" />
+      <ellipse cx="52" cy="62" rx="13" ry="20" fill="#FFFFFF" opacity="0.3" transform="rotate(-20, 52, 62)" />
+    </g>
+
+    <!-- ======================================================== -->
+    <!-- TOP ARCHED GREEN RIBBON : "ADOIO - BEJAIA"               -->
+    <!-- ======================================================== -->
+    <g transform="translate(180, 75)">
+      <!-- Ribbon tail left -->
+      <path d="M 25 35 L 5 45 L 20 20 L 5 0 L 30 10 Z" fill="#0D3812" />
+      <!-- Ribbon tail right -->
+      <path d="M 215 35 L 235 45 L 220 20 L 235 0 L 210 10 Z" fill="#0D3812" />
+      
+      <!-- Main curved banner -->
+      <path d="M 20 18 Q 120 -5 220 18 Q 225 38 215 48 Q 120 25 25 48 Z" fill="#1B5E20" stroke="#FFF5B8" stroke-width="1.8" />
+      <!-- Gold banner trim border -->
+      <path d="M 23 20 Q 120 -2 217 20" stroke="#FFE57F" stroke-width="1.2" fill="none" />
+      <path d="M 27 45 Q 120 23 213 45" stroke="#FFE57F" stroke-width="1.2" fill="none" />
+
+      <!-- Text on ribbon -->
+      <text x="120" y="32" font-family="'Playfair Display', Georgia, serif" font-size="16" font-weight="900" fill="#FFE57F" letter-spacing="3" text-anchor="middle">
+        ADOIO - BEJAIA
+      </text>
+    </g>
+
+    <!-- Bevel light overlay on inner medallion -->
+    <circle cx="300" cy="300" r="200" fill="none" stroke="#785507" stroke-width="4" opacity="0.6" />
+    <circle cx="300" cy="300" r="199" fill="url(#bevelLight-gold)" opacity="0.3" />
+  </g>
+
+  <!-- Specular glint on top-left edge -->
+  <ellipse cx="160" cy="120" rx="90" ry="25" fill="rgba(255, 255, 255, 0.45)" transform="rotate(-35, 160, 120)" />
+</svg>
