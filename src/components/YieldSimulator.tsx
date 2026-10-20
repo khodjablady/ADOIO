@@ -48,6 +48,9 @@ export const YieldSimulator: React.FC = () => {
   const [kgPerTree, setKgPerTree] = useState<number>(25);
 
   const [selectedVariety, setSelectedVariety] = useState<string>('chemlal');
+  const [comparedVariety, setComparedVariety] = useState<string>('bouchouk');
+  const [isComparingVarieties, setIsComparingVarieties] = useState<boolean>(true);
+
   const [harvestPeriod, setHarvestPeriod] = useState<'early' | 'mid' | 'late'>('mid');
   const [extractionType, setExtractionType] = useState<'modern' | 'traditional'>('modern');
   const [delayHours, setDelayHours] = useState<'fast' | 'medium' | 'slow'>('fast');
@@ -74,6 +77,92 @@ export const YieldSimulator: React.FC = () => {
     assemblage: 19.8,
   };
 
+  // Detailed agronomic & sensory profiles for side-by-side comparison
+  const varietyProfiles: Record<
+    string,
+    {
+      name: string;
+      shortName: string;
+      yieldRange: string;
+      polyphenols: string;
+      stability: string;
+      terroir: string;
+      sensory: string;
+      caliber: string;
+    }
+  > = {
+    chemlal: {
+      name: 'Chemlal de Kabylie',
+      shortName: 'Chemlal',
+      yieldRange: '16 – 20 %',
+      polyphenols: '420 mg/kg (Élevé)',
+      stability: '18 – 24 mois',
+      terroir: 'Vallée de la Soummam & piémonts',
+      sensory: 'Fruité vert équilibré, amande fraîche, ardence franche',
+      caliber: 'Petit à moyen (2,2 g)',
+    },
+    bouchouk: {
+      name: 'Bouchouk',
+      shortName: 'Bouchouk',
+      yieldRange: '20 – 25 %',
+      polyphenols: '340 mg/kg (Moyen-Haut)',
+      stability: '14 – 18 mois',
+      terroir: 'Guenzet, Beni Maouche, Haute-Soummam',
+      sensory: 'Doux, floral, pomme mûre et noisette fraîche',
+      caliber: 'Gros drupe (4,5 g)',
+    },
+    aberkane: {
+      name: 'Aberkane',
+      shortName: 'Aberkane',
+      yieldRange: '19 – 23 %',
+      polyphenols: '390 mg/kg (Élevé)',
+      stability: '16 – 20 mois',
+      terroir: 'Akbou, Ouzellaguen, Ighzer Amokrane',
+      sensory: 'Rond, velouté, fruits noirs et cœur d’artichaut',
+      caliber: 'Moyen à gros (3,8 g)',
+    },
+    limli: {
+      name: 'Limli de Sidi-Aïch',
+      shortName: 'Limli',
+      yieldRange: '20 – 24 %',
+      polyphenols: '460 mg/kg (Très élevé)',
+      stability: '20 – 24 mois',
+      terroir: 'Moyenne & Basse Soummam (Sidi-Aïch, El Kseur)',
+      sensory: 'Fruité vert intense, herbacé vif et poivré',
+      caliber: 'Moyen allongé (2,8 g)',
+    },
+    azeradj: {
+      name: 'Azeradj / Adjeraz',
+      shortName: 'Azeradj',
+      yieldRange: '20 – 25 %',
+      polyphenols: '450 mg/kg (Très élevé)',
+      stability: '20 – 24 mois',
+      terroir: 'Seddouk, Amalou, Tazmalt (pollinisateur)',
+      sensory: 'Puissant, feuille d’olivier, tomate verte',
+      caliber: 'Gros ovoïde (4,2 g)',
+    },
+    autres: {
+      name: 'Autres / Exotique',
+      shortName: 'Autres',
+      yieldRange: '18 – 22 %',
+      polyphenols: '310 mg/kg (Moyen)',
+      stability: '12 – 16 mois',
+      terroir: 'Périmètres irrigués récents',
+      sensory: 'Fruité léger à moyen, souple en bouche',
+      caliber: 'Moyen (3,2 g)',
+    },
+    assemblage: {
+      name: 'Assemblage Kabyle',
+      shortName: 'Assemblage',
+      yieldRange: '18 – 22 %',
+      polyphenols: '410 mg/kg (Élevé)',
+      stability: '18 – 22 mois',
+      terroir: 'Vergers familiaux mixtes (Chemlal + Azeradj)',
+      sensory: 'Complexe, harmonieux, typicité terroir Béjaïa',
+      caliber: 'Mixte (2,5 – 4,0 g)',
+    },
+  };
+
   // Modifier by harvest period
   const periodYieldFactor = {
     early: 0.85, // ~17 L/qx (early green)
@@ -84,11 +173,15 @@ export const YieldSimulator: React.FC = () => {
   // Modifier by extraction technology
   const techYieldFactor = extractionType === 'modern' ? 1.02 : 0.96;
 
-  // Final estimated yield in Liters per quintal
+  // Final estimated yield in Liters per quintal (Variety A)
   const finalYieldPerQuintal = (varietyBaseYields[selectedVariety] || 20) * periodYieldFactor * techYieldFactor;
-  
-  // Total estimated oil in Liters
+  // Total estimated oil in Liters (Variety A)
   const estimatedOilLiters = Math.round(totalQuintals * finalYieldPerQuintal);
+
+  // Final estimated yield in Liters per quintal (Variety B - Compared)
+  const comparedYieldPerQuintal = (varietyBaseYields[comparedVariety] || 20) * periodYieldFactor * techYieldFactor;
+  // Total estimated oil in Liters (Variety B - Compared)
+  const comparedEstimatedOilLiters = Math.round(totalQuintals * comparedYieldPerQuintal);
 
   // Acidity calculation
   let baseAcidity = 0.25;
@@ -124,6 +217,16 @@ export const YieldSimulator: React.FC = () => {
   }
 
   const estimatedValueDZD = estimatedOilLiters * pricePerLiter;
+  const comparedEstimatedValueDZD = comparedEstimatedOilLiters * pricePerLiter;
+
+  // Deltas (Variety B vs Variety A)
+  const yieldDiffPerQuintal = parseFloat((comparedYieldPerQuintal - finalYieldPerQuintal).toFixed(1));
+  const litersDiff = comparedEstimatedOilLiters - estimatedOilLiters;
+  const valueDiffDZD = comparedEstimatedValueDZD - estimatedValueDZD;
+  const yieldDiffPercent =
+    finalYieldPerQuintal > 0
+      ? parseFloat((((comparedYieldPerQuintal - finalYieldPerQuintal) / finalYieldPerQuintal) * 100).toFixed(1))
+      : 0;
 
   // Variety names for labels and tooltips
   const varietyNames: Record<string, string> = {
@@ -210,16 +313,24 @@ export const YieldSimulator: React.FC = () => {
     },
   ];
 
-  // Map data for Recharts
+  // Map data for Recharts (including both Variety A and Variety B)
   const multiSeasonChartData = historicalSeasons.map((s) => {
     const calculatedYield = s.isCurrent
       ? parseFloat(finalYieldPerQuintal.toFixed(1))
       : parseFloat((finalYieldPerQuintal * s.seasonYieldFactor).toFixed(1));
 
+    const calculatedComparedYield = s.isCurrent
+      ? parseFloat(comparedYieldPerQuintal.toFixed(1))
+      : parseFloat((comparedYieldPerQuintal * s.seasonYieldFactor).toFixed(1));
+
     const seasonWeightKg = Math.round(totalWeight * s.treeLoadFactor);
     const seasonLiters = s.isCurrent
       ? estimatedOilLiters
       : Math.round((seasonWeightKg / 100) * calculatedYield);
+
+    const seasonComparedLiters = s.isCurrent
+      ? comparedEstimatedOilLiters
+      : Math.round((seasonWeightKg / 100) * calculatedComparedYield);
 
     return {
       season: s.season,
@@ -228,8 +339,10 @@ export const YieldSimulator: React.FC = () => {
       cycle: s.cycle,
       cycleType: s.cycleType,
       rendementVariete: calculatedYield,
+      rendementVarieteComparee: calculatedComparedYield,
       rendementWilaya: s.wilayaAvgYield,
       productionLitres: seasonLiters,
+      productionLitresComparee: seasonComparedLiters,
       poidsOlivesKg: seasonWeightKg,
       climat: s.climateNote,
     };
@@ -241,8 +354,18 @@ export const YieldSimulator: React.FC = () => {
     multiSeasonChartData.length
   ).toFixed(1);
 
+  const avgComparedYieldAcrossSeasons = (
+    multiSeasonChartData.reduce((acc, curr) => acc + curr.rendementVarieteComparee, 0) /
+    multiSeasonChartData.length
+  ).toFixed(1);
+
   const avgLitersAcrossSeasons = Math.round(
     multiSeasonChartData.reduce((acc, curr) => acc + curr.productionLitres, 0) /
+    multiSeasonChartData.length
+  );
+
+  const avgComparedLitersAcrossSeasons = Math.round(
+    multiSeasonChartData.reduce((acc, curr) => acc + curr.productionLitresComparee, 0) /
     multiSeasonChartData.length
   );
 
@@ -681,23 +804,134 @@ export const YieldSimulator: React.FC = () => {
               </div>
             )}
 
-            {/* Variety Selector */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-[#18230F] block">
-                Variété principale :
-              </label>
-              <select
-                value={selectedVariety}
-                onChange={(e) => setSelectedVariety(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-[#E6DEC9] focus:outline-none focus:border-[#31491E] bg-[#FAF7F2] font-medium"
-              >
-                <option value="chemlal">Chemlal de Kabylie (Rendement moyen 16-20%)</option>
-                <option value="bouchouk">Bouchouk (Fruité fin 20-25%)</option>
-                <option value="aberkane">Aberkane Noire (Rond & Velouté 19-23%)</option>
-                <option value="azeradj">Azeradt/Adjeraz de la Haute-Soummam (Herbacé vif 20-25%)</option>
-                <option value="autres">Autres / Exotique (18-22%)</option>
-                <option value="assemblage">Assemblage Traditionnel Kabyle (Moyenne 20%)</option>
-              </select>
+            {/* Variety Selector & Side-by-Side Comparison Controls */}
+            <div className="space-y-3 p-4 rounded-2xl bg-[#FAF7F2] border border-[#E6DEC9]">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label className="text-xs font-bold uppercase tracking-wider text-[#18230F] flex items-center gap-1.5">
+                  <Sprout className="w-4 h-4 text-[#31491E]" />
+                  <span>Sélection & Comparaison Variétale :</span>
+                </label>
+
+                <div className="flex items-center gap-2">
+                  {isComparingVarieties && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const temp = selectedVariety;
+                        setSelectedVariety(comparedVariety);
+                        setComparedVariety(temp);
+                      }}
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white hover:bg-[#E8F4D9] text-[#31491E] border border-[#D5C7A3] transition-all flex items-center gap-1 cursor-pointer"
+                      title="Inverser la Variété A et la Variété B"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      <span>Inverser A ⇄ B</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setIsComparingVarieties(!isComparingVarieties)}
+                    className={`px-3 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
+                      isComparingVarieties
+                        ? 'bg-[#31491E] text-white border-[#31491E]'
+                        : 'bg-white text-[#436229] border-[#D5C7A3] hover:border-[#31491E]'
+                    }`}
+                  >
+                    {isComparingVarieties ? '✓ Mode Comparaison Côte à Côte' : '+ Comparer 2 Variétés'}
+                  </button>
+                </div>
+              </div>
+
+              <div className={`grid grid-cols-1 ${isComparingVarieties ? 'sm:grid-cols-2' : ''} gap-3`}>
+                {/* Variété A */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-bold text-[#31491E] flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-[#31491E]" />
+                      {isComparingVarieties ? 'Variété A (Référence)' : 'Variété principale'}
+                    </span>
+                    <span className="font-mono font-bold text-[#18230F]">
+                      Base : {varietyBaseYields[selectedVariety]} L/qx
+                    </span>
+                  </div>
+                  <select
+                    value={selectedVariety}
+                    onChange={(e) => setSelectedVariety(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-[#D5C7A3] focus:outline-none focus:border-[#31491E] bg-white font-bold text-[#18230F]"
+                  >
+                    <option value="chemlal">Chemlal de Kabylie (Rendement 16–20%)</option>
+                    <option value="bouchouk">Bouchouk (Fruité fin 20–25%)</option>
+                    <option value="aberkane">Aberkane Noire (Rond & Velouté 19–23%)</option>
+                    <option value="limli">Limli de Sidi-Aïch (Fruité vert 20–24%)</option>
+                    <option value="azeradj">Azeradj / Adjeraz Haute-Soummam (20–25%)</option>
+                    <option value="autres">Autres / Exotique (18–22%)</option>
+                    <option value="assemblage">Assemblage Traditionnel Kabyle (Moy. 20%)</option>
+                  </select>
+                </div>
+
+                {/* Variété B (si mode comparaison actif) */}
+                {isComparingVarieties && (
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-bold text-[#B47A16] flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-[#E6AB3C]" />
+                        Variété B (Comparée)
+                      </span>
+                      <span className="font-mono font-bold text-[#B47A16]">
+                        Base : {varietyBaseYields[comparedVariety]} L/qx
+                      </span>
+                    </div>
+                    <select
+                      value={comparedVariety}
+                      onChange={(e) => setComparedVariety(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-[#E6AB3C] focus:outline-none focus:border-[#B47A16] bg-[#FEF5DB]/50 font-bold text-[#18230F]"
+                    >
+                      <option value="chemlal">Chemlal de Kabylie (Rendement 16–20%)</option>
+                      <option value="bouchouk">Bouchouk (Fruité fin 20–25%)</option>
+                      <option value="aberkane">Aberkane Noire (Rond & Velouté 19–23%)</option>
+                      <option value="limli">Limli de Sidi-Aïch (Fruité vert 20–24%)</option>
+                      <option value="azeradj">Azeradj / Adjeraz Haute-Soummam (20–25%)</option>
+                      <option value="autres">Autres / Exotique (18–22%)</option>
+                      <option value="assemblage">Assemblage Traditionnel Kabyle (Moy. 20%)</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Presets de duels variétaux fréquents en Kabylie */}
+              {isComparingVarieties && (
+                <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-[#E6DEC9]">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#567B34] mr-1">
+                    Duels types :
+                  </span>
+                  {[
+                    { a: 'chemlal', b: 'bouchouk', label: 'Chemlal vs Bouchouk' },
+                    { a: 'chemlal', b: 'limli', label: 'Chemlal vs Limli' },
+                    { a: 'aberkane', b: 'azeradj', label: 'Aberkane vs Azeradj' },
+                    { a: 'chemlal', b: 'assemblage', label: 'Chemlal vs Assemblage' },
+                  ].map((pair) => {
+                    const isCurrentPair = selectedVariety === pair.a && comparedVariety === pair.b;
+                    return (
+                      <button
+                        key={pair.label}
+                        type="button"
+                        onClick={() => {
+                          setSelectedVariety(pair.a);
+                          setComparedVariety(pair.b);
+                        }}
+                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold border transition-all cursor-pointer ${
+                          isCurrentPair
+                            ? 'bg-[#18230F] text-[#E6AB3C] border-[#18230F]'
+                            : 'bg-white text-[#436229] border-[#E6DEC9] hover:border-[#31491E]'
+                        }`}
+                      >
+                        {pair.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Harvest Period */}
@@ -785,28 +1019,84 @@ export const YieldSimulator: React.FC = () => {
             <div className="flex items-center justify-between pb-4 border-b border-[#FAF7F2]/15">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-[#E6AB3C]" />
-                <h3 className="font-serif text-xl font-bold">Résultats Prévisionnels</h3>
+                <h3 className="font-serif text-xl font-bold">
+                  {isComparingVarieties ? 'Résultats Côte à Côte (A vs B)' : 'Résultats Prévisionnels'}
+                </h3>
               </div>
               <span className="text-[11px] font-mono text-[#B0D984]">
-                {totalWeight} kg d'olives
+                {totalWeight} kg d'olives ({totalQuintals.toFixed(1)} qx)
               </span>
             </div>
 
-            {/* Liters produced */}
-            <div className="space-y-1">
-              <span className="text-xs uppercase tracking-wider text-[#B0D984] font-medium block">
-                Production d'Huile Estimée
-              </span>
-              <div className="flex items-baseline gap-2">
-                <span className="font-serif text-4xl sm:text-5xl font-extrabold text-[#E6AB3C]">
-                  {estimatedOilLiters}
+            {/* Liters produced (Single or Side-by-Side) */}
+            {!isComparingVarieties ? (
+              <div className="space-y-1">
+                <span className="text-xs uppercase tracking-wider text-[#B0D984] font-medium block">
+                  Production d'Huile Estimée ({varietyNames[selectedVariety]})
                 </span>
-                <span className="text-lg font-sans font-bold text-[#FAF7F2]">Litres</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="font-serif text-4xl sm:text-5xl font-extrabold text-[#E6AB3C]">
+                    {estimatedOilLiters}
+                  </span>
+                  <span className="text-lg font-sans font-bold text-[#FAF7F2]">Litres</span>
+                </div>
+                <p className="text-xs text-[#E8F4D9]/80">
+                  Rendement moyen calculé : <strong>{finalYieldPerQuintal.toFixed(1)} L / quintal</strong>
+                </p>
               </div>
-              <p className="text-xs text-[#E8F4D9]/80">
-                Rendement moyen calculé : <strong>{finalYieldPerQuintal.toFixed(1)} L / quintal</strong>
-              </p>
-            </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Card Variété A */}
+                  <div className="p-3.5 rounded-2xl bg-white/10 border border-[#8CBE5D]/40 space-y-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#B0D984] block truncate">
+                      A • {varietyNames[selectedVariety]}
+                    </span>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="font-serif text-3xl font-extrabold text-white">
+                        {estimatedOilLiters}
+                      </span>
+                      <span className="text-xs font-bold text-[#B0D984]">Litres</span>
+                    </div>
+                    <span className="text-[11px] font-mono text-[#E8F4D9]/90 block">
+                      {finalYieldPerQuintal.toFixed(1)} L / qx
+                    </span>
+                  </div>
+
+                  {/* Card Variété B */}
+                  <div className="p-3.5 rounded-2xl bg-[#E6AB3C]/15 border border-[#E6AB3C]/60 space-y-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#E6AB3C] block truncate">
+                      B • {varietyNames[comparedVariety]}
+                    </span>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="font-serif text-3xl font-extrabold text-[#E6AB3C]">
+                        {comparedEstimatedOilLiters}
+                      </span>
+                      <span className="text-xs font-bold text-[#FAF7F2]">Litres</span>
+                    </div>
+                    <span className="text-[11px] font-mono text-[#E6AB3C] block">
+                      {comparedYieldPerQuintal.toFixed(1)} L / qx
+                    </span>
+                  </div>
+                </div>
+
+                {/* Écart net (Delta B vs A) */}
+                <div className="px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/10 flex items-center justify-between text-xs">
+                  <span className="text-[#E8F4D9]/90 font-medium">Impact sur le rendement final :</span>
+                  <span
+                    className={`font-mono font-extrabold ${
+                      litersDiff > 0
+                        ? 'text-[#8CBE5D]'
+                        : litersDiff < 0
+                        ? 'text-[#FFB4A2]'
+                        : 'text-[#E6AB3C]'
+                    }`}
+                  >
+                    {litersDiff > 0 ? `+${litersDiff}` : litersDiff} L ({yieldDiffPercent > 0 ? `+${yieldDiffPercent}%` : `${yieldDiffPercent}%`})
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Quality Grade and Acidity */}
             <div className="bg-[#FAF7F2]/10 backdrop-blur-md p-4 rounded-2xl border border-[#FAF7F2]/15 space-y-3">
@@ -843,9 +1133,35 @@ export const YieldSimulator: React.FC = () => {
                 <span>Valorisation marchande estimée :</span>
                 <span>~{pricePerLiter} DZD / L</span>
               </div>
-              <div className="font-serif text-2xl font-bold text-[#FAF7F2] mt-1">
-                {estimatedValueDZD.toLocaleString()} <span className="text-sm font-sans font-medium text-[#E6AB3C]">DZD</span>
-              </div>
+              {!isComparingVarieties ? (
+                <div className="font-serif text-2xl font-bold text-[#FAF7F2] mt-1">
+                  {estimatedValueDZD.toLocaleString('fr-FR')}{' '}
+                  <span className="text-sm font-sans font-medium text-[#E6AB3C]">DZD</span>
+                </div>
+              ) : (
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                  <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
+                    <span className="text-[10px] text-[#B0D984] block">
+                      {varietyProfiles[selectedVariety]?.shortName}
+                    </span>
+                    <span className="font-serif text-base font-bold text-white">
+                      {estimatedValueDZD.toLocaleString('fr-FR')} DZD
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-[#E6AB3C]/10 border border-[#E6AB3C]/30">
+                    <span className="text-[10px] text-[#E6AB3C] block">
+                      {varietyProfiles[comparedVariety]?.shortName} (
+                      {valueDiffDZD >= 0
+                        ? `+${valueDiffDZD.toLocaleString('fr-FR')}`
+                        : valueDiffDZD.toLocaleString('fr-FR')}{' '}
+                      DA)
+                    </span>
+                    <span className="font-serif text-base font-bold text-[#E6AB3C]">
+                      {comparedEstimatedValueDZD.toLocaleString('fr-FR')} DZD
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Recommandation ADOIO */}
@@ -859,6 +1175,250 @@ export const YieldSimulator: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* ===================================================================== */}
+        {/* PANNEAU DE COMPARAISON CÔTE À CÔTE DE DEUX VARIÉTÉS D'OLIVES */}
+        {/* ===================================================================== */}
+        {isComparingVarieties && (
+          <div className="mt-10 bg-white rounded-3xl border-2 border-[#D5C7A3] p-6 sm:p-8 shadow-xs space-y-6">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-[#E6DEC9]">
+              <div>
+                <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#31491E] mb-1">
+                  <Layers className="w-4 h-4 text-[#E6AB3C]" />
+                  <span>Comparateur Variétal Côte à Côte — Impact sur le Rendement Final</span>
+                </div>
+                <h3 className="font-serif text-2xl sm:text-3xl font-bold text-[#18230F]">
+                  {varietyNames[selectedVariety]} <span className="text-[#E6AB3C] font-sans text-lg mx-1">vs</span>{' '}
+                  {varietyNames[comparedVariety]}
+                </h3>
+                <p className="text-xs sm:text-sm text-[#436229] mt-1">
+                  Analyse comparative à conditions identiques ({totalWeight.toLocaleString('fr-FR')} kg d’olives, récolte en{' '}
+                  {harvestPeriod === 'early' ? 'Novembre' : harvestPeriod === 'mid' ? 'Décembre' : 'Janvier'}, trituration{' '}
+                  {extractionType === 'modern' ? 'continue moderne' : 'traditionnelle par pression'}).
+                </p>
+              </div>
+
+              {/* Synthèse du différentiel */}
+              <div className="px-4 py-3 rounded-2xl bg-[#FAF7F2] border border-[#D5C7A3] flex items-center gap-3 shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-[#31491E] text-[#E6AB3C] flex items-center justify-center font-bold shrink-0">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <div className="text-xs">
+                  <span className="text-[#567B34] font-semibold block">Différentiel de rendement final :</span>
+                  {litersDiff === 0 ? (
+                    <span className="font-bold text-[#18230F]">
+                      Rendement identique ({finalYieldPerQuintal.toFixed(1)} L/qx, soit {estimatedOilLiters} L)
+                    </span>
+                  ) : (
+                    <span className="font-bold text-[#18230F]">
+                      <strong>
+                        {litersDiff > 0 ? varietyNames[comparedVariety] : varietyNames[selectedVariety]}
+                      </strong>{' '}
+                      produit{' '}
+                      <span className="text-[#31491E] font-extrabold">
+                        +{Math.abs(litersDiff)} Litres ({Math.abs(yieldDiffPercent)}%)
+                      </span>{' '}
+                      de plus (+{Math.abs(valueDiffDZD).toLocaleString('fr-FR')} DZD)
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Cartes Côte à Côte A vs B + Jauges visuelles */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+              {/* Colonne Variété A */}
+              <div className="lg:col-span-5 rounded-2xl bg-[#F4F9EC] border border-[#C5DFB0] p-5 flex flex-col justify-between space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="px-2.5 py-0.5 rounded-md bg-[#31491E] text-white text-[10px] font-bold uppercase tracking-wider">
+                      Variété A • Référence
+                    </span>
+                    <span className="text-xs font-mono font-bold text-[#31491E]">
+                      Plage : {varietyProfiles[selectedVariety]?.yieldRange}
+                    </span>
+                  </div>
+                  <h4 className="font-serif text-xl font-bold text-[#18230F]">
+                    {varietyNames[selectedVariety]}
+                  </h4>
+                  <p className="text-xs text-[#436229] mt-1">
+                    {varietyProfiles[selectedVariety]?.sensory}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <div className="bg-white p-3 rounded-xl border border-[#C5DFB0]">
+                    <span className="text-[10px] font-bold uppercase text-[#567B34] block">Rendement Final</span>
+                    <span className="font-serif text-2xl font-extrabold text-[#18230F]">
+                      {finalYieldPerQuintal.toFixed(1)} <span className="text-xs font-sans">L/qx</span>
+                    </span>
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-[#C5DFB0]">
+                    <span className="text-[10px] font-bold uppercase text-[#567B34] block">Volume Total</span>
+                    <span className="font-serif text-2xl font-extrabold text-[#31491E]">
+                      {estimatedOilLiters.toLocaleString('fr-FR')} <span className="text-xs font-sans">L</span>
+                    </span>
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-[#C5DFB0]">
+                    <span className="text-[10px] font-bold uppercase text-[#567B34] block">Conditionnement</span>
+                    <span className="font-mono text-xs font-bold text-[#18230F] block mt-0.5">
+                      {(estimatedOilLiters / 5).toFixed(1)} bidons (5L)
+                    </span>
+                    <span className="text-[10px] text-[#567B34]">
+                      ou {Math.floor(estimatedOilLiters / 0.75)} bout. 75cl
+                    </span>
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-[#C5DFB0]">
+                    <span className="text-[10px] font-bold uppercase text-[#567B34] block">Valeur Marchande</span>
+                    <span className="font-mono text-xs font-extrabold text-[#18230F] block mt-0.5">
+                      {estimatedValueDZD.toLocaleString('fr-FR')} DZD
+                    </span>
+                    <span className="text-[10px] text-[#567B34]">Moy. 6 ans : {avgYieldAcrossSeasons} L/qx</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Colonne Centrale : Écart & Jauges Comparatives */}
+              <div className="lg:col-span-2 bg-[#FAF7F2] rounded-2xl border border-[#E6DEC9] p-4 flex flex-col justify-center items-center text-center space-y-3">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#567B34]">
+                  Écart (B vs A)
+                </span>
+                <div className="space-y-1">
+                  <span className="text-[11px] text-[#436229] block">Rendement / qx</span>
+                  <span
+                    className={`font-mono text-base font-extrabold px-2.5 py-0.5 rounded-lg inline-block ${
+                      yieldDiffPerQuintal > 0
+                        ? 'bg-[#E8F4D9] text-[#31491E]'
+                        : yieldDiffPerQuintal < 0
+                        ? 'bg-red-100 text-[#AF4D24]'
+                        : 'bg-gray-100 text-[#18230F]'
+                    }`}
+                  >
+                    {yieldDiffPerQuintal > 0 ? `+${yieldDiffPerQuintal}` : yieldDiffPerQuintal} L/qx
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[11px] text-[#436229] block">Volume Huile</span>
+                  <span
+                    className={`font-mono text-base font-extrabold px-2.5 py-0.5 rounded-lg inline-block ${
+                      litersDiff > 0
+                        ? 'bg-[#E8F4D9] text-[#31491E]'
+                        : litersDiff < 0
+                        ? 'bg-red-100 text-[#AF4D24]'
+                        : 'bg-gray-100 text-[#18230F]'
+                    }`}
+                  >
+                    {litersDiff > 0 ? `+${litersDiff}` : litersDiff} L
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[11px] text-[#436229] block">Bidons de 5L</span>
+                  <span className="font-mono text-xs font-bold text-[#18230F]">
+                    {litersDiff > 0 ? `+${(litersDiff / 5).toFixed(1)}` : (litersDiff / 5).toFixed(1)} bidons
+                  </span>
+                </div>
+              </div>
+
+              {/* Colonne Variété B */}
+              <div className="lg:col-span-5 rounded-2xl bg-[#FEF5DB]/70 border border-[#E6AB3C] p-5 flex flex-col justify-between space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="px-2.5 py-0.5 rounded-md bg-[#E6AB3C] text-[#18230F] text-[10px] font-bold uppercase tracking-wider">
+                      Variété B • Comparée
+                    </span>
+                    <span className="text-xs font-mono font-bold text-[#8C5E0A]">
+                      Plage : {varietyProfiles[comparedVariety]?.yieldRange}
+                    </span>
+                  </div>
+                  <h4 className="font-serif text-xl font-bold text-[#18230F]">
+                    {varietyNames[comparedVariety]}
+                  </h4>
+                  <p className="text-xs text-[#436229] mt-1">
+                    {varietyProfiles[comparedVariety]?.sensory}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <div className="bg-white p-3 rounded-xl border border-[#E6AB3C]/60">
+                    <span className="text-[10px] font-bold uppercase text-[#8C5E0A] block">Rendement Final</span>
+                    <span className="font-serif text-2xl font-extrabold text-[#18230F]">
+                      {comparedYieldPerQuintal.toFixed(1)} <span className="text-xs font-sans">L/qx</span>
+                    </span>
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-[#E6AB3C]/60">
+                    <span className="text-[10px] font-bold uppercase text-[#8C5E0A] block">Volume Total</span>
+                    <span className="font-serif text-2xl font-extrabold text-[#B47A16]">
+                      {comparedEstimatedOilLiters.toLocaleString('fr-FR')} <span className="text-xs font-sans">L</span>
+                    </span>
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-[#E6AB3C]/60">
+                    <span className="text-[10px] font-bold uppercase text-[#8C5E0A] block">Conditionnement</span>
+                    <span className="font-mono text-xs font-bold text-[#18230F] block mt-0.5">
+                      {(comparedEstimatedOilLiters / 5).toFixed(1)} bidons (5L)
+                    </span>
+                    <span className="text-[10px] text-[#567B34]">
+                      ou {Math.floor(comparedEstimatedOilLiters / 0.75)} bout. 75cl
+                    </span>
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-[#E6AB3C]/60">
+                    <span className="text-[10px] font-bold uppercase text-[#8C5E0A] block">Valeur Marchande</span>
+                    <span className="font-mono text-xs font-extrabold text-[#18230F] block mt-0.5">
+                      {comparedEstimatedValueDZD.toLocaleString('fr-FR')} DZD
+                    </span>
+                    <span className="text-[10px] text-[#567B34]">
+                      Moy. 6 ans : {avgComparedYieldAcrossSeasons} L/qx
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Tableau comparatif agronomique et qualitatif des deux variétés */}
+            <div className="overflow-x-auto rounded-2xl border border-[#E6DEC9]">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-[#18230F] text-white">
+                    <th className="py-3 px-4 font-bold">Critère Agronomique & Organoleptique</th>
+                    <th className="py-3 px-4 font-bold text-[#B0D984]">
+                      Variété A : {varietyNames[selectedVariety]}
+                    </th>
+                    <th className="py-3 px-4 font-bold text-[#E6AB3C]">
+                      Variété B : {varietyNames[comparedVariety]}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E6DEC9]">
+                  <tr className="bg-[#FAF7F2]">
+                    <td className="py-2.5 px-4 font-bold text-[#18230F]">Terroir de prédilection (Béjaïa)</td>
+                    <td className="py-2.5 px-4 text-[#31491E]">{varietyProfiles[selectedVariety]?.terroir}</td>
+                    <td className="py-2.5 px-4 text-[#8C5E0A]">{varietyProfiles[comparedVariety]?.terroir}</td>
+                  </tr>
+                  <tr className="bg-white">
+                    <td className="py-2.5 px-4 font-bold text-[#18230F]">Teneur en polyphénols (antioxydants)</td>
+                    <td className="py-2.5 px-4 font-mono font-semibold text-[#18230F]">
+                      {varietyProfiles[selectedVariety]?.polyphenols}
+                    </td>
+                    <td className="py-2.5 px-4 font-mono font-semibold text-[#18230F]">
+                      {varietyProfiles[comparedVariety]?.polyphenols}
+                    </td>
+                  </tr>
+                  <tr className="bg-[#FAF7F2]">
+                    <td className="py-2.5 px-4 font-bold text-[#18230F]">Stabilité & durée de conservation</td>
+                    <td className="py-2.5 px-4 text-[#436229]">{varietyProfiles[selectedVariety]?.stability}</td>
+                    <td className="py-2.5 px-4 text-[#436229]">{varietyProfiles[comparedVariety]?.stability}</td>
+                  </tr>
+                  <tr className="bg-white">
+                    <td className="py-2.5 px-4 font-bold text-[#18230F]">Calibre moyen du fruit (drupe)</td>
+                    <td className="py-2.5 px-4 text-[#436229]">{varietyProfiles[selectedVariety]?.caliber}</td>
+                    <td className="py-2.5 px-4 text-[#436229]">{varietyProfiles[comparedVariety]?.caliber}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Personalized Harvest Optimal Window Alerts System (PWA Service Worker) */}
         <OptimalHarvestAlertSystem 
@@ -952,10 +1512,17 @@ export const YieldSimulator: React.FC = () => {
                 <span className="font-serif text-2xl font-bold text-[#18230F]">
                   {avgYieldAcrossSeasons}
                 </span>
-                <span className="text-xs text-[#567B34] font-semibold">L / quintal</span>
+                {isComparingVarieties && (
+                  <span className="text-xs font-mono font-bold text-[#B47A16]">
+                    vs {avgComparedYieldAcrossSeasons}
+                  </span>
+                )}
+                <span className="text-xs text-[#567B34] font-semibold">L / qx</span>
               </div>
               <p className="text-[11px] text-[#567B34] mt-1">
-                Variété : <strong>{varietyNames[selectedVariety]}</strong>
+                {isComparingVarieties
+                  ? `${varietyProfiles[selectedVariety]?.shortName} vs ${varietyProfiles[comparedVariety]?.shortName}`
+                  : `Variété : ${varietyNames[selectedVariety]}`}
               </p>
             </div>
 
@@ -970,10 +1537,17 @@ export const YieldSimulator: React.FC = () => {
                 <span className="font-serif text-2xl font-bold text-[#E6AB3C]">
                   {finalYieldPerQuintal.toFixed(1)}
                 </span>
-                <span className="text-xs text-[#18230F] font-semibold">L / quintal</span>
+                {isComparingVarieties && (
+                  <span className="text-xs font-mono font-bold text-[#31491E]">
+                    vs {comparedYieldPerQuintal.toFixed(1)}
+                  </span>
+                )}
+                <span className="text-xs text-[#18230F] font-semibold">L / qx</span>
               </div>
               <p className="text-[11px] text-[#567B34] mt-1">
-                Soit <strong>{estimatedOilLiters.toLocaleString()} L</strong> pour {totalWeight} kg
+                {isComparingVarieties
+                  ? `${estimatedOilLiters.toLocaleString('fr-FR')} L vs ${comparedEstimatedOilLiters.toLocaleString('fr-FR')} L`
+                  : `Soit ${estimatedOilLiters.toLocaleString('fr-FR')} L pour ${totalWeight} kg`}
               </p>
             </div>
 
@@ -1004,9 +1578,14 @@ export const YieldSimulator: React.FC = () => {
               </div>
               <div className="mt-2 flex items-baseline gap-1.5">
                 <span className="font-serif text-2xl font-bold text-[#31491E]">
-                  {avgLitersAcrossSeasons.toLocaleString()}
+                  {avgLitersAcrossSeasons.toLocaleString('fr-FR')}
                 </span>
-                <span className="text-xs text-[#31491E] font-semibold">Litres</span>
+                {isComparingVarieties && (
+                  <span className="text-xs font-mono font-bold text-[#B47A16]">
+                    vs {avgComparedLitersAcrossSeasons.toLocaleString('fr-FR')}
+                  </span>
+                )}
+                <span className="text-xs text-[#31491E] font-semibold">L</span>
               </div>
               <p className="text-[11px] text-[#567B34] mt-1">
                 Lissé sur le cycle biennal
@@ -1020,9 +1599,11 @@ export const YieldSimulator: React.FC = () => {
               <span className="text-xs font-bold text-[#18230F] flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#31491E]"></span>
                 {chartMetric === 'yield'
-                  ? `Rendement en huile par quintal (${varietyNames[selectedVariety]} vs Wilaya)`
+                  ? isComparingVarieties
+                    ? `Rendement en huile par quintal (${varietyNames[selectedVariety]} vs ${varietyNames[comparedVariety]})`
+                    : `Rendement en huile par quintal (${varietyNames[selectedVariety]} vs Wilaya)`
                   : chartMetric === 'volume'
-                  ? `Volume annuel total estimé en Litres (Impact de l'alternance biennale)`
+                  ? `Volume annuel total estimé en Litres (Impact variétal & alternance biennale)`
                   : `Vue combinée : Production en Litres (barres) & Rendement en L/quintal (courbes)`}
               </span>
               <span className="text-[11px] text-[#6F9D44] font-medium hidden sm:inline-block">
@@ -1108,12 +1689,23 @@ export const YieldSimulator: React.FC = () => {
                             <div className="space-y-1.5 pt-0.5">
                               <div className="flex justify-between items-center">
                                 <span className="text-[#B0D984]">
-                                  Rendement ({varietyNames[selectedVariety]}):
+                                  A • {varietyNames[selectedVariety]} :
                                 </span>
                                 <span className="text-white text-sm font-mono font-bold">
-                                  {data.rendementVariete} L / qx
+                                  {data.rendementVariete} L/qx ({data.productionLitres.toLocaleString('fr-FR')} L)
                                 </span>
                               </div>
+
+                              {isComparingVarieties && (
+                                <div className="flex justify-between items-center">
+                                  <span className="text-[#E6AB3C]">
+                                    B • {varietyNames[comparedVariety]} :
+                                  </span>
+                                  <span className="text-[#E6AB3C] text-sm font-mono font-bold">
+                                    {data.rendementVarieteComparee} L/qx ({data.productionLitresComparee.toLocaleString('fr-FR')} L)
+                                  </span>
+                                </div>
+                              )}
 
                               {showWilayaBenchmark && (
                                 <div className="flex justify-between items-center text-[#E8F4D9]/80">
@@ -1124,17 +1716,10 @@ export const YieldSimulator: React.FC = () => {
                                 </div>
                               )}
 
-                              <div className="flex justify-between items-center pt-1.5 border-t border-[#FAF7F2]/10">
-                                <span className="text-[#E6AB3C] font-semibold">Production estimée :</span>
-                                <span className="text-[#FAF7F2] text-sm font-bold font-mono">
-                                  {data.productionLitres.toLocaleString()} Litres
-                                </span>
-                              </div>
-
-                              <div className="flex justify-between items-center text-[11px] text-[#E8F4D9]/70">
+                              <div className="flex justify-between items-center text-[11px] text-[#E8F4D9]/70 pt-1 border-t border-[#FAF7F2]/10">
                                 <span>Poids équivalent récolté :</span>
                                 <span>
-                                  {data.poidsOlivesKg.toLocaleString()} kg (
+                                  {data.poidsOlivesKg.toLocaleString('fr-FR')} kg (
                                   {Math.round(data.poidsOlivesKg / 100)} qx)
                                 </span>
                               </div>
@@ -1161,20 +1746,29 @@ export const YieldSimulator: React.FC = () => {
                     <>
                       <Bar
                         dataKey="rendementVariete"
-                        name={`Rendement ${varietyNames[selectedVariety]} (L/qx)`}
+                        name={`Variété A : ${varietyNames[selectedVariety]} (L/qx)`}
                         fill="#31491E"
                         radius={[8, 8, 0, 0]}
-                        maxBarSize={52}
+                        maxBarSize={42}
                       />
+                      {isComparingVarieties && (
+                        <Bar
+                          dataKey="rendementVarieteComparee"
+                          name={`Variété B : ${varietyNames[comparedVariety]} (L/qx)`}
+                          fill="#E6AB3C"
+                          radius={[8, 8, 0, 0]}
+                          maxBarSize={42}
+                        />
+                      )}
                       {showWilayaBenchmark && (
                         <Line
                           type="monotone"
                           dataKey="rendementWilaya"
                           name="Moyenne Wilaya Béjaïa (L/qx)"
-                          stroke="#E6AB3C"
-                          strokeWidth={3}
-                          dot={{ r: 5, fill: '#E6AB3C', stroke: '#18230F', strokeWidth: 1.5 }}
-                          activeDot={{ r: 7 }}
+                          stroke="#AF4D24"
+                          strokeWidth={2.5}
+                          dot={{ r: 4, fill: '#AF4D24', stroke: '#FFFFFF', strokeWidth: 1.5 }}
+                          activeDot={{ r: 6 }}
                         />
                       )}
                       <ReferenceLine
@@ -1196,19 +1790,20 @@ export const YieldSimulator: React.FC = () => {
                     <>
                       <Bar
                         dataKey="productionLitres"
-                        name="Huile Produite (Litres)"
-                        fill="#E6AB3C"
+                        name={`Volume A : ${varietyNames[selectedVariety]} (L)`}
+                        fill="#31491E"
                         radius={[8, 8, 0, 0]}
-                        maxBarSize={52}
+                        maxBarSize={42}
                       />
-                      <Line
-                        type="monotone"
-                        dataKey="productionLitres"
-                        name="Tendance de production"
-                        stroke="#31491E"
-                        strokeWidth={2.5}
-                        dot={{ r: 5, fill: '#31491E', stroke: '#FFFFFF', strokeWidth: 2 }}
-                      />
+                      {isComparingVarieties && (
+                        <Bar
+                          dataKey="productionLitresComparee"
+                          name={`Volume B : ${varietyNames[comparedVariety]} (L)`}
+                          fill="#E6AB3C"
+                          radius={[8, 8, 0, 0]}
+                          maxBarSize={42}
+                        />
+                      )}
                     </>
                   )}
 
@@ -1217,31 +1812,53 @@ export const YieldSimulator: React.FC = () => {
                       <Bar
                         yAxisId="left"
                         dataKey="productionLitres"
-                        name="Volume Produit (Litres)"
+                        name={`Volume A : ${varietyNames[selectedVariety]} (L)`}
                         fill="#6F9D44"
                         opacity={0.85}
                         radius={[8, 8, 0, 0]}
-                        maxBarSize={48}
+                        maxBarSize={38}
                       />
+                      {isComparingVarieties && (
+                        <Bar
+                          yAxisId="left"
+                          dataKey="productionLitresComparee"
+                          name={`Volume B : ${varietyNames[comparedVariety]} (L)`}
+                          fill="#E6AB3C"
+                          opacity={0.85}
+                          radius={[8, 8, 0, 0]}
+                          maxBarSize={38}
+                        />
+                      )}
                       <Line
                         yAxisId="right"
                         type="monotone"
                         dataKey="rendementVariete"
-                        name={`Rendement ${varietyNames[selectedVariety]} (L/qx)`}
+                        name={`Rendement A : ${varietyNames[selectedVariety]} (L/qx)`}
                         stroke="#18230F"
                         strokeWidth={3}
                         dot={{ r: 5, fill: '#18230F', stroke: '#E6AB3C', strokeWidth: 2 }}
                       />
+                      {isComparingVarieties && (
+                        <Line
+                          yAxisId="right"
+                          type="monotone"
+                          dataKey="rendementVarieteComparee"
+                          name={`Rendement B : ${varietyNames[comparedVariety]} (L/qx)`}
+                          stroke="#B47A16"
+                          strokeWidth={3}
+                          dot={{ r: 5, fill: '#E6AB3C', stroke: '#18230F', strokeWidth: 2 }}
+                        />
+                      )}
                       {showWilayaBenchmark && (
                         <Line
                           yAxisId="right"
                           type="monotone"
                           dataKey="rendementWilaya"
                           name="Moyenne Wilaya (L/qx)"
-                          stroke="#E6AB3C"
+                          stroke="#AF4D24"
                           strokeWidth={2}
                           strokeDasharray="4 4"
-                          dot={{ r: 4, fill: '#E6AB3C' }}
+                          dot={{ r: 4, fill: '#AF4D24' }}
                         />
                       )}
                     </>

@@ -2,19 +2,16 @@ import React, { useState } from 'react';
 import { 
   X, 
   MapPin, 
-  Building2, 
   Droplets, 
   Award, 
-  Calculator, 
-  BookOpen, 
-  Layers, 
   Search, 
   ArrowRight, 
   CheckCircle2,
-  Share2,
   FileText,
   Compass,
-  Phone
+  Phone,
+  Download,
+  ExternalLink
 } from 'lucide-react';
 import { SILOS_CONFIG } from './SiloNavigation';
 import { OLIVE_VARIETIES, BEJAIA_COMMUNES_DATA, ADOIO_INFO } from '../data/bejaiaOliveData';
@@ -39,15 +36,47 @@ export const SitemapModal: React.FC<SitemapModalProps> = ({
     onClose();
   };
 
+  const normalizedQuery = filterText.trim().toLowerCase();
+
+  const filteredSilos = SILOS_CONFIG.map((silo) => ({
+    ...silo,
+    subsections: normalizedQuery
+      ? silo.subsections.filter(
+          (sub) =>
+            sub.title.toLowerCase().includes(normalizedQuery) ||
+            sub.description.toLowerCase().includes(normalizedQuery) ||
+            sub.slug.toLowerCase().includes(normalizedQuery) ||
+            silo.title.toLowerCase().includes(normalizedQuery)
+        )
+      : silo.subsections,
+  })).filter((silo) => silo.subsections.length > 0);
+
   const filteredCommunes = BEJAIA_COMMUNES_DATA.filter(c => 
-    c.commune.toLowerCase().includes(filterText.toLowerCase()) ||
-    c.daira.toLowerCase().includes(filterText.toLowerCase())
+    c.commune.toLowerCase().includes(normalizedQuery) ||
+    c.daira.toLowerCase().includes(normalizedQuery)
   );
 
   const filteredVarieties = OLIVE_VARIETIES.filter(v =>
-    v.name.toLowerCase().includes(filterText.toLowerCase()) ||
-    v.kabyleName.toLowerCase().includes(filterText.toLowerCase())
+    v.name.toLowerCase().includes(normalizedQuery) ||
+    v.kabyleName.toLowerCase().includes(normalizedQuery)
   );
+
+  const officialGuides = [
+    {
+      title: 'Guide du Consommateur de l’Huile d’Olive (ADOIO – Édition révisée)',
+      subtitle: 'Comprendre, choisir, déguster, lire l’étiquette, cuisiner et conserver (8 pages)',
+      pdfUrl: '/assets/aistudio/Guide_consommateur_huile_olive_ADOIO_revise_b2346a53.pdf',
+      sectionId: 'degustation',
+      badge: 'Guide Consommateur PDF',
+    },
+    {
+      title: 'Les Sous-Produits Oléicoles : Mieux les connaître, mieux les valoriser',
+      subtitle: 'Grignons, margines, bois de taille, compostage, biomasse, cosmétique & oléotourisme (14 pages)',
+      pdfUrl: '/assets/aistudio/Les_sous_produits_oleicoles_version_revisee_265b6229.pdf',
+      sectionId: 'sous-produits',
+      badge: 'Guide Technique PDF',
+    },
+  ];
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
@@ -58,13 +87,13 @@ export const SitemapModal: React.FC<SitemapModalProps> = ({
           <div>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FAF7F2]/10 text-xs font-semibold text-[#B0D984] mb-1">
               <Compass className="w-3.5 h-3.5 text-[#E6AB3C]" />
-              <span>Architecture de l'Information & Index Global</span>
+              <span>Architecture de l'Information · 4 Silos & 15 Chapitres</span>
             </div>
             <h3 className="font-serif text-2xl font-bold tracking-tight">
               Plan du Site & Table des Matières ADOIO
             </h3>
             <p className="text-xs text-[#E8F4D9]/80 mt-0.5">
-              Accès direct sans friction à tous les modules, communes, fiches variétales et services du portail.
+              Accès direct sans friction à tous les modules, guides PDF officiels, communes, fiches variétales et outils interactifs.
             </p>
           </div>
 
@@ -83,7 +112,7 @@ export const SitemapModal: React.FC<SitemapModalProps> = ({
             <Search className="w-4 h-4 text-[#567B34] absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Rechercher une section, une variété (Chemlal...), une commune (Akbou, Seddouk...)..."
+              placeholder="Filtrer les 15 chapitres, une variété (Chemlal, Bouchouk...), une commune (Akbou, Seddouk...), un outil..."
               value={filterText}
               onChange={(e) => setFilterText(e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-white rounded-xl border border-[#E6DEC9] text-xs focus:outline-none focus:ring-2 focus:ring-[#567B34] text-[#18230F]"
@@ -92,11 +121,12 @@ export const SitemapModal: React.FC<SitemapModalProps> = ({
         </div>
 
         {/* Scrollable Content: 4 Silos Architecture */}
-        <div className="p-6 overflow-y-auto space-y-8 flex-1">
+        <div className="p-6 overflow-y-auto space-y-6 flex-1">
           {/* Grid of the 4 Thematic Silos */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {SILOS_CONFIG.map((silo, idx) => {
+            {filteredSilos.map((silo) => {
               const Icon = silo.icon;
+              const originalIdx = SILOS_CONFIG.findIndex((s) => s.id === silo.id);
               return (
                 <div 
                   key={silo.id}
@@ -105,7 +135,7 @@ export const SitemapModal: React.FC<SitemapModalProps> = ({
                   <div>
                     <div className="flex items-center gap-2.5 mb-2">
                       <div className="w-7 h-7 rounded-lg bg-[#E8F4D9] text-[#233416] flex items-center justify-center font-bold text-xs">
-                        P{idx + 1}
+                        P{originalIdx + 1}
                       </div>
                       <Icon className="w-5 h-5 text-[#31491E]" />
                       <h4 className="font-serif font-bold text-base text-[#18230F]">
@@ -142,8 +172,59 @@ export const SitemapModal: React.FC<SitemapModalProps> = ({
             })}
           </div>
 
+          {/* Official PDF Guides & Documents Library */}
+          <div className="bg-[#F4EEE1] p-5 rounded-2xl border border-[#E6DEC9]">
+            <div className="flex items-center gap-2 mb-3">
+              <FileText className="w-4 h-4 text-[#31491E]" />
+              <h5 className="font-serif font-bold text-sm text-[#18230F]">
+                Bibliothèque des Guides Officiels ADOIO (Documents PDF & Rubriques dédiées)
+              </h5>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {officialGuides.map((doc) => (
+                <div
+                  key={doc.pdfUrl}
+                  className="bg-white rounded-xl p-3.5 border border-[#E6DEC9] flex flex-col justify-between gap-3"
+                >
+                  <div>
+                    <span className="inline-block px-2 py-0.5 rounded-md bg-[#E8F4D9] text-[#233416] text-[10px] font-bold mb-1">
+                      {doc.badge}
+                    </span>
+                    <h6 className="text-xs font-bold text-[#18230F]">{doc.title}</h6>
+                    <p className="text-[11px] text-[#436229] mt-0.5">{doc.subtitle}</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#E6DEC9]/60">
+                    <button
+                      onClick={() => handleSelectSection(doc.sectionId)}
+                      className="px-2.5 py-1 rounded-lg bg-[#31491E] hover:bg-[#233416] text-white text-[11px] font-bold transition-colors cursor-pointer"
+                    >
+                      Aller à la rubrique interactive
+                    </button>
+                    <a
+                      href={doc.pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#FAF7F2] hover:bg-[#E8F4D9] text-[#233416] border border-[#E6DEC9] text-[11px] font-semibold transition-colors"
+                    >
+                      <ExternalLink className="w-3 h-3 text-[#567B34]" />
+                      <span>Lire le PDF</span>
+                    </a>
+                    <a
+                      href={doc.pdfUrl}
+                      download
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white hover:bg-[#F4EEE1] text-[#233416] border border-[#E6DEC9] text-[11px] font-semibold transition-colors"
+                    >
+                      <Download className="w-3 h-3 text-[#567B34]" />
+                      <span>Télécharger</span>
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Quick Deep-Links Index: Variétés & Communes (Eliminates orphan content) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-[#E6DEC9]">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
             {/* Varietal Index */}
             <div className="bg-[#FAF7F2] p-4 rounded-2xl border border-[#E6DEC9]">
               <div className="flex items-center gap-2 mb-3">
@@ -220,7 +301,7 @@ export const SitemapModal: React.FC<SitemapModalProps> = ({
         <div className="p-4 bg-[#F4EEE1] border-t border-[#E6DEC9] flex items-center justify-between text-xs text-[#567B34] shrink-0">
           <span className="flex items-center gap-1">
             <CheckCircle2 className="w-3.5 h-3.5 text-[#567B34]" />
-            Architecture 4 Piliers · Zéro page orpheline · Siloing thématique
+            Architecture 4 Piliers · 15 Chapitres interconnectés · Zéro contenu orphelin
           </span>
           <button
             onClick={onClose}

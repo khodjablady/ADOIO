@@ -8,7 +8,9 @@ import {
   Mail, 
   ArrowUp, 
   Heart,
-  ShieldCheck
+  ShieldCheck,
+  Globe,
+  ExternalLink
 } from 'lucide-react';
 
 interface FooterProps {
@@ -196,6 +198,14 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick, onOpenAdhesion, onOp
                   </li>
                   <li>
                     <button
+                      onClick={() => onNavClick('diagnostic-phytosanitaire')}
+                      className="hover:text-white transition-colors cursor-pointer text-left text-[#B0D984] font-semibold"
+                    >
+                      🩺 Diagnostic Phytosanitaire & Bio
+                    </button>
+                  </li>
+                  <li>
+                    <button
                       onClick={() => onNavClick('alertes-recolte')}
                       className="hover:text-white transition-colors cursor-pointer text-left"
                     >
@@ -258,6 +268,52 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick, onOpenAdhesion, onOp
               >
                 Formulaire de Contact / Adhésion
               </button>
+            </div>
+
+            {/* Sites du Secteur Oléicole International */}
+            <div className="pt-4 border-t border-[#FAF7F2]/10 space-y-2.5">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#E6AB3C] flex items-center gap-1.5">
+                <Globe className="w-3.5 h-3.5 text-[#E6AB3C]" />
+                <span>Sites du Secteur Oléicole</span>
+              </h4>
+              <ul className="space-y-2 text-xs text-[#E8F4D9]/85">
+                <li>
+                  <a
+                    href="https://www.internationaloliveoil.org"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-start justify-between gap-2 p-2 rounded-lg bg-[#FAF7F2]/5 hover:bg-[#FAF7F2]/15 border border-[#FAF7F2]/10 transition-all"
+                  >
+                    <div>
+                      <span className="font-semibold text-white group-hover:text-[#E6AB3C] transition-colors block">
+                        Conseil Oléicole International (COI)
+                      </span>
+                      <span className="text-[11px] text-[#B0D984] font-mono">
+                        www.internationaloliveoil.org
+                      </span>
+                    </div>
+                    <ExternalLink className="w-3.5 h-3.5 text-[#E6AB3C] shrink-0 mt-0.5" />
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://www.oliveoiltimes.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-start justify-between gap-2 p-2 rounded-lg bg-[#FAF7F2]/5 hover:bg-[#FAF7F2]/15 border border-[#FAF7F2]/10 transition-all"
+                  >
+                    <div>
+                      <span className="font-semibold text-white group-hover:text-[#E6AB3C] transition-colors block">
+                        Olive Oil Times (Actualités & Marchés)
+                      </span>
+                      <span className="text-[11px] text-[#B0D984] font-mono">
+                        www.oliveoiltimes.com
+                      </span>
+                    </div>
+                    <ExternalLink className="w-3.5 h-3.5 text-[#E6AB3C] shrink-0 mt-0.5" />
+                  </a>
+                </li>
+              </ul>
             </div>
           </div>
         </div>

@@ -97,14 +97,14 @@ export const SILOS_CONFIG: SiloItem[] = [
       {
         id: 'degustation',
         slug: 'degustation-qualite',
-        title: 'Dégustation & Normes COI',
-        description: 'Critères organoleptiques, acidité Vierge Extra et bienfaits nutritionnels.',
+        title: 'Dégustation & Guide Consommateur',
+        description: 'Guide officiel du consommateur ADOIO (PDF), catégories COI, étiquetage, cuisson et conservation.',
       },
       {
         id: 'concours',
         slug: 'concours-huile',
         title: 'Concours Meilleure Huile 2026',
-        description: 'Fête de l’Olive, règlement COI, analyses chimiques et formulaire officiel.',
+        description: 'Fête de l’Olive, palmarès & graphique des médailles (5 ans), règlement COI et inscription.',
       },
     ],
   },
@@ -112,15 +112,15 @@ export const SILOS_CONFIG: SiloItem[] = [
     id: 'silo-outils',
     slug: 'outils-pratiques',
     title: 'Outils & Bonnes Pratiques',
-    subtitle: 'Simulateurs, Fertilisation & Irrigation',
+    subtitle: 'Simulateurs, Sous-Produits, Diagnostic Bio & Météo',
     icon: Calculator,
     color: '#436229',
     subsections: [
       {
         id: 'simulateur',
         slug: 'simulateur-recolte',
-        title: 'Simulateur de Rendement & Carbone',
-        description: 'Calcul prévisionnel multi-saisons Recharts, alertes récolte PWA et bilan carbone.',
+        title: 'Simulateur & Comparateur Variétal',
+        description: 'Convertisseur express (15-25%), duel côte à côte de 2 variétés, Recharts multi-saisons et carbone.',
       },
       {
         id: 'fertilisation',
@@ -139,6 +139,12 @@ export const SILOS_CONFIG: SiloItem[] = [
         slug: 'valorisation-sous-produits',
         title: 'Valorisation des Sous-Produits',
         description: 'Guide ADOIO : grignons, margines, alimentation animale, compost, biomasse et cosmétiques.',
+      },
+      {
+        id: 'diagnostic-phytosanitaire',
+        slug: 'diagnostic-phytosanitaire',
+        title: 'Diagnostic Phytosanitaire & Bio',
+        description: 'Identification par symptômes (mouche de l’olive, verticilliose, œil de paon) et traitements bio.',
       },
       {
         id: 'pratiques',
@@ -169,6 +175,19 @@ export const SiloNavigation: React.FC<SiloNavigationProps> = ({
 }) => {
   const [scrollProgress, setScrollProgress] = useState(0);
 
+  // Flatten all subsections for sequential Prev/Next navigation
+  const allSubsections = SILOS_CONFIG.flatMap((silo) =>
+    silo.subsections.map((sub) => ({ ...sub, siloId: silo.id, siloTitle: silo.title }))
+  );
+
+  const currentFlatIndex = Math.max(
+    0,
+    allSubsections.findIndex((sub) => sub.id === activeSectionId)
+  );
+  const prevSubsection = currentFlatIndex > 0 ? allSubsections[currentFlatIndex - 1] : null;
+  const nextSubsection =
+    currentFlatIndex < allSubsections.length - 1 ? allSubsections[currentFlatIndex + 1] : null;
+
   // Determine active silo based on activeSectionId
   const activeSilo = SILOS_CONFIG.find((silo) =>
     silo.subsections.some((sub) => sub.id === activeSectionId)
@@ -192,7 +211,7 @@ export const SiloNavigation: React.FC<SiloNavigationProps> = ({
   }, []);
 
   return (
-    <div className="sticky top-20 z-30 bg-[#FAF7F2]/95 backdrop-blur-md border-b border-[#E6DEC9] shadow-xs transition-all">
+    <div className="sticky top-[112px] z-30 bg-[#FAF7F2]/95 backdrop-blur-md border-b border-[#E6DEC9] shadow-xs transition-all no-print">
       {/* Scroll progress bar */}
       <div className="w-full bg-[#E6DEC9]/40 h-0.5">
         <div 
@@ -215,15 +234,22 @@ export const SiloNavigation: React.FC<SiloNavigationProps> = ({
 
             <ChevronRight className="w-3.5 h-3.5 text-[#B0D984] shrink-0" />
 
-            <span className="font-semibold text-[#18230F] flex items-center gap-1">
+            <button
+              onClick={() => onNavigate(activeSilo.subsections[0].id)}
+              className="font-semibold text-[#18230F] hover:text-[#31491E] flex items-center gap-1 cursor-pointer transition-colors"
+            >
               {React.createElement(activeSilo.icon, { className: 'w-3.5 h-3.5 text-[#E6AB3C]' })}
               <span>{activeSilo.title}</span>
-            </span>
+            </button>
 
             <ChevronRight className="w-3.5 h-3.5 text-[#B0D984] shrink-0" />
 
             <span className="text-[#567B34] bg-[#E8F4D9] px-2 py-0.5 rounded-md font-semibold text-[11px]">
               {activeSubsection.title}
+            </span>
+
+            <span className="text-[10px] font-mono text-[#567B34]/75 bg-white px-1.5 py-0.5 rounded border border-[#E6DEC9] ml-1">
+              {currentFlatIndex + 1}/{allSubsections.length}
             </span>
           </nav>
 
@@ -267,10 +293,10 @@ export const SiloNavigation: React.FC<SiloNavigationProps> = ({
           </div>
         </div>
 
-        {/* Subsections Quick Chips */}
+        {/* Subsections Quick Chips + Sequential Stepper */}
         <div className="mt-1.5 pt-1.5 border-t border-[#E6DEC9]/40 flex items-center justify-between text-[11px] overflow-x-auto whitespace-nowrap gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-[#567B34] font-medium hidden sm:inline">Dans ce pilier :</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[#567B34] font-semibold hidden sm:inline">Dans ce pilier ({activeSilo.subsections.length}) :</span>
             {activeSilo.subsections.map((sub) => {
               const isSelected = sub.id === activeSectionId;
               return (
@@ -289,9 +315,25 @@ export const SiloNavigation: React.FC<SiloNavigationProps> = ({
             })}
           </div>
 
-          <div className="text-[11px] text-[#436229]/80 hidden md:flex items-center gap-1 font-serif italic">
-            <Sparkles className="w-3 h-3 text-[#E6AB3C]" />
-            <span>Règle des 3 clics : accès direct garanti</span>
+          <div className="hidden lg:flex items-center gap-1.5 shrink-0">
+            {prevSubsection && (
+              <button
+                onClick={() => onNavigate(prevSubsection.id)}
+                className="px-2 py-0.5 rounded-md bg-white hover:bg-[#E8F4D9] text-[#233416] border border-[#E6DEC9] text-[10px] font-semibold transition-colors cursor-pointer"
+                title={`Chapitre précédent : ${prevSubsection.title}`}
+              >
+                ← {prevSubsection.title}
+              </button>
+            )}
+            {nextSubsection && (
+              <button
+                onClick={() => onNavigate(nextSubsection.id)}
+                className="px-2 py-0.5 rounded-md bg-[#E8F4D9] hover:bg-[#D4E8BF] text-[#18230F] border border-[#8CBE5D]/50 text-[10px] font-bold transition-colors cursor-pointer"
+                title={`Chapitre suivant : ${nextSubsection.title}`}
+              >
+                Suivant : {nextSubsection.title} →
+              </button>
+            )}
           </div>
         </div>
       </div>

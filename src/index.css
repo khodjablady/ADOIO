@@ -27,10 +27,23 @@
   --color-sand-200: #e9dec9;
 }
 
+html {
+  scroll-padding-top: 11.5rem;
+  scroll-behavior: smooth;
+}
+
 body {
   font-family: var(--font-sans);
   background-color: #faf7f2;
   color: #242a20;
+}
+
+@media print {
+  header,
+  footer,
+  .no-print {
+    display: none !important;
+  }
 }
 
 /* Custom subtle scrollbar */
