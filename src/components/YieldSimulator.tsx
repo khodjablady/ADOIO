@@ -37,6 +37,11 @@ import {
 import { OptimalHarvestAlertSystem } from './OptimalHarvestAlertSystem';
 
 export const YieldSimulator: React.FC = () => {
+  // Quick Converter state (top of section: 15% to 25% configurable yield)
+  const [quickWeightKg, setQuickWeightKg] = useState<number>(300);
+  const [quickUnit, setQuickUnit] = useState<'kg' | 'qx'>('kg');
+  const [quickYieldPercent, setQuickYieldPercent] = useState<number>(20);
+
   const [inputMode, setInputMode] = useState<'weight' | 'trees'>('weight');
   const [weightKg, setWeightKg] = useState<number>(500); // 5 quintaux
   const [treeCount, setTreeCount] = useState<number>(30);
@@ -322,11 +327,49 @@ export const YieldSimulator: React.FC = () => {
   const kmCarEquivalent = Math.abs(Math.round(netCarbonSavedKg / 0.12)); // 0.12 kg CO2e / km
   const roundtripsAlgerBejaia = Math.max(1, Math.round(kmCarEquivalent / 520)); // ~520 km A/R
 
+  // Quick Converter calculations (15% to 25% configurable yield)
+  const safeQuickWeightKg = Math.max(0, quickWeightKg || 0);
+  const quickQuintals = safeQuickWeightKg / 100;
+  // Volume in Liters according to standard Kabyle mill yield (L / 100 kg)
+  const quickEstimatedLiters = Number((quickQuintals * quickYieldPercent).toFixed(1));
+  const quickBidons5L = Number((quickEstimatedLiters / 5).toFixed(1));
+  const quickBottles75cl = Math.floor(quickEstimatedLiters / 0.75);
+
+  const handleQuickUnitChange = (newUnit: 'kg' | 'qx') => {
+    setQuickUnit(newUnit);
+  };
+
+  const handleQuickInputValChange = (valStr: string) => {
+    const parsed = parseFloat(valStr);
+    if (isNaN(parsed) || parsed < 0) {
+      setQuickWeightKg(0);
+      return;
+    }
+    if (quickUnit === 'qx') {
+      setQuickWeightKg(Math.round(parsed * 100));
+    } else {
+      setQuickWeightKg(Math.round(parsed));
+    }
+  };
+
+  const applyQuickToDetailedSimulator = () => {
+    setInputMode('weight');
+    const clamped = Math.min(5000, Math.max(50, Math.round(safeQuickWeightKg / 50) * 50 || 50));
+    setWeightKg(clamped);
+    if (quickYieldPercent <= 17.5) {
+      setHarvestPeriod('early');
+    } else if (quickYieldPercent >= 22.5) {
+      setHarvestPeriod('late');
+    } else {
+      setHarvestPeriod('mid');
+    }
+  };
+
   return (
     <section id="simulateur" className="py-16 sm:py-24 bg-[#FAF7F2] border-b border-[#E6DEC9]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="max-w-3xl mb-12">
+        <div className="max-w-3xl mb-8">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#567B34] mb-2">
             <Calculator className="w-4 h-4 text-[#E6AB3C]" />
             <span>Outil Décisionnel pour Oléiculteurs & Consommateurs</span>
@@ -337,6 +380,212 @@ export const YieldSimulator: React.FC = () => {
           <p className="mt-3 text-base text-[#436229] leading-relaxed">
             Estimez le volume d'huile obtenu, le taux d'acidité prévisible et la valeur commerciale de vos olives de Kabylie selon la variété, la date de cueillette et le délai de trituration.
           </p>
+        </div>
+
+        {/* Petit Calculateur Express : Poids des Olives -> Volume d'Huile (15% à 25%) */}
+        <div className="mb-10 bg-white rounded-3xl border-2 border-[#D5C7A3] shadow-sm overflow-hidden">
+          <div className="bg-gradient-to-r from-[#18230F] via-[#243516] to-[#31491E] px-5 py-3.5 sm:px-7 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#E6AB3C]/20 border border-[#E6AB3C]/40 flex items-center justify-center text-[#E6AB3C]">
+                <Calculator className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm sm:text-base font-bold text-white tracking-tight">
+                    Convertisseur Express : Poids d'Olives → Volume d'Huile
+                  </h3>
+                  <span className="hidden sm:inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#E6AB3C] text-[#18230F]">
+                    Calcul Instantané
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#E8F4D9]/80">
+                  Conversion rapide selon un rendement moyen configurable de 15% à 25% (15 à 25 L par quintal)
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={applyQuickToDetailedSimulator}
+              className="text-xs font-bold px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-[#FAF7F2] border border-white/15 transition-all flex items-center gap-1.5 cursor-pointer"
+              title="Transférer ces valeurs vers le simulateur agronomique complet ci-dessous"
+            >
+              <span>Synchroniser avec le simulateur complet</span>
+              <ArrowUpRight className="w-3.5 h-3.5 text-[#E6AB3C]" />
+            </button>
+          </div>
+
+          <div className="p-5 sm:p-7 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+            {/* 1. Poids des olives récoltées */}
+            <div className="lg:col-span-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <label htmlFor="quick-olive-weight" className="text-xs font-bold uppercase tracking-wider text-[#18230F]">
+                  1. Poids d'olives récoltées
+                </label>
+                <div className="inline-flex rounded-lg bg-[#FAF7F2] p-0.5 border border-[#E6DEC9]">
+                  <button
+                    type="button"
+                    onClick={() => handleQuickUnitChange('kg')}
+                    className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all cursor-pointer ${
+                      quickUnit === 'kg'
+                        ? 'bg-[#31491E] text-white'
+                        : 'text-[#436229] hover:text-[#18230F]'
+                    }`}
+                  >
+                    Kilogrammes (kg)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickUnitChange('qx')}
+                    className={`px-2 py-0.5 text-[11px] font-bold rounded-md transition-all cursor-pointer ${
+                      quickUnit === 'qx'
+                        ? 'bg-[#31491E] text-white'
+                        : 'text-[#436229] hover:text-[#18230F]'
+                    }`}
+                  >
+                    Quintaux (qx)
+                  </button>
+                </div>
+              </div>
+
+              <div className="relative flex items-center">
+                <input
+                  id="quick-olive-weight"
+                  type="number"
+                  min="0"
+                  max={quickUnit === 'qx' ? 1000 : 100000}
+                  step={quickUnit === 'qx' ? '0.5' : '10'}
+                  value={quickUnit === 'qx' ? Number((safeQuickWeightKg / 100).toFixed(2)) : safeQuickWeightKg}
+                  onChange={(e) => handleQuickInputValChange(e.target.value)}
+                  className="w-full px-4 py-2.5 pr-28 rounded-xl border border-[#D5C7A3] bg-[#FAF7F2] text-[#18230F] font-mono text-lg font-extrabold focus:outline-none focus:border-[#31491E]"
+                />
+                <span className="absolute right-3 text-xs font-bold text-[#567B34] bg-[#E8F4D9] px-2.5 py-1 rounded-lg border border-[#C5DFB0]">
+                  {quickUnit === 'kg'
+                    ? `${quickQuintals.toFixed(1)} qx`
+                    : `${safeQuickWeightKg.toLocaleString('fr-FR')} kg`}
+                </span>
+              </div>
+
+              {/* Quick weight presets */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] font-medium text-[#567B34] mr-1">Lots fréquents :</span>
+                {[
+                  { label: '100 kg (1 qx)', kg: 100 },
+                  { label: '300 kg (3 qx)', kg: 300 },
+                  { label: '500 kg (5 qx)', kg: 500 },
+                  { label: '1 000 kg (10 qx)', kg: 1000 },
+                  { label: '2 500 kg (25 qx)', kg: 2500 },
+                ].map((preset) => (
+                  <button
+                    key={preset.kg}
+                    type="button"
+                    onClick={() => setQuickWeightKg(preset.kg)}
+                    className={`px-2 py-1 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer ${
+                      safeQuickWeightKg === preset.kg
+                        ? 'bg-[#31491E] text-white border-[#31491E]'
+                        : 'bg-[#FAF7F2] text-[#31491E] border-[#E6DEC9] hover:border-[#31491E]'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 2. Rendement moyen configurable (15% à 25%) */}
+            <div className="lg:col-span-4 space-y-3 lg:border-x lg:border-[#E6DEC9] lg:px-6">
+              <div className="flex items-center justify-between">
+                <label htmlFor="quick-yield-slider" className="text-xs font-bold uppercase tracking-wider text-[#18230F]">
+                  2. Rendement moyen (15% – 25%)
+                </label>
+                <span className="font-mono text-base font-extrabold text-[#18230F] bg-[#FEF5DB] border border-[#E6AB3C] px-2.5 py-0.5 rounded-lg">
+                  {quickYieldPercent.toFixed(1)}% ({quickYieldPercent.toFixed(1)} L/qx)
+                </span>
+              </div>
+
+              <input
+                id="quick-yield-slider"
+                type="range"
+                min="15"
+                max="25"
+                step="0.5"
+                value={quickYieldPercent}
+                onChange={(e) => setQuickYieldPercent(parseFloat(e.target.value))}
+                className="w-full accent-[#31491E] cursor-pointer"
+              />
+
+              <div className="flex justify-between text-[10px] font-semibold text-[#567B34]">
+                <span>15% (Récolte précoce)</span>
+                <span>20% (Moyenne Kabylie)</span>
+                <span>25% (Maturité haute)</span>
+              </div>
+
+              {/* Quick yield presets */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                {[
+                  { pct: 15, label: '15% Vert' },
+                  { pct: 18, label: '18% Chemlal' },
+                  { pct: 20, label: '20% Standard' },
+                  { pct: 22.5, label: '22.5% Bouchouk' },
+                  { pct: 25, label: '25% Tardif' },
+                ].map((item) => (
+                  <button
+                    key={item.pct}
+                    type="button"
+                    onClick={() => setQuickYieldPercent(item.pct)}
+                    className={`px-2 py-1 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer ${
+                      quickYieldPercent === item.pct
+                        ? 'bg-[#E6AB3C] text-[#18230F] border-[#D49524] font-bold'
+                        : 'bg-[#FAF7F2] text-[#436229] border-[#E6DEC9] hover:border-[#E6AB3C]'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 3. Résultat instantané en volume d'huile */}
+            <div className="lg:col-span-4 bg-gradient-to-br from-[#F4F9EC] to-[#E8F4D9] p-4 sm:p-5 rounded-2xl border border-[#C5DFB0] flex flex-col justify-between space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#31491E] block">
+                    Volume d'Huile Estimé
+                  </span>
+                  <div className="flex items-baseline gap-2 mt-1">
+                    <span className="font-serif text-3xl sm:text-4xl font-extrabold text-[#18230F]">
+                      {quickEstimatedLiters.toLocaleString('fr-FR')}
+                    </span>
+                    <span className="text-base font-bold text-[#31491E]">Litres</span>
+                  </div>
+                </div>
+                <div className="w-10 h-10 rounded-2xl bg-[#31491E] text-[#E6AB3C] flex items-center justify-center shrink-0 shadow-xs">
+                  <Droplet className="w-5 h-5 fill-current" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[#C5DFB0]/80 text-center">
+                <div className="bg-white/80 rounded-xl p-2 border border-[#C5DFB0]/60">
+                  <span className="text-[10px] font-semibold text-[#567B34] block">Bidons de 5L</span>
+                  <span className="font-mono text-xs sm:text-sm font-extrabold text-[#18230F]">
+                    {quickBidons5L} bidons
+                  </span>
+                </div>
+                <div className="bg-white/80 rounded-xl p-2 border border-[#C5DFB0]/60">
+                  <span className="text-[10px] font-semibold text-[#567B34] block">Bouteilles 75cl</span>
+                  <span className="font-mono text-xs sm:text-sm font-extrabold text-[#18230F]">
+                    {quickBottles75cl} bout.
+                  </span>
+                </div>
+                <div className="bg-white/80 rounded-xl p-2 border border-[#C5DFB0]/60">
+                  <span className="text-[10px] font-semibold text-[#567B34] block">Poids net huile</span>
+                  <span className="font-mono text-xs sm:text-sm font-extrabold text-[#18230F]">
+                    ~{(quickEstimatedLiters * 0.916).toFixed(1)} kg
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
