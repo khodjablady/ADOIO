@@ -188,6 +188,14 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick, onOpenAdhesion, onOp
                   </li>
                   <li>
                     <button
+                      onClick={() => onNavClick('sous-produits')}
+                      className="hover:text-white transition-colors cursor-pointer text-left text-[#E6AB3C] font-semibold"
+                    >
+                      ♻️ Valorisation des Sous-Produits (Guide ADOIO)
+                    </button>
+                  </li>
+                  <li>
+                    <button
                       onClick={() => onNavClick('alertes-recolte')}
                       className="hover:text-white transition-colors cursor-pointer text-left"
                     >

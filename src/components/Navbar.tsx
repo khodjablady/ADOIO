@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, X, Droplets, MapPin, Phone, Award, Calculator, BookOpen, Layers, Building2, ListOrdered, Bell, Trophy } from 'lucide-react';
+import { Menu, X, Droplets, MapPin, Phone, Award, Calculator, BookOpen, Layers, Building2, ListOrdered, Bell, Trophy, Recycle } from 'lucide-react';
 import { AdoioLogo } from './AdoioLogo';
 import { PWAInstallButton } from './PWAInstallButton';
 
@@ -27,6 +27,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'varietes', label: 'Guide Variétal', icon: Droplets, sub: 'Chemlal, Bouchouk...' },
     { id: 'degustation', label: 'Qualité & COI', icon: Award, sub: 'Normes & Sensoriel' },
     { id: 'concours', label: 'Concours 2026', icon: Trophy, sub: "Fête de l'Olive" },
+    { id: 'sous-produits', label: 'Sous-Produits', icon: Recycle, sub: 'Grignons, Margines & Biomasse' },
     { id: 'pratiques', label: 'Bonnes Pratiques', icon: BookOpen, sub: 'Météo & Alertes Gel' },
   ];
 

@@ -135,6 +135,12 @@ export const SILOS_CONFIG: SiloItem[] = [
         description: 'Besoins en eau selon l’âge des oliviers et le type de sol kabyle (RDI ADOIO).',
       },
       {
+        id: 'sous-produits',
+        slug: 'valorisation-sous-produits',
+        title: 'Valorisation des Sous-Produits',
+        description: 'Guide ADOIO : grignons, margines, alimentation animale, compost, biomasse et cosmétiques.',
+      },
+      {
         id: 'pratiques',
         slug: 'calendrier-agronomique',
         title: 'Météo, Alertes Gel & Calendrier',

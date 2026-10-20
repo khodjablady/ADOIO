@@ -16,6 +16,7 @@ import { VarietiesGuide } from './components/VarietiesGuide';
 import { YieldSimulator } from './components/YieldSimulator';
 import { OrganicFertilizationCalculator } from './components/OrganicFertilizationCalculator';
 import { IrrigationGuide } from './components/IrrigationGuide';
+import { ByproductsValorizationSection } from './components/ByproductsValorizationSection';
 import { TastingAndQuality } from './components/TastingAndQuality';
 import { OilCompetitionSection } from './components/OilCompetitionSection';
 import { CalendarAndPractices } from './components/CalendarAndPractices';
@@ -61,6 +62,9 @@ export default function App() {
       'guide-irrigation': 'irrigation',
       'irrigation': 'irrigation',
       'besoins-eau': 'irrigation',
+      'sous-produits': 'sous-produits',
+      'valorisation-sous-produits': 'sous-produits',
+      'grignons-margines': 'sous-produits',
       'calendrier-agronomique': 'pratiques',
       'alertes-meteo': 'alertes-meteo',
       'alertes-gel': 'alertes-meteo',
@@ -101,6 +105,7 @@ export default function App() {
       'simulateur',
       'fertilisation',
       'irrigation',
+      'sous-produits',
       'pratiques',
       'faq-oleiculture',
     ];
@@ -215,6 +220,9 @@ export default function App() {
 
           {/* Interactive Irrigation Guide & Water Needs Simulator */}
           <IrrigationGuide />
+
+          {/* Valorization of Olive By-products (Grignons, Margines, Compost, Biomass, Cosmetics, Tourism) */}
+          <ByproductsValorizationSection />
 
           {/* Seasonal Calendar & Best Agricultural Practices */}
           <CalendarAndPractices />
