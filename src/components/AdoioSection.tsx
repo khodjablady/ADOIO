@@ -133,8 +133,8 @@ export const AdoioSection: React.FC<AdoioSectionProps> = ({ onOpenAdhesion }) =>
                     <a href={`mailto:${ADOIO_INFO.email}`} className="hover:text-white underline block">
                       {ADOIO_INFO.email}
                     </a>
-                    <a href={`mailto:${ADOIO_INFO.contactSecondary}`} className="hover:text-white underline block">
-                      {ADOIO_INFO.contactSecondary}
+                    <a href="mailto:adoio.bejaia@gmail.com" className="hover:text-white underline block">
+                      adoio.bejaia@gmail.com
                     </a>
                   </div>
                 </div>

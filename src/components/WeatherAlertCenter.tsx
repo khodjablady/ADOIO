@@ -1,28 +1,34 @@
 import React, { useState } from 'react';
-import { 
-  Bell, 
-  BellRing, 
-  BellOff, 
-  ShieldAlert, 
-  AlertTriangle, 
-  Snowflake, 
-  Wind, 
-  CloudRain, 
-  Flame, 
-  CheckCircle2, 
-  Settings, 
-  Sparkles, 
-  Smartphone, 
-  Volume2, 
-  X, 
-  Info, 
-  ChevronRight, 
-  Trash2, 
+import {
+  Bell,
+  BellRing,
+  BellOff,
+  ShieldAlert,
+  AlertTriangle,
+  Snowflake,
+  Wind,
+  CloudRain,
+  Flame,
+  CheckCircle2,
+  Settings,
+  Sparkles,
+  Smartphone,
+  Volume2,
+  X,
+  Info,
+  Trash2,
   Send,
   Sliders,
-  MapPin
+  MapPin,
+  Sprout,
+  Calendar,
+  Radio,
 } from 'lucide-react';
-import { useWeatherAlerts, WeatherAlert, AlertType } from '../hooks/useWeatherAlerts';
+import {
+  useWeatherAlerts,
+  AlertType,
+  BEJAIA_OLIVE_BASSINS,
+} from '../hooks/useWeatherAlerts';
 
 interface WeatherAlertCenterProps {
   className?: string;
@@ -31,20 +37,25 @@ interface WeatherAlertCenterProps {
 
 export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
   className = '',
-  onNavigateToCalendar
+  onNavigateToCalendar,
 }) => {
   const {
-    isSupported,
     permission,
+    pushStatus,
+    pushSubscriptionId,
+    isSubscribing,
     settings,
     activeAlerts,
     alertHistory,
     lastNotificationStatus,
+    liveToastAlert,
     updateSettings,
-    requestPermission,
+    subscribeToPush,
+    unsubscribeFromPush,
     simulateAlert,
     dismissAlert,
-    clearAllHistory
+    dismissLiveToast,
+    clearAllHistory,
   } = useWeatherAlerts();
 
   const [showSettings, setShowSettings] = useState<boolean>(false);
@@ -53,14 +64,18 @@ export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
 
   const handleTestAlert = async (type: AlertType, zoneName?: string) => {
     setTestingType(type);
-    await simulateAlert(type, zoneName);
+    await simulateAlert(type, zoneName || settings.selectedBassin);
     setTimeout(() => {
       setTestingType(null);
-    }, 800);
+    }, 600);
   };
 
   const getAlertIcon = (type: AlertType) => {
     switch (type) {
+      case 'harvest-start':
+        return <Sprout className="w-5 h-5 text-emerald-700" />;
+      case 'agronomic-period':
+        return <Calendar className="w-5 h-5 text-[#567B34]" />;
       case 'frost':
         return <Snowflake className="w-5 h-5 text-cyan-600" />;
       case 'high-wind':
@@ -75,6 +90,12 @@ export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
   };
 
   const getAlertBg = (type: AlertType, severity: string) => {
+    if (type === 'harvest-start') {
+      return 'bg-emerald-50/90 border-emerald-300 text-emerald-950';
+    }
+    if (type === 'agronomic-period') {
+      return 'bg-[#F4F9EC] border-[#8CBE5D] text-[#18230F]';
+    }
     if (severity === 'critical') return 'bg-red-50/90 border-red-200 text-red-950';
     if (type === 'frost') return 'bg-cyan-50/80 border-cyan-200 text-cyan-950';
     if (type === 'high-wind') return 'bg-amber-50/80 border-amber-200 text-amber-950';
@@ -82,106 +103,203 @@ export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
     return 'bg-amber-50/80 border-amber-200 text-amber-950';
   };
 
+  const isPushSubscribed =
+    pushStatus === 'subscribed' ||
+    pushStatus === 'local-sw-ready' ||
+    permission === 'granted';
+
   return (
-    <div id="alertes-meteo" className={`bg-white rounded-3xl border border-[#E6DEC9] p-6 sm:p-7 shadow-xs relative overflow-hidden ${className}`}>
+    <div
+      id="alertes-meteo"
+      className={`bg-white rounded-3xl border border-[#E6DEC9] p-6 sm:p-7 shadow-xs relative overflow-hidden ${className}`}
+    >
       {/* Decorative background glow */}
       <div className="absolute top-0 right-0 w-72 h-72 bg-gradient-to-bl from-amber-500/10 via-emerald-500/5 to-transparent rounded-bl-full pointer-events-none" />
 
       {/* Header bar */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-5 border-b border-[#E6DEC9] relative z-10">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 pb-5 border-b border-[#E6DEC9] relative z-10">
         <div>
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#567B34] mb-1">
-            <ShieldAlert className="w-4 h-4 text-amber-600" />
-            <span>Service Worker · Système de Vigilance Agricole</span>
+          <div className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#567B34] mb-1">
+            <Radio className="w-4 h-4 text-emerald-600 animate-pulse" />
+            <span>Notifications PWA · Web Push API (RFC 8030 / VAPID)</span>
           </div>
-          <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#18230F] flex items-center gap-2">
-            <span>Alertes Météo Critiques & Risques de Gel</span>
-            <span className="hidden sm:inline-block text-[11px] font-sans font-bold px-2 py-0.5 rounded-full bg-[#E8F4D9] text-[#233416] border border-[#8CBE5D]">
-              Béjaïa & Soummam
-            </span>
+          <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#18230F] flex flex-wrap items-center gap-2">
+            <span>Alertes Push : Périodes Critiques, Début de Récolte & Météo Locale</span>
           </h3>
-          <p className="text-xs text-[#436229] mt-0.5 max-w-2xl">
-            Notifications push automatiques par le service worker pour alerter les oléiculteurs en cas de gelée blanche, coups de sirocco ou tempêtes sur les vergers.
+          <p className="text-xs text-[#436229] mt-1 max-w-2xl leading-relaxed">
+            Abonnez-vous aux notifications Push PWA pour être alerté en temps réel de l’ouverture optimale de la récolte (véraison Chemlal, Azeradj, Limli), des risques météo locaux (gel, sirocco, vents forts) et des périodes clés du calendrier oléicole à Béjaïa.
           </p>
         </div>
 
-        {/* Permission status pill & Settings toggle */}
-        <div className="flex items-center gap-2 self-stretch sm:self-auto justify-between sm:justify-end">
-          {permission === 'granted' ? (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <BellRing className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Push Actives</span>
+        {/* Basin Selector + Push API Subscription Controls */}
+        <div className="flex flex-wrap items-center gap-2.5 self-stretch lg:self-auto justify-between lg:justify-end">
+          <div className="flex items-center gap-1.5 bg-[#FAF7F2] border border-[#E6DEC9] rounded-xl px-2.5 py-1.5">
+            <MapPin className="w-3.5 h-3.5 text-[#567B34] shrink-0" />
+            <label htmlFor="push-bassin-select" className="sr-only">
+              Sélectionner votre bassin oléicole à Béjaïa
+            </label>
+            <select
+              id="push-bassin-select"
+              value={settings.selectedBassin}
+              onChange={(e) => updateSettings({ selectedBassin: e.target.value })}
+              className="bg-transparent text-xs font-bold text-[#18230F] focus:outline-none cursor-pointer max-w-[210px] truncate"
+            >
+              {BEJAIA_OLIVE_BASSINS.map((bassin) => (
+                <option key={bassin} value={bassin}>
+                  {bassin}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {isPushSubscribed ? (
+            <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <BellRing className="w-3.5 h-3.5 text-emerald-700" />
+                <span>
+                  API Push Active
+                  {pushSubscriptionId ? ` · #${pushSubscriptionId.slice(0, 6)}` : ''}
+                </span>
+              </div>
+              <button
+                onClick={unsubscribeFromPush}
+                className="px-2.5 py-1.5 rounded-xl bg-[#FAF7F2] hover:bg-red-50 text-[#436229] hover:text-red-700 border border-[#E6DEC9] text-[11px] font-semibold transition-colors cursor-pointer"
+                title="Désactiver l'abonnement Push sur cet appareil"
+              >
+                Désabonner
+              </button>
             </div>
           ) : permission === 'denied' ? (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs font-semibold" title="Notifications bloquées par le navigateur">
-              <BellOff className="w-3.5 h-3.5 text-red-600" />
-              <span>Push Bloquées</span>
-            </div>
+            <button
+              onClick={subscribeToPush}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-bold cursor-pointer"
+              title="Activer le mode Push local via Service Worker"
+            >
+              <BellOff className="w-3.5 h-3.5 text-amber-700" />
+              <span>Activer Relais Push PWA</span>
+            </button>
           ) : (
             <button
-              onClick={requestPermission}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#233416] hover:bg-[#31491E] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+              onClick={subscribeToPush}
+              disabled={isSubscribing}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#233416] hover:bg-[#31491E] text-white text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-60"
             >
               <Bell className="w-3.5 h-3.5 text-[#E6AB3C]" />
-              <span>Activer les Push</span>
+              <span>
+                {isSubscribing ? 'Connexion API Push...' : 'Activer les Notifications Push'}
+              </span>
             </button>
           )}
 
           <button
             onClick={() => setShowSettings(!showSettings)}
             className={`p-2 rounded-xl border transition-all cursor-pointer ${
-              showSettings 
-                ? 'bg-[#233416] text-[#FAF7F2] border-[#233416]' 
+              showSettings
+                ? 'bg-[#233416] text-[#FAF7F2] border-[#233416]'
                 : 'bg-[#FAF7F2] text-[#436229] border-[#E6DEC9] hover:bg-white'
             }`}
-            title="Paramètres des seuils d'alerte"
-            aria-label="Configurer les seuils"
+            title="Paramètres des canaux Push et seuils météo"
+            aria-label="Configurer les canaux de notification Push"
           >
             <Sliders className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Permission banner for first-time visitors */}
-      {permission !== 'granted' && (
+      {/* Live Push Notification Toast Preview (Displays immediately when a Push is triggered) */}
+      {liveToastAlert && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="mt-4 p-4 rounded-2xl bg-[#18230F] text-[#FAF7F2] border border-[#8CBE5D] shadow-md flex items-start justify-between gap-3 animate-fadeIn"
+        >
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#233416] border border-[#8CBE5D]/50 flex items-center justify-center shrink-0 mt-0.5">
+              <BellRing className="w-5 h-5 text-[#E6AB3C] animate-bounce" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#B0D984]">
+                <span>Notification Push PWA Transmise en Direct</span>
+                <span>·</span>
+                <span>{liveToastAlert.pushProtocol || 'Service Worker Push API'}</span>
+              </div>
+              <h4 className="font-bold text-sm sm:text-base text-white mt-0.5">
+                {liveToastAlert.title}
+              </h4>
+              <p className="text-xs text-[#E8F4D9]/90 mt-1 leading-relaxed">
+                <strong className="text-[#E6AB3C]">{liveToastAlert.metric}</strong> —{' '}
+                {liveToastAlert.message}
+              </p>
+              {liveToastAlert.recommendations[0] && (
+                <p className="text-[11px] text-[#B0D984] mt-1.5 font-medium">
+                  👉 Action prioritaire : {liveToastAlert.recommendations[0]}
+                </p>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={dismissLiveToast}
+            className="p-1.5 rounded-lg hover:bg-white/10 text-[#E8F4D9] cursor-pointer shrink-0"
+            aria-label="Fermer l'aperçu de notification Push"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Subscription callout banner if not yet subscribed */}
+      {!isPushSubscribed && (
         <div className="mt-4 p-4 rounded-2xl bg-amber-50/90 border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-start gap-3">
             <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center shrink-0 text-amber-800 mt-0.5">
-              <Bell className="w-5 h-5 text-amber-700 animate-bounce" />
+              <Bell className="w-5 h-5 text-amber-700" />
             </div>
             <div>
               <h4 className="text-sm font-bold text-amber-950">
-                Recevez les alertes gelée & tempête en direct sur votre téléphone ou PC
+                Recevez les alertes « Début de récolte » et « Météo locale » sur votre mobile ou PC
               </h4>
-              <p className="text-xs text-amber-800 mt-0.5">
-                Grâce au Service Worker PWA, le portail vous prévient à l’avance même lorsque l’application n’est pas ouverte au premier plan.
+              <p className="text-xs text-amber-900 mt-0.5 leading-relaxed">
+                Le Service Worker PWA utilise l’API Push (<code className="font-mono text-[11px]">PushManager</code>) pour notifier les oléiculteurs de Béjaïa dès que la véraison optimale est atteinte ou qu’un gel printanier / coup de sirocco menace le verger.
               </p>
               {lastNotificationStatus && (
-                <p className="text-[11px] font-semibold text-amber-900 mt-1">
+                <p className="text-[11px] font-semibold text-amber-950 mt-1">
                   Statut : {lastNotificationStatus}
                 </p>
               )}
             </div>
           </div>
           <button
-            onClick={requestPermission}
-            className="shrink-0 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-xs cursor-pointer flex items-center gap-2"
+            onClick={subscribeToPush}
+            disabled={isSubscribing}
+            className="shrink-0 px-4 py-2.5 rounded-xl bg-[#233416] hover:bg-[#31491E] text-white text-xs font-bold shadow-xs cursor-pointer flex items-center gap-2"
           >
-            <BellRing className="w-4 h-4" />
-            <span>Autoriser les Alertes</span>
+            <BellRing className="w-4 h-4 text-[#E6AB3C]" />
+            <span>S'abonner via l'API Push</span>
           </button>
         </div>
       )}
 
-      {/* Threshold settings drawer */}
+      {isPushSubscribed && lastNotificationStatus && (
+        <div className="mt-3 flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl bg-[#FAF7F2] border border-[#E6DEC9] text-xs text-[#233416]">
+          <span className="font-medium flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{lastNotificationStatus}</span>
+          </span>
+          <span className="text-[11px] text-[#567B34] hidden sm:inline">
+            Bassin : <strong>{settings.selectedBassin}</strong>
+          </span>
+        </div>
+      )}
+
+      {/* Channels & Threshold settings drawer */}
       {showSettings && (
         <div className="mt-4 p-5 rounded-2xl bg-[#FAF7F2] border border-[#E6DEC9] animate-fadeIn">
           <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#E6DEC9]">
             <div className="flex items-center gap-2">
               <Settings className="w-4 h-4 text-[#567B34]" />
               <h4 className="text-xs font-bold text-[#18230F] uppercase tracking-wider">
-                Réglages des Seuils de Vigilance Agronomique
+                Canaux d’Abonnement Push & Seuils de Vigilance Agronomique
               </h4>
             </div>
             <button
@@ -192,13 +310,55 @@ export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-            {/* Frost toggle & threshold */}
-            <div className="p-3 bg-white rounded-xl border border-[#E6DEC9]">
-              <div className="flex items-center justify-between mb-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+            {/* 1. Harvest Start & Ripeness Channel */}
+            <div className="p-3.5 bg-white rounded-xl border border-emerald-200">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="font-bold text-[#18230F] flex items-center gap-1.5">
+                  <Sprout className="w-4 h-4 text-emerald-700" />
+                  <span>Début de Récolte & Véraison</span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={settings.notifyOnHarvestStart}
+                  onChange={(e) =>
+                    updateSettings({ notifyOnHarvestStart: e.target.checked })
+                  }
+                  className="rounded text-[#233416] cursor-pointer"
+                />
+              </div>
+              <p className="text-[11px] text-[#436229] leading-snug">
+                Alerte dès l’ouverture optimale de la cueillette par variété (Azeradj, Limli, Chemlal) et par altitude.
+              </p>
+            </div>
+
+            {/* 2. Critical Agronomic & Phytosanitary Periods */}
+            <div className="p-3.5 bg-white rounded-xl border border-[#8CBE5D]">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="font-bold text-[#18230F] flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4 text-[#567B34]" />
+                  <span>Périodes Taille & Vigilance Bio</span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={settings.notifyOnAgronomicPeriod}
+                  onChange={(e) =>
+                    updateSettings({ notifyOnAgronomicPeriod: e.target.checked })
+                  }
+                  className="rounded text-[#233416] cursor-pointer"
+                />
+              </div>
+              <p className="text-[11px] text-[#436229] leading-snug">
+                Fenêtre de taille de fructification (fév-mars), pic de vol Mouche de l’olive (argile kaolinite) et Œil de paon.
+              </p>
+            </div>
+
+            {/* 3. Frost toggle & threshold */}
+            <div className="p-3.5 bg-white rounded-xl border border-[#E6DEC9]">
+              <div className="flex items-center justify-between mb-1.5">
                 <span className="font-bold text-[#18230F] flex items-center gap-1.5">
                   <Snowflake className="w-4 h-4 text-cyan-600" />
-                  <span>Alerte Gel</span>
+                  <span>Alerte Gel Nocturne / Printanier</span>
                 </span>
                 <input
                   type="checkbox"
@@ -207,11 +367,13 @@ export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
                   className="rounded text-[#233416] cursor-pointer"
                 />
               </div>
-              <div className="text-[11px] text-[#436229] mb-1.5">Déclenchement dès :</div>
               <select
                 value={settings.frostThreshold}
-                onChange={(e) => updateSettings({ frostThreshold: Number(e.target.value) })}
-                className="w-full px-2 py-1 bg-[#FAF7F2] border border-[#E6DEC9] rounded-lg font-semibold text-[#18230F] text-xs cursor-pointer"
+                onChange={(e) =>
+                  updateSettings({ frostThreshold: Number(e.target.value) })
+                }
+                aria-label="Seuil de température pour l'alerte gel"
+                className="w-full mt-1 px-2 py-1 bg-[#FAF7F2] border border-[#E6DEC9] rounded-lg font-semibold text-[#18230F] text-xs cursor-pointer"
               >
                 <option value={0}>≤ 0°C (Gelée sévère)</option>
                 <option value={1}>≤ 1°C (Gel modéré)</option>
@@ -220,12 +382,12 @@ export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
               </select>
             </div>
 
-            {/* Wind toggle & threshold */}
-            <div className="p-3 bg-white rounded-xl border border-[#E6DEC9]">
-              <div className="flex items-center justify-between mb-2">
+            {/* 4. Wind toggle & threshold */}
+            <div className="p-3.5 bg-white rounded-xl border border-[#E6DEC9]">
+              <div className="flex items-center justify-between mb-1.5">
                 <span className="font-bold text-[#18230F] flex items-center gap-1.5">
                   <Wind className="w-4 h-4 text-amber-600" />
-                  <span>Vents Violents</span>
+                  <span>Vents Violents (Soummam)</span>
                 </span>
                 <input
                   type="checkbox"
@@ -234,24 +396,26 @@ export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
                   className="rounded text-[#233416] cursor-pointer"
                 />
               </div>
-              <div className="text-[11px] text-[#436229] mb-1.5">Rafales supérieures à :</div>
               <select
                 value={settings.windThreshold}
-                onChange={(e) => updateSettings({ windThreshold: Number(e.target.value) })}
-                className="w-full px-2 py-1 bg-[#FAF7F2] border border-[#E6DEC9] rounded-lg font-semibold text-[#18230F] text-xs cursor-pointer"
+                onChange={(e) =>
+                  updateSettings({ windThreshold: Number(e.target.value) })
+                }
+                aria-label="Seuil de vitesse du vent"
+                className="w-full mt-1 px-2 py-1 bg-[#FAF7F2] border border-[#E6DEC9] rounded-lg font-semibold text-[#18230F] text-xs cursor-pointer"
               >
                 <option value={35}>≥ 35 km/h (Vent soutenu)</option>
-                <option value={45}>≥ 45 km/h (Seuil filet Soummam)</option>
+                <option value={45}>≥ 45 km/h (Seuil filets Soummam)</option>
                 <option value={55}>≥ 55 km/h (Bourrasques critiques)</option>
               </select>
             </div>
 
-            {/* Rain toggle & threshold */}
-            <div className="p-3 bg-white rounded-xl border border-[#E6DEC9]">
-              <div className="flex items-center justify-between mb-2">
+            {/* 5. Rain toggle & threshold */}
+            <div className="p-3.5 bg-white rounded-xl border border-[#E6DEC9]">
+              <div className="flex items-center justify-between mb-1.5">
                 <span className="font-bold text-[#18230F] flex items-center gap-1.5">
                   <CloudRain className="w-4 h-4 text-blue-600" />
-                  <span>Pluies Fortes</span>
+                  <span>Pluies Fortes (Arrêt cueillette)</span>
                 </span>
                 <input
                   type="checkbox"
@@ -260,11 +424,13 @@ export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
                   className="rounded text-[#233416] cursor-pointer"
                 />
               </div>
-              <div className="text-[11px] text-[#436229] mb-1.5">Cumul de pluie :</div>
               <select
                 value={settings.rainThreshold}
-                onChange={(e) => updateSettings({ rainThreshold: Number(e.target.value) })}
-                className="w-full px-2 py-1 bg-[#FAF7F2] border border-[#E6DEC9] rounded-lg font-semibold text-[#18230F] text-xs cursor-pointer"
+                onChange={(e) =>
+                  updateSettings({ rainThreshold: Number(e.target.value) })
+                }
+                aria-label="Seuil de cumul de pluie"
+                className="w-full mt-1 px-2 py-1 bg-[#FAF7F2] border border-[#E6DEC9] rounded-lg font-semibold text-[#18230F] text-xs cursor-pointer"
               >
                 <option value={10}>≥ 10 mm (Humidification)</option>
                 <option value={15}>≥ 15 mm (Arrêt récolte)</option>
@@ -272,12 +438,12 @@ export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
               </select>
             </div>
 
-            {/* Sirocco toggle */}
-            <div className="p-3 bg-white rounded-xl border border-[#E6DEC9]">
-              <div className="flex items-center justify-between mb-2">
+            {/* 6. Sirocco toggle */}
+            <div className="p-3.5 bg-white rounded-xl border border-[#E6DEC9]">
+              <div className="flex items-center justify-between mb-1.5">
                 <span className="font-bold text-[#18230F] flex items-center gap-1.5">
                   <Flame className="w-4 h-4 text-red-600" />
-                  <span>Sirocco / Iryifi</span>
+                  <span>Sirocco / Iryifi (&gt; 36°C)</span>
                 </span>
                 <input
                   type="checkbox"
@@ -286,18 +452,17 @@ export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
                   className="rounded text-[#233416] cursor-pointer"
                 />
               </div>
-              <div className="text-[11px] text-[#436229] mb-1.5">Seuil critique :</div>
-              <div className="px-2 py-1 bg-[#FAF7F2] border border-[#E6DEC9] rounded-lg font-semibold text-[#18230F] text-xs">
-                ≥ 36°C & Humidité &lt; 25%
-              </div>
+              <p className="text-[11px] text-[#436229] leading-snug">
+                Vigilance stress hydrique aigu et protection de la floraison/nouaison (Humidité &lt; 25%).
+              </p>
             </div>
           </div>
         </div>
       )}
 
       {/* Tabs navigation: Active Alerts, Test Simulators, History */}
-      <div className="flex items-center justify-between mt-5 border-b border-[#E6DEC9] pb-2">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 mt-5 border-b border-[#E6DEC9] pb-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setActiveTab('alerts')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
@@ -307,12 +472,7 @@ export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
             }`}
           >
             <ShieldAlert className="w-3.5 h-3.5" />
-            <span>Vigilances en Cours</span>
-            {activeAlerts.length > 0 && (
-              <span className="w-5 h-5 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center font-bold">
-                {activeAlerts.length}
-              </span>
-            )}
+            <span>Périodes Critiques & Vigilances ({activeAlerts.length})</span>
           </button>
 
           <button
@@ -324,7 +484,7 @@ export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
             }`}
           >
             <Send className="w-3.5 h-3.5 text-[#E6AB3C]" />
-            <span>Tester les Notifications Push</span>
+            <span>Tester l’API Push (6 Scénarios)</span>
           </button>
 
           <button
@@ -335,7 +495,7 @@ export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
                 : 'text-[#436229] hover:bg-[#FAF7F2]'
             }`}
           >
-            <span>Historique ({alertHistory.length})</span>
+            <span>Journal Push ({alertHistory.length})</span>
           </button>
         </div>
 
@@ -359,34 +519,35 @@ export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
                 <CheckCircle2 className="w-6 h-6" />
               </div>
               <h4 className="font-serif text-base font-bold text-[#18230F]">
-                Aucune alerte critique en cours dans la Wilaya de Béjaïa
+                Aucune alerte non lue pour {settings.selectedBassin}
               </h4>
               <p className="text-xs text-[#436229] max-w-md mx-auto mt-1">
-                Les conditions atmosphériques actuelles (plaine de la Soummam, hauts plateaux de Seddouk et terrasses de Chemini) se situent dans les normales saisonnières.
+                Testez dès maintenant l’envoi d’une notification Push « Début de récolte » ou « Alerte Gel » pour vérifier la réception sur votre appareil.
               </p>
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                 <button
-                  onClick={() => setActiveTab('test')}
+                  onClick={() => handleTestAlert('harvest-start', settings.selectedBassin)}
                   className="px-4 py-2 rounded-xl bg-[#233416] hover:bg-[#31491E] text-white text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
                 >
-                  <Send className="w-3.5 h-3.5 text-[#E6AB3C]" />
-                  <span>Simuler une alerte de gelée pour tester</span>
+                  <Sprout className="w-3.5 h-3.5 text-[#B0D984]" />
+                  <span>Recevoir Push « Début de Récolte »</span>
                 </button>
-                {onNavigateToCalendar && (
-                  <button
-                    onClick={onNavigateToCalendar}
-                    className="px-3.5 py-2 rounded-xl bg-white border border-[#E6DEC9] text-[#233416] text-xs font-bold hover:bg-[#FAF7F2] transition-colors cursor-pointer"
-                  >
-                    Voir le calendrier de récolte
-                  </button>
-                )}
+                <button
+                  onClick={() => setActiveTab('test')}
+                  className="px-3.5 py-2 rounded-xl bg-white border border-[#E6DEC9] text-[#233416] text-xs font-bold hover:bg-[#FAF7F2] transition-colors cursor-pointer"
+                >
+                  Voir les 6 scénarios Push
+                </button>
               </div>
             </div>
           ) : (
             activeAlerts.map((alert) => (
               <div
                 key={alert.id}
-                className={`p-4 sm:p-5 rounded-2xl border transition-all ${getAlertBg(alert.type, alert.severity)}`}
+                className={`p-4 sm:p-5 rounded-2xl border transition-all ${getAlertBg(
+                  alert.type,
+                  alert.severity
+                )}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
@@ -403,27 +564,40 @@ export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
                         </span>
                         {alert.isSimulated && (
                           <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-200 text-amber-900 font-semibold">
-                            Test simulé
+                            Push Test
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 text-xs opacity-90 mb-2">
+                      <div className="flex flex-wrap items-center gap-2 text-xs opacity-90 mb-2">
                         <span className="flex items-center gap-1 font-semibold">
                           <MapPin className="w-3.5 h-3.5" />
                           <span>{alert.zone}</span>
                         </span>
                         <span>•</span>
-                        <span>{new Date(alert.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span>
+                          {new Date(alert.timestamp).toLocaleTimeString('fr-FR', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                        {alert.pushProtocol && (
+                          <>
+                            <span>•</span>
+                            <span className="font-medium opacity-80">
+                              {alert.pushProtocol}
+                            </span>
+                          </>
+                        )}
                       </div>
                       <p className="text-xs mb-3 font-medium leading-relaxed">
                         {alert.message}
                       </p>
 
                       {/* Agronomic Recommendations for Farmers */}
-                      <div className="bg-white/80 backdrop-blur-xs p-3.5 rounded-xl border border-current/20">
+                      <div className="bg-white/85 backdrop-blur-xs p-3.5 rounded-xl border border-current/20">
                         <div className="text-[11px] font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5">
                           <Sparkles className="w-3.5 h-3.5" />
-                          <span>Actions d’urgence recommandées aux oléiculteurs :</span>
+                          <span>Consignes agronomiques ADOIO aux oléiculteurs :</span>
                         </div>
                         <ul className="space-y-1.5 text-xs">
                           {alert.recommendations.map((rec, i) => (
@@ -452,21 +626,89 @@ export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
         </div>
       )}
 
-      {/* Tab 2: Test & Simulators for Farmers */}
+      {/* Tab 2: 6 Test & Simulators for Farmers (Harvest Start + Agronomic Period + 4 Weather Alerts) */}
       {activeTab === 'test' && (
         <div className="mt-4 space-y-4">
-          <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-xs text-amber-950 flex items-start gap-3">
-            <Info className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+          <div className="p-4 rounded-2xl bg-[#F4F9EC] border border-[#8CBE5D] text-xs text-[#18230F] flex items-start gap-3">
+            <Info className="w-5 h-5 text-[#567B34] shrink-0 mt-0.5" />
             <div>
-              <span className="font-bold">Test du Service Worker & Push Notifications :</span>
-              <p className="mt-0.5 leading-relaxed text-amber-900">
-                Cliquez sur l'un des scénarios agronomiques ci-dessous pour déclencher instantanément une notification réelle via le Service Worker de l'application. Vous constaterez l'affichage sur votre écran (avec vibration sur mobile et conseils techniques).
+              <span className="font-bold">
+                Simulateur d’Événements Web Push API (<code className="font-mono">sw-push.js</code> + <code className="font-mono">/api/push/dispatch-alert</code>) :
+              </span>
+              <p className="mt-0.5 leading-relaxed text-[#233416]">
+                Déclenchez l’un des 6 scénarios critiques ci-dessous (ouverture de la récolte à la véraison, période de taille/mouche de l’olive, gelée blanche, rafales, pluies torrentielles ou sirocco) pour recevoir instantanément la notification PWA.
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Scenario 1: Frost */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {/* Scenario 1: Harvest Start (Début de Récolte Optimale) */}
+            <div className="p-4 rounded-2xl bg-white border-2 border-emerald-300 hover:border-emerald-500 transition-all shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                    <Sprout className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-100 text-emerald-900">
+                    Début de Récolte
+                  </span>
+                </div>
+                <h5 className="font-bold text-sm text-[#18230F]">
+                  Ouverture Récolte & Véraison (Chemlal / Azeradj)
+                </h5>
+                <p className="text-xs text-[#436229] mt-1 leading-relaxed">
+                  Alerte Push d’entrée en maturité optimale (65% tournante violet-noir) avec pic de polyphénols et consignes de trituration à froid &lt; 24h.
+                </p>
+              </div>
+              <button
+                onClick={() => handleTestAlert('harvest-start', settings.selectedBassin)}
+                disabled={testingType === 'harvest-start'}
+                className="mt-4 w-full py-2 px-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Sprout className="w-3.5 h-3.5" />
+                <span>
+                  {testingType === 'harvest-start'
+                    ? 'Envoi Push en cours...'
+                    : 'Déclencher Push Début Récolte'}
+                </span>
+              </button>
+            </div>
+
+            {/* Scenario 2: Critical Agronomic & Phytosanitary Period */}
+            <div className="p-4 rounded-2xl bg-white border-2 border-[#8CBE5D] hover:border-[#567B34] transition-all shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="w-8 h-8 rounded-xl bg-[#E8F4D9] text-[#233416] flex items-center justify-center">
+                    <Calendar className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[#E8F4D9] text-[#233416]">
+                    Calendrier & Bio
+                  </span>
+                </div>
+                <h5 className="font-bold text-sm text-[#18230F]">
+                  Période Critique : Mouche de l’Olive & Taille
+                </h5>
+                <p className="text-xs text-[#436229] mt-1 leading-relaxed">
+                  Rappel Push pour la barrière d’argile kaolinite bio (juin-sept) ou l’ouverture de la taille de fructification (fév-mars) avec prophylaxie.
+                </p>
+              </div>
+              <button
+                onClick={() =>
+                  handleTestAlert('agronomic-period', settings.selectedBassin)
+                }
+                disabled={testingType === 'agronomic-period'}
+                className="mt-4 w-full py-2 px-3 rounded-xl bg-[#233416] hover:bg-[#31491E] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Calendar className="w-3.5 h-3.5 text-[#E6AB3C]" />
+                <span>
+                  {testingType === 'agronomic-period'
+                    ? 'Envoi Push en cours...'
+                    : 'Déclencher Push Calendrier Bio'}
+                </span>
+              </button>
+            </div>
+
+            {/* Scenario 3: Frost */}
             <div className="p-4 rounded-2xl bg-white border border-[#E6DEC9] hover:border-cyan-400 transition-all shadow-xs flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -481,7 +723,7 @@ export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
                   Risque de Gel à Seddouk (-0.5°C)
                 </h5>
                 <p className="text-xs text-[#436229] mt-1 leading-relaxed">
-                  Alerte gelée blanche sur les hauts plateaux de Seddouk et Beni Maouche. Risque d'éclatement des parois des olives et altération du taux de polyphénols.
+                  Alerte gelée blanche sur les hauts plateaux de Seddouk et Beni Maouche. Risque d’éclatement cellulaire des drupes et oxydation.
                 </p>
               </div>
               <button
@@ -490,11 +732,13 @@ export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
                 className="mt-4 w-full py-2 px-3 rounded-xl bg-cyan-700 hover:bg-cyan-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
                 <Snowflake className="w-3.5 h-3.5" />
-                <span>{testingType === 'frost' ? 'Envoi en cours...' : 'Déclencher Push Gel'}</span>
+                <span>
+                  {testingType === 'frost' ? 'Envoi en cours...' : 'Déclencher Push Gel'}
+                </span>
               </button>
             </div>
 
-            {/* Scenario 2: High wind */}
+            {/* Scenario 4: High wind */}
             <div className="p-4 rounded-2xl bg-white border border-[#E6DEC9] hover:border-amber-400 transition-all shadow-xs flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -506,23 +750,29 @@ export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
                   </span>
                 </div>
                 <h5 className="font-bold text-sm text-[#18230F]">
-                  Rafales Bassin d'Akbou
+                  Rafales Bassin d’Akbou
                 </h5>
                 <p className="text-xs text-[#436229] mt-1 leading-relaxed">
-                  Vents violents d'Est dans le couloir de la Soummam. Risque d'envol des filets de récolte et chute massive des olives au sol.
+                  Vents violents dans le couloir de la Soummam. Risque d’envol des filets de récolte et chute massive des olives au sol.
                 </p>
               </div>
               <button
-                onClick={() => handleTestAlert('high-wind', 'Vallée de la Soummam · Akbou')}
+                onClick={() =>
+                  handleTestAlert('high-wind', 'Vallée de la Soummam · Akbou')
+                }
                 disabled={testingType === 'high-wind'}
                 className="mt-4 w-full py-2 px-3 rounded-xl bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
                 <Wind className="w-3.5 h-3.5" />
-                <span>{testingType === 'high-wind' ? 'Envoi en cours...' : 'Déclencher Push Vents'}</span>
+                <span>
+                  {testingType === 'high-wind'
+                    ? 'Envoi en cours...'
+                    : 'Déclencher Push Vents'}
+                </span>
               </button>
             </div>
 
-            {/* Scenario 3: Heavy rain */}
+            {/* Scenario 5: Heavy rain */}
             <div className="p-4 rounded-2xl bg-white border border-[#E6DEC9] hover:border-blue-400 transition-all shadow-xs flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -537,7 +787,7 @@ export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
                   Pluies Torrentielles Chemini
                 </h5>
                 <p className="text-xs text-[#436229] mt-1 leading-relaxed">
-                  Averses abondantes sur les terrasses du Djurdjura. Consigne d'arrêt immédiat de la cueillette et pressage d'urgence sous 24h.
+                  Averses abondantes sur les terrasses du Djurdjura. Consigne d’arrêt immédiat de la cueillette et pressage d’urgence sous 24h.
                 </p>
               </div>
               <button
@@ -546,11 +796,15 @@ export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
                 className="mt-4 w-full py-2 px-3 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
                 <CloudRain className="w-3.5 h-3.5" />
-                <span>{testingType === 'heavy-rain' ? 'Envoi en cours...' : 'Déclencher Push Pluie'}</span>
+                <span>
+                  {testingType === 'heavy-rain'
+                    ? 'Envoi en cours...'
+                    : 'Déclencher Push Pluie'}
+                </span>
               </button>
             </div>
 
-            {/* Scenario 4: Heat / Sirocco */}
+            {/* Scenario 6: Heat / Sirocco */}
             <div className="p-4 rounded-2xl bg-white border border-[#E6DEC9] hover:border-red-400 transition-all shadow-xs flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -569,12 +823,18 @@ export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
                 </p>
               </div>
               <button
-                onClick={() => handleTestAlert('heat-sirocco', 'Tazmalt & Oued Soummam')}
+                onClick={() =>
+                  handleTestAlert('heat-sirocco', 'Tazmalt & Oued Soummam')
+                }
                 disabled={testingType === 'heat-sirocco'}
                 className="mt-4 w-full py-2 px-3 rounded-xl bg-red-700 hover:bg-red-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
                 <Flame className="w-3.5 h-3.5" />
-                <span>{testingType === 'heat-sirocco' ? 'Envoi en cours...' : 'Déclencher Push Sirocco'}</span>
+                <span>
+                  {testingType === 'heat-sirocco'
+                    ? 'Envoi en cours...'
+                    : 'Déclencher Push Sirocco'}
+                </span>
               </button>
             </div>
           </div>
@@ -586,7 +846,7 @@ export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
         <div className="mt-4 space-y-2">
           {alertHistory.length === 0 ? (
             <div className="p-5 text-center text-xs text-[#436229] bg-[#FAF7F2] rounded-xl border border-[#E6DEC9]">
-              Aucun historique d'alerte enregistré pour le moment.
+              Aucun historique d'alerte Push enregistré pour le moment.
             </div>
           ) : (
             alertHistory.map((item) => (
@@ -599,7 +859,11 @@ export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
                   <div>
                     <div className="font-bold text-[#18230F]">{item.title}</div>
                     <div className="text-[11px] text-[#567B34]">
-                      {item.zone} · {item.metric} · {new Date(item.timestamp).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
+                      {item.zone} · {item.metric} ·{' '}
+                      {new Date(item.timestamp).toLocaleString('fr-FR', {
+                        dateStyle: 'short',
+                        timeStyle: 'short',
+                      })}
                     </div>
                   </div>
                 </div>
@@ -609,7 +873,7 @@ export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
                   }}
                   className="px-2.5 py-1 rounded-lg bg-white border border-[#E6DEC9] text-[#233416] hover:bg-[#E8F4D9] transition-colors font-semibold text-[11px] shrink-0 cursor-pointer"
                 >
-                  Renvoyer
+                  Renvoyer Push
                 </button>
               </div>
             ))
@@ -621,11 +885,15 @@ export const WeatherAlertCenter: React.FC<WeatherAlertCenterProps> = ({
       <div className="mt-6 pt-4 border-t border-[#E6DEC9] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-[11px] text-[#436229]">
         <div className="flex items-center gap-2">
           <Smartphone className="w-3.5 h-3.5 text-[#567B34]" />
-          <span>Compatible Android, Chrome, Edge, Firefox, et Safari iOS (via Écran d'accueil PWA).</span>
+          <span>
+            Compatible Web Push API (Android, Chrome, Edge, Firefox, Safari iOS 16.4+ sur écran d’accueil PWA).
+          </span>
         </div>
         <div className="flex items-center gap-2 font-medium">
           <Volume2 className="w-3.5 h-3.5 text-[#E6AB3C]" />
-          <span>Vibreur et notification sonore inclus selon vos paramètres mobiles.</span>
+          <span>
+            Notification système + aperçu temps réel intégré au portail ADOIO.
+          </span>
         </div>
       </div>
     </div>
