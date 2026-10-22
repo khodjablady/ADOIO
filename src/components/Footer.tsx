@@ -153,7 +153,15 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick, onOpenAdhesion, onOp
                       onClick={() => onNavClick('concours')}
                       className="hover:text-white transition-colors cursor-pointer text-left flex items-center gap-1.5 text-[#E6AB3C] font-semibold"
                     >
-                      <span>🏆 Concours Meilleure Huile 2026</span>
+                      <span>Concours Meilleure Huile 2026</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      onClick={() => onNavClick('glossaire-oleicole')}
+                      className="hover:text-white transition-colors cursor-pointer text-left text-[#B0D984] font-semibold"
+                    >
+                      Glossaire Oléicole & Termes COI
                     </button>
                   </li>
                 </ul>
@@ -193,7 +201,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick, onOpenAdhesion, onOp
                       onClick={() => onNavClick('sous-produits')}
                       className="hover:text-white transition-colors cursor-pointer text-left text-[#E6AB3C] font-semibold"
                     >
-                      ♻️ Valorisation des Sous-Produits (Guide ADOIO)
+                      Valorisation des Sous-Produits (Guide ADOIO)
                     </button>
                   </li>
                   <li>
@@ -201,15 +209,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick, onOpenAdhesion, onOp
                       onClick={() => onNavClick('diagnostic-phytosanitaire')}
                       className="hover:text-white transition-colors cursor-pointer text-left text-[#B0D984] font-semibold"
                     >
-                      🩺 Diagnostic Phytosanitaire & Bio
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      onClick={() => onNavClick('alertes-recolte')}
-                      className="hover:text-white transition-colors cursor-pointer text-left"
-                    >
-                      Alertes Récolte Optimale PWA
+                      Diagnostic Phytosanitaire & Bio
                     </button>
                   </li>
                   <li>
@@ -217,7 +217,15 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick, onOpenAdhesion, onOp
                       onClick={() => onNavClick('pratiques')}
                       className="hover:text-white transition-colors cursor-pointer text-left"
                     >
-                      Calendrier & Bonnes Pratiques
+                      Calendrier, Météo & Vigilance Gel
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      onClick={() => onNavClick('assistant-adoio')}
+                      className="hover:text-white transition-colors cursor-pointer text-left text-[#E6AB3C] font-semibold"
+                    >
+                      Assistant Agronomique ADOIO
                     </button>
                   </li>
                   <li>

@@ -3,30 +3,90 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
-import { ArrowUp, ListOrdered, ArrowRight, Sparkles, Compass } from 'lucide-react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
+import { ArrowUp, ListOrdered, ArrowRight } from 'lucide-react';
 import { Navbar } from './components/Navbar';
 import { SiloNavigation } from './components/SiloNavigation';
 import { HeroSection } from './components/HeroSection';
-import { StatsAndPotential } from './components/StatsAndPotential';
-import { OliveLandscapesGallery } from './components/OliveLandscapesGallery';
-import { InteractiveOliveMap } from './components/InteractiveOliveMap';
 import { AdoioSection } from './components/AdoioSection';
-import { MillsDirectory } from './components/MillsDirectory';
-import { VarietiesGuide } from './components/VarietiesGuide';
-import { YieldSimulator } from './components/YieldSimulator';
-import { OrganicFertilizationCalculator } from './components/OrganicFertilizationCalculator';
-import { IrrigationGuide } from './components/IrrigationGuide';
-import { ByproductsValorizationSection } from './components/ByproductsValorizationSection';
-import { PhytosanitaryDiagnosis } from './components/PhytosanitaryDiagnosis';
-import { TastingAndQuality } from './components/TastingAndQuality';
-import { OilCompetitionSection } from './components/OilCompetitionSection';
-import { CalendarAndPractices } from './components/CalendarAndPractices';
-import { FaqOleiculture } from './components/FaqOleiculture';
-import { AdhesionModal } from './components/AdhesionModal';
-import { SitemapModal } from './components/SitemapModal';
 import { Footer } from './components/Footer';
 import { OfflineIndicator } from './components/OfflineIndicator';
+
+// Lazy-loaded below-the-fold sections & modals for fast initial paint on mobile/3G
+const StatsAndPotential = lazy(() =>
+  import('./components/StatsAndPotential').then((m) => ({ default: m.StatsAndPotential }))
+);
+const OliveLandscapesGallery = lazy(() =>
+  import('./components/OliveLandscapesGallery').then((m) => ({ default: m.OliveLandscapesGallery }))
+);
+const InteractiveOliveMap = lazy(() =>
+  import('./components/InteractiveOliveMap').then((m) => ({ default: m.InteractiveOliveMap }))
+);
+const MillsDirectory = lazy(() =>
+  import('./components/MillsDirectory').then((m) => ({ default: m.MillsDirectory }))
+);
+const VarietiesGuide = lazy(() =>
+  import('./components/VarietiesGuide').then((m) => ({ default: m.VarietiesGuide }))
+);
+const TastingAndQuality = lazy(() =>
+  import('./components/TastingAndQuality').then((m) => ({ default: m.TastingAndQuality }))
+);
+const OilCompetitionSection = lazy(() =>
+  import('./components/OilCompetitionSection').then((m) => ({ default: m.OilCompetitionSection }))
+);
+const OliveGlossarySection = lazy(() =>
+  import('./components/OliveGlossarySection').then((m) => ({ default: m.OliveGlossarySection }))
+);
+const YieldSimulator = lazy(() =>
+  import('./components/YieldSimulator').then((m) => ({ default: m.YieldSimulator }))
+);
+const OrganicFertilizationCalculator = lazy(() =>
+  import('./components/OrganicFertilizationCalculator').then((m) => ({
+    default: m.OrganicFertilizationCalculator,
+  }))
+);
+const IrrigationGuide = lazy(() =>
+  import('./components/IrrigationGuide').then((m) => ({ default: m.IrrigationGuide }))
+);
+const ByproductsValorizationSection = lazy(() =>
+  import('./components/ByproductsValorizationSection').then((m) => ({
+    default: m.ByproductsValorizationSection,
+  }))
+);
+const PhytosanitaryDiagnosis = lazy(() =>
+  import('./components/PhytosanitaryDiagnosis').then((m) => ({ default: m.PhytosanitaryDiagnosis }))
+);
+const CalendarAndPractices = lazy(() =>
+  import('./components/CalendarAndPractices').then((m) => ({ default: m.CalendarAndPractices }))
+);
+const AdoioAssistantChatbot = lazy(() =>
+  import('./components/AdoioAssistantChatbot').then((m) => ({ default: m.AdoioAssistantChatbot }))
+);
+const FaqOleiculture = lazy(() =>
+  import('./components/FaqOleiculture').then((m) => ({ default: m.FaqOleiculture }))
+);
+const AdhesionModal = lazy(() =>
+  import('./components/AdhesionModal').then((m) => ({ default: m.AdhesionModal }))
+);
+const SitemapModal = lazy(() =>
+  import('./components/SitemapModal').then((m) => ({ default: m.SitemapModal }))
+);
+
+const SectionSkeleton: React.FC<{ id?: string; label: string }> = ({ id, label }) => (
+  <div
+    id={id}
+    role="status"
+    aria-live="polite"
+    aria-label={`Chargement de la section ${label}`}
+    className="py-16 px-4 max-w-7xl mx-auto"
+  >
+    <div className="rounded-3xl border border-[#E6DEC9] bg-white/60 p-8 animate-pulse space-y-4">
+      <div className="h-4 w-48 bg-[#E8F4D9] rounded" />
+      <div className="h-8 w-80 max-w-full bg-[#E6DEC9]/70 rounded-lg" />
+      <div className="h-32 w-full bg-[#F4EEE1]/80 rounded-2xl" />
+    </div>
+  </div>
+);
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('adoio');
@@ -35,6 +95,30 @@ export default function App() {
   const [isSitemapOpen, setIsSitemapOpen] = useState<boolean>(false);
   const [showFloatingTop, setShowFloatingTop] = useState<boolean>(false);
   const [gmpQuotaExceeded, setGmpQuotaExceeded] = useState<boolean>(false);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    try {
+      const savedTheme = localStorage.getItem('adoio_theme_mode');
+      if (savedTheme === 'dark') return true;
+      if (savedTheme === 'light') return false;
+      return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isDarkMode) {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    try {
+      localStorage.setItem('adoio_theme_mode', isDarkMode ? 'dark' : 'light');
+    } catch {
+      // Ignore storage errors
+    }
+  }, [isDarkMode]);
 
   useEffect(() => {
     const handleQuotaExceeded = () => setGmpQuotaExceeded(true);
@@ -64,6 +148,9 @@ export default function App() {
       'meilleure-huile': 'concours',
       'palmares-medailles': 'concours',
       'fete-olive': 'concours',
+      'glossaire': 'glossaire-oleicole',
+      'glossaire-oleicole': 'glossaire-oleicole',
+      'lexique-oleicole': 'glossaire-oleicole',
       'outils-pratiques': 'simulateur',
       'simulateur-recolte': 'simulateur',
       'comparateur-varietes': 'simulateur',
@@ -84,6 +171,8 @@ export default function App() {
       'calendrier-agronomique': 'pratiques',
       'alertes-meteo': 'alertes-meteo',
       'alertes-gel': 'alertes-meteo',
+      'assistant-adoio': 'assistant-adoio',
+      'chatbot-adoio': 'assistant-adoio',
       'faq-pratiques': 'faq-oleiculture',
       'faq': 'faq-oleiculture',
     };
@@ -131,12 +220,14 @@ export default function App() {
       'varietes',
       'degustation',
       'concours',
+      'glossaire-oleicole',
       'simulateur',
       'fertilisation',
       'irrigation',
       'sous-produits',
       'diagnostic-phytosanitaire',
       'pratiques',
+      'assistant-adoio',
       'faq-oleiculture',
     ];
 
@@ -155,10 +246,26 @@ export default function App() {
       }
     );
 
-    sectionIds.forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) observer.observe(el);
+    const observedElements = new Set<Element>();
+    const observeAllSections = () => {
+      sectionIds.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el && !observedElements.has(el)) {
+          observedElements.add(el);
+          observer.observe(el);
+        }
+      });
+    };
+
+    observeAllSections();
+
+    const mainEl = document.getElementById('main-content');
+    const mutationObserver = new MutationObserver(() => {
+      observeAllSections();
     });
+    if (mainEl) {
+      mutationObserver.observe(mainEl, { childList: true, subtree: true });
+    }
 
     const handleFloatingVisibility = () => {
       setShowFloatingTop(window.scrollY > 650);
@@ -166,6 +273,7 @@ export default function App() {
     window.addEventListener('scroll', handleFloatingVisibility, { passive: true });
 
     return () => {
+      mutationObserver.disconnect();
       observer.disconnect();
       window.removeEventListener('scroll', handleFloatingVisibility);
     };
@@ -210,6 +318,8 @@ export default function App() {
         onOpenAdhesion={() => setIsAdhesionOpen(true)}
         onOpenSimulator={() => scrollToSection('simulateur')}
         onOpenSitemap={() => setIsSitemapOpen(true)}
+        isDarkMode={isDarkMode}
+        onToggleDarkMode={() => setIsDarkMode((prev) => !prev)}
       />
 
       {/* Thematic Silo Navigation Bar (Breadcrumb + 4 Topic Clusters Switcher) */}
@@ -239,10 +349,14 @@ export default function App() {
           <AdoioSection onOpenAdhesion={() => setIsAdhesionOpen(true)} />
 
           {/* Potentialities & Official Figures (Verger, 52 communes) */}
-          <StatsAndPotential />
+          <Suspense fallback={<SectionSkeleton id="potential" label="Chiffres & Verger" />}>
+            <StatsAndPotential />
+          </Suspense>
 
           {/* Olive Landscapes Gallery of Béjaïa */}
-          <OliveLandscapesGallery />
+          <Suspense fallback={<SectionSkeleton id="galerie-paysages" label="Galerie des Paysages" />}>
+            <OliveLandscapesGallery />
+          </Suspense>
 
           {/* Inter-Silo Contextual Bridge : Silo 1 -> Silo 2 */}
           <div className="bg-[#233416] text-[#FAF7F2] border-y border-[#8CBE5D]/30 py-5 px-4 no-print">
@@ -261,7 +375,7 @@ export default function App() {
                   className="px-3.5 py-2 rounded-xl bg-[#8CBE5D] hover:bg-[#729e4b] text-[#18230F] text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <span>Ouvrir la Carte SIG</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
                 </button>
                 <button
                   onClick={() => scrollToSection('annuaire')}
@@ -277,12 +391,16 @@ export default function App() {
         {/* ============================================================ */}
         {/* SILO 2 : CARTOGRAPHIE & ANNUAIRE DES HUILERIES (SIG & 448 moulins) */}
         {/* ============================================================ */}
-        <div id="carte-moulins" className="scroll-mt-44" role="region" aria-label="Pilier 2 : Cartographie SIG et Annuaire des Huileries">
+        <div id="carte-moulins" className="scroll-mt-44 cv-auto" role="region" aria-label="Pilier 2 : Cartographie SIG et Annuaire des Huileries">
           {/* Interactive Geographical Map of Communes & Registered Mills */}
-          <InteractiveOliveMap />
+          <Suspense fallback={<SectionSkeleton id="carte-interactive" label="Carte Interactive SIG" />}>
+            <InteractiveOliveMap />
+          </Suspense>
 
           {/* Mills & Producers Directory (Modern continuous & traditional) */}
-          <MillsDirectory initialSearch={searchQuery} />
+          <Suspense fallback={<SectionSkeleton id="annuaire" label="Annuaire des 448 Huileries" />}>
+            <MillsDirectory initialSearch={searchQuery} />
+          </Suspense>
 
           {/* Inter-Silo Contextual Bridge : Silo 2 -> Silo 3 */}
           <div className="bg-[#233416] text-[#FAF7F2] border-y border-[#8CBE5D]/30 py-5 px-4 no-print">
@@ -292,16 +410,16 @@ export default function App() {
                   Continuité du Parcours · Pilier 3
                 </span>
                 <p className="text-xs sm:text-sm text-[#E8F4D9]">
-                  Découvrez les <strong>variétés autochtones kabyles</strong>, le <strong>Guide officiel du Consommateur ADOIO</strong> et le <strong>Concours 2026</strong>.
+                  Découvrez les <strong>variétés autochtones kabyles</strong>, le <strong>Guide officiel du Consommateur ADOIO</strong>, le <strong>Concours 2026</strong> et le <strong>Glossaire Oléicole</strong>.
                 </p>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0 flex-wrap">
                 <button
                   onClick={() => scrollToSection('varietes')}
                   className="px-3.5 py-2 rounded-xl bg-[#8CBE5D] hover:bg-[#729e4b] text-[#18230F] text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <span>Guide Variétal</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
                 </button>
                 <button
                   onClick={() => scrollToSection('degustation')}
@@ -315,6 +433,12 @@ export default function App() {
                 >
                   Concours 2026
                 </button>
+                <button
+                  onClick={() => scrollToSection('glossaire-oleicole')}
+                  className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/15 transition-colors cursor-pointer"
+                >
+                  Glossaire Oléicole
+                </button>
               </div>
             </div>
           </div>
@@ -323,15 +447,26 @@ export default function App() {
         {/* ============================================================ */}
         {/* SILO 3 : PATRIMOINE VARIÉTAL & DÉGUSTATION (Génétique & Normes COI) */}
         {/* ============================================================ */}
-        <div id="varietes-degustation" className="scroll-mt-44" role="region" aria-label="Pilier 3 : Variétés, Guide du Consommateur et Concours">
+        <div id="varietes-degustation" className="scroll-mt-44 cv-auto" role="region" aria-label="Pilier 3 : Variétés, Guide du Consommateur, Concours et Glossaire Oléicole">
           {/* Kabylie Varieties Guide with Social Sharing */}
-          <VarietiesGuide />
+          <Suspense fallback={<SectionSkeleton id="varietes" label="Guide des Variétés" />}>
+            <VarietiesGuide />
+          </Suspense>
 
           {/* Tasting & Quality Standards (Consumer Guide ADOIO, COI Norms, Sensory) */}
-          <TastingAndQuality />
+          <Suspense fallback={<SectionSkeleton id="degustation" label="Guide du Consommateur & Normes COI" />}>
+            <TastingAndQuality />
+          </Suspense>
 
           {/* Annual Competition for the Best Olive Oil of the Season (Fête de l'Olive) */}
-          <OilCompetitionSection />
+          <Suspense fallback={<SectionSkeleton id="concours" label="Concours Meilleure Huile 2026" />}>
+            <OilCompetitionSection />
+          </Suspense>
+
+          {/* Technical Olive-Growing Glossary for Producers & Millers */}
+          <Suspense fallback={<SectionSkeleton id="glossaire-oleicole" label="Glossaire Oléicole" />}>
+            <OliveGlossarySection onNavigate={scrollToSection} />
+          </Suspense>
 
           {/* Inter-Silo Contextual Bridge : Silo 3 -> Silo 4 */}
           <div className="bg-[#233416] text-[#FAF7F2] border-y border-[#8CBE5D]/30 py-5 px-4 no-print">
@@ -341,7 +476,7 @@ export default function App() {
                   Continuité du Parcours · Pilier 4
                 </span>
                 <p className="text-xs sm:text-sm text-[#E8F4D9]">
-                  Passez à l’action avec le <strong>Simulateur Comparatif de Variétés</strong>, la <strong>Valorisation des Sous-Produits</strong> et le <strong>Diagnostic Phytosanitaire Bio</strong>.
+                  Passez à l’action avec le <strong>Simulateur Comparatif de Variétés</strong>, la <strong>Valorisation des Sous-Produits</strong>, le <strong>Diagnostic Bio</strong> et l’<strong>Assistant Agronomique ADOIO</strong>.
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0 flex-wrap">
@@ -350,7 +485,7 @@ export default function App() {
                   className="px-3.5 py-2 rounded-xl bg-[#8CBE5D] hover:bg-[#729e4b] text-[#18230F] text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <span>Simulateur & Comparateur</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
                 </button>
                 <button
                   onClick={() => scrollToSection('sous-produits')}
@@ -364,6 +499,12 @@ export default function App() {
                 >
                   Diagnostic Bio
                 </button>
+                <button
+                  onClick={() => scrollToSection('assistant-adoio')}
+                  className="px-3.5 py-2 rounded-xl bg-[#E6AB3C]/20 hover:bg-[#E6AB3C]/30 text-[#E6AB3C] text-xs font-bold border border-[#E6AB3C]/40 transition-colors cursor-pointer"
+                >
+                  Assistant ADOIO
+                </button>
               </div>
             </div>
           </div>
@@ -372,32 +513,51 @@ export default function App() {
         {/* ============================================================ */}
         {/* SILO 4 : OUTILS & BONNES PRATIQUES (Simulateur Recharts & Calendrier) */}
         {/* ============================================================ */}
-        <div id="outils-pratiques" className="scroll-mt-44" role="region" aria-label="Pilier 4 : Outils Agronomiques, Sous-Produits, Diagnostic et Bonnes Pratiques">
+        <div id="outils-pratiques" className="scroll-mt-44 cv-auto" role="region" aria-label="Pilier 4 : Outils Agronomiques, Sous-Produits, Diagnostic et Bonnes Pratiques">
           {/* Harvest & Multi-Season Yield Simulator with Carbon Footprint */}
-          <YieldSimulator />
+          <Suspense fallback={<SectionSkeleton id="simulateur" label="Simulateur de Rendement" />}>
+            <YieldSimulator />
+          </Suspense>
 
           {/* Organic Fertilization Calculator based on parcel size & olive tree age */}
           <div id="fertilisation" className="scroll-mt-44 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <OrganicFertilizationCalculator />
+            <Suspense fallback={<SectionSkeleton label="Calculateur de Fertilisation" />}>
+              <OrganicFertilizationCalculator />
+            </Suspense>
           </div>
 
           {/* Interactive Irrigation Guide & Water Needs Simulator */}
-          <IrrigationGuide />
+          <Suspense fallback={<SectionSkeleton id="irrigation" label="Guide d'Irrigation" />}>
+            <IrrigationGuide />
+          </Suspense>
 
           {/* Valorization of Olive By-products (Grignons, Margines, Compost, Biomass, Cosmetics, Tourism) */}
-          <ByproductsValorizationSection />
+          <Suspense fallback={<SectionSkeleton id="sous-produits" label="Valorisation des Sous-Produits" />}>
+            <ByproductsValorizationSection />
+          </Suspense>
 
           {/* Interactive Phytosanitary Diagnosis & Bio Treatments Module */}
-          <PhytosanitaryDiagnosis />
+          <Suspense fallback={<SectionSkeleton id="diagnostic-phytosanitaire" label="Diagnostic Phytosanitaire Bio" />}>
+            <PhytosanitaryDiagnosis />
+          </Suspense>
 
           {/* Seasonal Calendar & Best Agricultural Practices */}
-          <CalendarAndPractices />
+          <Suspense fallback={<SectionSkeleton id="pratiques" label="Calendrier Agronomique" />}>
+            <CalendarAndPractices />
+          </Suspense>
+
+          {/* AI-Powered Agronomic Assistant Chatbot (Pruning, Olive Diseases & Bejaia Calendar) */}
+          <Suspense fallback={<SectionSkeleton id="assistant-adoio" label="Assistant Agronomique ADOIO" />}>
+            <AdoioAssistantChatbot />
+          </Suspense>
 
           {/* Interactive FAQ on Pruning, Bio Treatments, and Harvesting */}
-          <FaqOleiculture
-            onOpenAdhesion={() => setIsAdhesionOpen(true)}
-            onOpenSimulator={() => scrollToSection('simulateur')}
-          />
+          <Suspense fallback={<SectionSkeleton id="faq-oleiculture" label="FAQ Oléicole" />}>
+            <FaqOleiculture
+              onOpenAdhesion={() => setIsAdhesionOpen(true)}
+              onOpenSimulator={() => scrollToSection('simulateur')}
+            />
+          </Suspense>
         </div>
       </main>
 
@@ -406,11 +566,11 @@ export default function App() {
         <div className="fixed bottom-5 right-5 z-40 flex items-center gap-2 no-print animate-in fade-in slide-in-from-bottom-4 duration-200">
           <button
             onClick={() => setIsSitemapOpen(true)}
-            className="px-3.5 py-2.5 rounded-2xl bg-[#233416]/95 hover:bg-[#18230F] text-[#FAF7F2] text-xs font-bold shadow-xl border border-[#8CBE5D]/40 flex items-center gap-2 backdrop-blur-md transition-all cursor-pointer"
-            title="Ouvrir le Plan du Site et l'Index des 15 chapitres"
+            className="px-3.5 py-2.5 rounded-2xl bg-[#233416]/95 hover:bg-[#18230F] text-[#FAF7F2] text-xs font-bold shadow-xl border border-[#8CBE5D]/40 flex items-center gap-2 backdrop-blur-md transition-all cursor-pointer tabular-nums"
+            title="Ouvrir le Plan du Site et l'Index des 17 chapitres"
           >
-            <ListOrdered className="w-4 h-4 text-[#E6AB3C]" />
-            <span className="hidden sm:inline">Index Rapide (15)</span>
+            <ListOrdered className="w-4 h-4 text-[#E6AB3C]" aria-hidden="true" />
+            <span className="hidden sm:inline">Index Rapide (17)</span>
           </button>
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -418,7 +578,7 @@ export default function App() {
             title="Remonter tout en haut de la page"
             aria-label="Remonter en haut de la page"
           >
-            <ArrowUp className="w-4 h-4 text-[#E6AB3C]" />
+            <ArrowUp className="w-4 h-4 text-[#E6AB3C]" aria-hidden="true" />
           </button>
         </div>
       )}
@@ -430,18 +590,26 @@ export default function App() {
         onOpenSitemap={() => setIsSitemapOpen(true)}
       />
 
-      {/* Membership / Contact Modal */}
-      <AdhesionModal
-        isOpen={isAdhesionOpen}
-        onClose={() => setIsAdhesionOpen(false)}
-      />
+      {/* Membership / Contact Modal (Loaded on demand) */}
+      {isAdhesionOpen && (
+        <Suspense fallback={null}>
+          <AdhesionModal
+            isOpen={isAdhesionOpen}
+            onClose={() => setIsAdhesionOpen(false)}
+          />
+        </Suspense>
+      )}
 
-      {/* Full Sitemap & Thematic Index Modal (Eliminates orphan content) */}
-      <SitemapModal
-        isOpen={isSitemapOpen}
-        onClose={() => setIsSitemapOpen(false)}
-        onNavigate={scrollToSection}
-      />
+      {/* Full Sitemap & Thematic Index Modal (Loaded on demand) */}
+      {isSitemapOpen && (
+        <Suspense fallback={null}>
+          <SitemapModal
+            isOpen={isSitemapOpen}
+            onClose={() => setIsSitemapOpen(false)}
+            onNavigate={scrollToSection}
+          />
+        </Suspense>
+      )}
 
       {/* Offline Status & Cached Information Indicator for Isolated Rural Zones */}
       <OfflineIndicator />

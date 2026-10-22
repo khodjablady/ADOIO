@@ -26,10 +26,9 @@ export const OfflineIndicator: React.FC = () => {
     return (
       <button
         onClick={() => setIsDismissed(false)}
-        className="fixed bottom-4 left-4 z-50 flex items-center gap-2 bg-[#233416] text-[#FAF7F2] px-3 py-1.5 rounded-full shadow-lg border border-[#8CBE5D]/40 text-xs font-semibold cursor-pointer hover:bg-[#18230F] transition-all"
+        className="fixed bottom-20 left-5 z-50 flex items-center gap-2 bg-[#233416] text-[#FAF7F2] px-3 py-1.5 rounded-full shadow-lg border border-[#8CBE5D]/40 text-xs font-semibold cursor-pointer hover:bg-[#18230F] transition-all"
         title="Mode hors-ligne actif - Cliquer pour détails"
       >
-        <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
         <WifiOff className="w-3.5 h-3.5 text-amber-400" />
         <span>Hors-ligne</span>
       </button>
@@ -37,7 +36,7 @@ export const OfflineIndicator: React.FC = () => {
   }
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 sm:right-auto sm:max-w-md z-50 bg-[#233416] text-[#FAF7F2] rounded-2xl shadow-2xl border border-[#8CBE5D]/40 p-4 transition-all">
+    <div className="fixed bottom-20 left-5 right-5 sm:right-auto sm:max-w-md z-50 bg-[#233416] text-[#FAF7F2] rounded-2xl shadow-2xl border border-[#8CBE5D]/40 p-4 transition-all">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-amber-400/20 flex items-center justify-center text-amber-400 shrink-0">

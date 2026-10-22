@@ -455,13 +455,17 @@ const LandscapePhoto: React.FC<LandscapePhotoProps> = ({
       <img
         src={currentPath}
         alt={item.imageAlt}
+        width={960}
+        height={604}
+        decoding="async"
+        fetchPriority="low"
         className={`w-full h-full object-cover transition-transform duration-700 ${
           isLoaded ? 'opacity-100' : 'opacity-0'
         } ${!isLarge ? 'group-hover:scale-105' : ''}`}
         onLoad={() => setIsLoaded(true)}
         onError={handleImageError}
         referrerPolicy="no-referrer"
-        loading={isLarge ? 'eager' : 'lazy'}
+        loading="lazy"
       />
     </div>
   );
@@ -680,6 +684,9 @@ const LandscapeLightboxViewer: React.FC<LandscapeLightboxViewerProps> = ({
 
   return (
     <div 
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Visionneuse photographique plein écran : ${item.title}`}
       className="fixed inset-0 z-50 bg-[#070b05]/98 backdrop-blur-xl flex flex-col justify-between overflow-hidden select-none animate-in fade-in duration-200"
       tabIndex={0}
     >
@@ -890,7 +897,11 @@ const LandscapeLightboxViewer: React.FC<LandscapeLightboxViewerProps> = ({
                   <div className="w-10 h-7 rounded-md overflow-hidden bg-black/40 shrink-0">
                     <img
                       src={thumbSrc}
-                      alt={l.title}
+                      alt={l.imageAlt}
+                      width={80}
+                      height={56}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         (e.currentTarget as HTMLImageElement).src = `/${l.imageFileName}`;

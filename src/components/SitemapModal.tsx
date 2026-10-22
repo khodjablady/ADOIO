@@ -29,6 +29,15 @@ export const SitemapModal: React.FC<SitemapModalProps> = ({
 }) => {
   const [filterText, setFilterText] = useState('');
 
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleSelectSection = (id: string) => {
@@ -79,21 +88,30 @@ export const SitemapModal: React.FC<SitemapModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="relative bg-[#FAF7F2] rounded-3xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-[#E6DEC9] overflow-hidden">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="sitemap-modal-title"
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="relative bg-[#FAF7F2] rounded-3xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-[#E6DEC9] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* Modal Header */}
         <div className="p-6 bg-[#233416] text-[#FAF7F2] flex items-center justify-between shrink-0">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FAF7F2]/10 text-xs font-semibold text-[#B0D984] mb-1">
+            <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#B0D984] mb-1">
               <Compass className="w-3.5 h-3.5 text-[#E6AB3C]" />
-              <span>Architecture de l'Information · 4 Silos & 15 Chapitres</span>
+              <span>Architecture de l'Information · 4 Piliers & 17 Chapitres</span>
             </div>
-            <h3 className="font-serif text-2xl font-bold tracking-tight">
+            <h3 id="sitemap-modal-title" className="font-serif text-2xl font-bold tracking-tight">
               Plan du Site & Table des Matières ADOIO
             </h3>
             <p className="text-xs text-[#E8F4D9]/80 mt-0.5">
-              Accès direct sans friction à tous les modules, guides PDF officiels, communes, fiches variétales et outils interactifs.
+              Accès direct sans friction à tous les modules, guides PDF officiels, communes, fiches variétales, glossaire et outils interactifs.
             </p>
           </div>
 
@@ -112,7 +130,7 @@ export const SitemapModal: React.FC<SitemapModalProps> = ({
             <Search className="w-4 h-4 text-[#567B34] absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Filtrer les 15 chapitres, une variété (Chemlal, Bouchouk...), une commune (Akbou, Seddouk...), un outil..."
+              placeholder="Filtrer les 17 chapitres, une variété (Chemlal, Bouchouk...), une commune (Akbou, Seddouk...), un terme du glossaire..."
               value={filterText}
               onChange={(e) => setFilterText(e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-white rounded-xl border border-[#E6DEC9] text-xs focus:outline-none focus:ring-2 focus:ring-[#567B34] text-[#18230F]"
@@ -301,7 +319,7 @@ export const SitemapModal: React.FC<SitemapModalProps> = ({
         <div className="p-4 bg-[#F4EEE1] border-t border-[#E6DEC9] flex items-center justify-between text-xs text-[#567B34] shrink-0">
           <span className="flex items-center gap-1">
             <CheckCircle2 className="w-3.5 h-3.5 text-[#567B34]" />
-            Architecture 4 Piliers · 15 Chapitres interconnectés · Zéro contenu orphelin
+            Architecture 4 Piliers · 17 Chapitres interconnectés · Zéro contenu orphelin
           </span>
           <button
             onClick={onClose}

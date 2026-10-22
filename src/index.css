@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "leaflet/dist/leaflet.css";
 
 @theme {
   --font-serif: 'Playfair Display', Georgia, Cambria, serif;
@@ -28,14 +27,234 @@
 }
 
 html {
-  scroll-padding-top: 11.5rem;
+  scroll-padding-top: 7.5rem;
   scroll-behavior: smooth;
+}
+
+@media (min-width: 768px) {
+  html {
+    scroll-padding-top: 11rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 body {
   font-family: var(--font-sans);
   background-color: #faf7f2;
   color: #242a20;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid #8cbe5d;
+  outline-offset: 2px;
+}
+
+/* Optimisation du rendu hors-écran sur mobile (Content-Visibility) */
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 900px;
+}
+
+/* Conformité contraste WCAG 2.1 AA (ratio >= 4.5:1 sur fond clair #FAF7F2 / #FFFFFF) */
+html:not(.dark) .text-\[\#6F9D44\] {
+  color: #436229;
+}
+
+/* ==========================================================================
+   MODE NUIT OPTIMISÉ POUR LA LECTURE (Warm Dark Olive & High-Legibility)
+   ========================================================================== */
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #11170e;
+  color: #eae6df;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: 0.008em;
+}
+
+/* Surfaces principales et cartes */
+html.dark .bg-\[\#FAF7F2\] {
+  background-color: #11170e !important;
+}
+
+html.dark .bg-\[\#FAF7F2\]\/95 {
+  background-color: rgba(17, 23, 14, 0.95) !important;
+}
+
+html.dark .bg-\[\#FAF7F2\]\/90,
+html.dark .bg-\[\#FAF7F2\]\/80,
+html.dark .bg-\[\#FAF7F2\]\/60,
+html.dark .bg-\[\#FAF7F2\]\/50 {
+  background-color: rgba(24, 33, 20, 0.88) !important;
+}
+
+html.dark .bg-\[\#F4EEE1\],
+html.dark .bg-\[\#F4EEE1\]\/70,
+html.dark .bg-\[\#F4EEE1\]\/60,
+html.dark .bg-\[\#F4EEE1\]\/50,
+html.dark .bg-\[\#F4EEE1\]\/40 {
+  background-color: #172013 !important;
+}
+
+html.dark .bg-white {
+  background-color: #1b2617 !important;
+}
+
+html.dark .bg-white\/95,
+html.dark .bg-white\/90,
+html.dark .bg-white\/80 {
+  background-color: rgba(27, 38, 23, 0.92) !important;
+}
+
+html.dark .bg-gray-50,
+html.dark .bg-stone-50,
+html.dark .bg-neutral-50 {
+  background-color: #161f12 !important;
+}
+
+html.dark .bg-gray-100 {
+  background-color: #212e1c !important;
+}
+
+/* Surfaces d'accentuation douces */
+html.dark .bg-\[\#E8F4D9\],
+html.dark .bg-\[\#E8F4D9\]\/60,
+html.dark .bg-\[\#E8F4D9\]\/50,
+html.dark .bg-\[\#E8F4D9\]\/40,
+html.dark .bg-\[\#E8F4D9\]\/30 {
+  background-color: rgba(67, 98, 41, 0.28) !important;
+}
+
+html.dark .bg-amber-50,
+html.dark .bg-amber-50\/80,
+html.dark .bg-amber-50\/60,
+html.dark .bg-amber-50\/50 {
+  background-color: rgba(120, 83, 18, 0.22) !important;
+}
+
+html.dark .bg-amber-100\/80,
+html.dark .bg-amber-100 {
+  background-color: rgba(146, 100, 22, 0.3) !important;
+}
+
+html.dark .bg-emerald-50,
+html.dark .bg-green-50 {
+  background-color: rgba(34, 84, 48, 0.25) !important;
+}
+
+html.dark .bg-red-50,
+html.dark .bg-rose-50 {
+  background-color: rgba(127, 29, 29, 0.24) !important;
+}
+
+html.dark .bg-blue-50,
+html.dark .bg-sky-50 {
+  background-color: rgba(30, 58, 95, 0.25) !important;
+}
+
+/* Typographie optimisée pour la lecture nocturne (anti-éblouissement) */
+html.dark .text-\[\#18230F\],
+html.dark .text-\[\#233416\],
+html.dark .text-\[\#242A20\],
+html.dark .text-gray-900,
+html.dark .text-gray-800 {
+  color: #eae6df !important;
+}
+
+html.dark .text-\[\#31491E\],
+html.dark .text-\[\#436229\],
+html.dark .text-\[\#567B34\] {
+  color: #a7d179 !important;
+}
+
+html.dark .text-\[\#4A5543\],
+html.dark .text-gray-700,
+html.dark .text-gray-600 {
+  color: #c2cbbd !important;
+}
+
+html.dark .text-gray-500,
+html.dark .text-gray-400 {
+  color: #96a38f !important;
+}
+
+html.dark .text-amber-950,
+html.dark .text-amber-900,
+html.dark .text-amber-800 {
+  color: #f7d694 !important;
+}
+
+html.dark .text-emerald-900,
+html.dark .text-emerald-800,
+html.dark .text-green-800 {
+  color: #9de2b0 !important;
+}
+
+html.dark .text-red-900,
+html.dark .text-red-800,
+html.dark .text-rose-900 {
+  color: #fca5a5 !important;
+}
+
+/* Bordures et séparateurs */
+html.dark .border-\[\#E6DEC9\],
+html.dark .border-\[\#D8CEB8\],
+html.dark .border-gray-200,
+html.dark .border-gray-100,
+html.dark .divide-\[\#E6DEC9\] > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #2b3a24 !important;
+}
+
+html.dark .border-amber-200,
+html.dark .border-amber-200\/80,
+html.dark .border-amber-300 {
+  border-color: rgba(212, 148, 42, 0.35) !important;
+}
+
+/* Champs de formulaire, inputs et sélecteurs en mode nuit */
+html.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html.dark select,
+html.dark textarea {
+  background-color: #141c11 !important;
+  color: #eae6df !important;
+  border-color: #324429 !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #7d8b76 !important;
+}
+
+/* Ombres adoucies en mode sombre */
+html.dark .shadow-sm,
+html.dark .shadow,
+html.dark .shadow-md,
+html.dark .shadow-lg,
+html.dark .shadow-xl {
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.45), 0 2px 6px -1px rgba(0, 0, 0, 0.3) !important;
 }
 
 @media print {
@@ -60,6 +279,17 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #6f9d44;
+}
+
+html.dark ::-webkit-scrollbar-track {
+  background: #141c11;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: #3d5726;
+  border-radius: 4px;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #567b34;
 }
 
 /* Interactive Map Markers & Selection Hover Animations */
@@ -98,32 +328,4 @@ body {
   transform: rotate(45deg) translate(-50%, -50%) scale(1.24) !important;
   box-shadow: 0 16px 30px -3px rgba(217, 119, 6, 0.55), 0 8px 16px -2px rgba(0, 0, 0, 0.35) !important;
   filter: brightness(1.1) drop-shadow(0 4px 12px rgba(217, 119, 6, 0.5));
-}
-
-.leaflet-popup {
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
-}
-
-.leaflet-popup-content-wrapper {
-  border-radius: 16px !important;
-  box-shadow: 0 16px 32px -4px rgba(24, 35, 15, 0.35) !important;
-  border: 1px solid #E6DEC9;
-}
-
-/* Custom Leaflet Tooltip */
-.leaflet-tooltip.custom-map-tooltip {
-  background: rgba(255, 255, 255, 0.98) !important;
-  backdrop-filter: blur(8px);
-  border: 1.5px solid #E6DEC9 !important;
-  border-radius: 12px !important;
-  box-shadow: 0 12px 28px -4px rgba(24, 35, 15, 0.28), 0 4px 6px -2px rgba(0, 0, 0, 0.1) !important;
-  color: #18230F !important;
-  padding: 6px 10px !important;
-  pointer-events: auto !important;
-  font-family: inherit;
-  transition: transform 0.15s ease, opacity 0.15s ease;
-}
-
-.leaflet-tooltip.custom-map-tooltip::before {
-  border-top-color: rgba(255, 255, 255, 0.96) !important;
 }

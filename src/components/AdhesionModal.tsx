@@ -30,6 +30,15 @@ export const AdhesionModal: React.FC<AdhesionModalProps> = ({ isOpen, onClose })
   const [submitted, setSubmitted] = useState<boolean>(false);
   const [referenceId, setReferenceId] = useState<string>('');
 
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -51,11 +60,20 @@ export const AdhesionModal: React.FC<AdhesionModalProps> = ({ isOpen, onClose })
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-[#FAF7F2] rounded-3xl border border-[#E6DEC9] max-w-xl w-full p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="adhesion-modal-title"
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-[#FAF7F2] rounded-3xl border border-[#E6DEC9] max-w-xl w-full p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 p-2 rounded-full bg-white hover:bg-gray-100 text-gray-500 hover:text-black transition-colors"
+          className="absolute top-5 right-5 p-2 rounded-full bg-white hover:bg-gray-100 text-gray-500 hover:text-black transition-colors cursor-pointer"
           aria-label="Fermer"
         >
           <X className="w-5 h-5" />
@@ -66,11 +84,11 @@ export const AdhesionModal: React.FC<AdhesionModalProps> = ({ isOpen, onClose })
             <div className="w-16 h-16 rounded-full bg-[#E8F4D9] flex items-center justify-center text-[#31491E] mx-auto">
               <CheckCircle2 className="w-10 h-10 text-[#567B34]" />
             </div>
-            <h3 className="font-serif text-2xl font-bold text-[#18230F]">
+            <h3 id="adhesion-modal-title" className="font-serif text-2xl font-bold text-[#18230F]">
               Demande Enregistrée avec Succès !
             </h3>
             <p className="text-xs sm:text-sm text-[#436229] max-w-md mx-auto leading-relaxed">
-              Merci <strong>{fullName}</strong>. Votre dossier d'adhésion / prise de contact a été transmis au bureau de l'ADOIO à Seddouk.
+              Merci <strong>{fullName}</strong>. Votre dossier d'adhésion / prise de contact a été transmis au bureau de l'ADOIO ({ADOIO_INFO.headquarters}).
             </p>
 
             <div className="bg-white p-4 rounded-2xl border border-[#E6DEC9] max-w-xs mx-auto text-left text-xs space-y-1">

@@ -205,7 +205,16 @@ export const CompetitionMedalsChartSection: React.FC = () => {
             return (
               <div
                 key={type}
+                role="button"
+                tabIndex={0}
+                aria-label={`Inspecter la ${m.name} (${m.scoreRange})`}
                 onClick={() => setInspectedMedal(type)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setInspectedMedal(type);
+                  }
+                }}
                 className="bg-white rounded-3xl border-2 border-[#18230F] p-6 shadow-[5px_5px_0px_0px_#18230F] relative group hover:-translate-y-1.5 transition-all cursor-pointer overflow-hidden flex flex-col justify-between"
               >
                 {/* Top badge */}
@@ -213,13 +222,13 @@ export const CompetitionMedalsChartSection: React.FC = () => {
                   <span className={`px-3 py-1 rounded-full text-xs font-bold border ${m.badgeBg}`}>
                     {m.name}
                   </span>
-                  <button
-                    type="button"
-                    className="w-8 h-8 rounded-full bg-[#FAF7F2] hover:bg-[#E8F4D9] flex items-center justify-center text-[#18230F] border border-[#E6DEC9] transition-colors"
+                  <span
+                    aria-hidden="true"
+                    className="w-8 h-8 rounded-full bg-[#FAF7F2] group-hover:bg-[#E8F4D9] flex items-center justify-center text-[#18230F] border border-[#E6DEC9] transition-colors"
                     title="Agrandir la médaille"
                   >
                     <Maximize2 className="w-3.5 h-3.5" />
-                  </button>
+                  </span>
                 </div>
 
                 {/* Medallion Visual Container */}
@@ -227,7 +236,10 @@ export const CompetitionMedalsChartSection: React.FC = () => {
                   <div className="relative w-44 h-44 sm:w-48 sm:h-48 group-hover:scale-105 transition-transform duration-300 drop-shadow-xl">
                     <img
                       src={m.svgSrc}
-                      alt={m.name}
+                      alt={`${m.name} – Concours de la meilleure huile d'olive de Béjaïa (${m.scoreRange})`}
+                      width={192}
+                      height={192}
+                      decoding="async"
                       className="w-full h-full object-contain filter group-hover:drop-shadow-[0_12px_20px_rgba(0,0,0,0.3)] transition-all"
                       loading="lazy"
                     />

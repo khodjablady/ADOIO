@@ -46,7 +46,8 @@ export default defineConfig(() => {
         },
         workbox: {
           importScripts: ['/sw-push.js'],
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,jpg,jpeg,webp}'],
+          // Precache only core application shell assets (avoid forcing 1MB+ of gallery photos on initial 3G load)
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -90,24 +91,95 @@ export default defineConfig(() => {
                 },
               },
             },
+            {
+              urlPattern: /\/images\/.*\.(?:jpg|jpeg|png|webp|svg)$/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'adoio-images-cache',
+                expiration: {
+                  maxEntries: 30,
+                  maxAgeSeconds: 60 * 60 * 24 * 30,
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
+            {
+              urlPattern: /\/assets\/.*\.pdf$/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'adoio-pdf-guides-cache',
+                expiration: {
+                  maxEntries: 10,
+                  maxAgeSeconds: 60 * 60 * 24 * 90,
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
           ],
         },
         devOptions: {
-          enabled: true,
+          enabled: false,
           type: 'module',
         },
       }),
+      {
+        name: 'disable-vite-client-ws-error',
+        enforce: 'post',
+        transform(code, id) {
+          if (id.includes('vite/dist/client/client.mjs')) {
+            return code
+              .replace(
+                'reject(/* @__PURE__ */ new Error("WebSocket closed without opened."));',
+                'resolve();'
+              )
+              .replace(
+                'transport.connect(createHMRHandler(handleMessage));',
+                'transport.connect(createHMRHandler(handleMessage)).catch(() => {});'
+              );
+          }
+          if (code.includes("@vitejs/plugin-react can't detect preamble")) {
+            return code.replace(
+              /if\s*\(!window\.\$RefreshReg\$\)\s*\{\s*throw new Error\(\s*"@vitejs\/plugin-react can't detect preamble\. Something is wrong\."\s*\);\s*\}/g,
+              `if (!window.$RefreshReg$) { try { RefreshRuntime.injectIntoGlobalHook(window); } catch {} window.$RefreshReg$ = () => {}; window.$RefreshSig$ = () => (type) => type; }`
+            );
+          }
+        },
+      },
     ],
+    build: {
+      target: 'es2020',
+      cssCodeSplit: true,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('recharts') || id.includes('d3-')) {
+                return 'vendor-charts';
+              }
+              if (id.includes('@vis.gl/react-google-maps')) {
+                return 'vendor-maps';
+              }
+              if (id.includes('lucide-react')) {
+                return 'vendor-icons';
+              }
+              if (id.includes('react-dom') || id.includes('/react/') || id.includes('scheduler')) {
+                return 'vendor-react';
+              }
+            }
+          },
+        },
+      },
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
     },
     server: {
-      // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modify—file watching is disabled to prevent flickering during agent edits.
-      hmr: process.env.DISABLE_HMR !== 'true',
-      // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
   };
