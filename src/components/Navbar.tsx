@@ -12,6 +12,7 @@ interface NavbarProps {
   onOpenOfflineGuides?: () => void;
   offlineCachedCount?: number;
   isDarkMode?: boolean;
+  isSystemTheme?: boolean;
   onToggleDarkMode?: () => void;
 }
 
@@ -24,6 +25,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenOfflineGuides,
   offlineCachedCount = 5,
   isDarkMode = false,
+  isSystemTheme = true,
   onToggleDarkMode,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -178,7 +180,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={onToggleDarkMode}
                 aria-label={isDarkMode ? 'Passer au thème clair' : 'Activer le mode nuit optimisé pour la lecture'}
                 aria-pressed={isDarkMode}
-                title={isDarkMode ? 'Mode clair (actuellement en mode nuit)' : 'Mode nuit optimisé pour la lecture'}
+                title={
+                  isSystemTheme
+                    ? `Synchronisé en temps réel avec le système (${isDarkMode ? 'Sombre' : 'Clair'}) · Cliquer pour basculer`
+                    : isDarkMode
+                      ? 'Mode Nuit actif · Cliquer pour revenir au thème clair'
+                      : 'Mode Clair actif · Cliquer pour activer le mode nuit'
+                }
                 className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                   isDarkMode
                     ? 'bg-[#233416] text-[#F7D694] border-[#436229] hover:bg-[#31491E]'
@@ -371,7 +379,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <span>{isDarkMode ? 'Thème Clair (Jour)' : 'Mode Nuit (Lecture confort)'}</span>
                 </span>
                 <span className="text-xs px-2 py-0.5 rounded bg-[#E8F4D9] text-[#233416]">
-                  {isDarkMode ? 'Actif : Sombre' : 'Actif : Clair'}
+                  {isSystemTheme
+                    ? `Auto Système (${isDarkMode ? 'Sombre' : 'Clair'})`
+                    : isDarkMode
+                      ? 'Actif : Sombre'
+                      : 'Actif : Clair'}
                 </span>
               </button>
             )}

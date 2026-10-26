@@ -14,7 +14,20 @@
     <link rel="canonical" href="https://ais-pre-cm2rpjmq4xkvkqhmdrimjg-541677789389.europe-west1.run.app" />
 
     <!-- PWA & Mobile Web App Meta Tags -->
-    <meta name="theme-color" content="#233416" />
+    <meta name="theme-color" content="#233416" id="meta-theme-color" />
+    <script>
+      (function () {
+        try {
+          var pref = localStorage.getItem('adoio_theme_preference');
+          var sysDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var isDark = pref === 'dark' || (pref !== 'light' && sysDark);
+          document.documentElement.classList.toggle('dark', isDark);
+          document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+          var meta = document.getElementById('meta-theme-color');
+          if (meta) meta.setAttribute('content', isDark ? '#11190D' : '#233416');
+        } catch (e) {}
+      })();
+    </script>
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />

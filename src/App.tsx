@@ -190,30 +190,101 @@ export default function App() {
   const [showFloatingTop, setShowFloatingTop] = useState<boolean>(false);
   const [gmpQuotaExceeded, setGmpQuotaExceeded] = useState<boolean>(false);
   const [forcedSections, setForcedSections] = useState<Record<string, boolean>>({});
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+  const [themePreference, setThemePreference] = useState<'system' | 'light' | 'dark'>(() => {
     try {
-      const savedTheme = localStorage.getItem('adoio_theme_mode');
-      if (savedTheme === 'dark') return true;
-      if (savedTheme === 'light') return false;
+      const saved = localStorage.getItem('adoio_theme_preference');
+      if (saved === 'dark' || saved === 'light' || saved === 'system') return saved;
+      return 'system';
+    } catch {
+      return 'system';
+    }
+  });
+
+  const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(() => {
+    try {
       return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
     } catch {
       return false;
     }
   });
 
+  const isDarkMode = themePreference === 'system' ? systemPrefersDark : themePreference === 'dark';
+
+  // Real-time system theme detection via window.matchMedia('(prefers-color-scheme: dark)')
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+    // Sync initial state in case OS changed between script parse and React mount
+    setSystemPrefersDark(mediaQuery.matches);
+
+    const handleSystemThemeChange = (event: MediaQueryListEvent) => {
+      setSystemPrefersDark(event.matches);
+      // Automatically realign with the OS transition in real time without refresh
+      setThemePreference('system');
+      try {
+        localStorage.removeItem('adoio_theme_preference');
+      } catch {
+        // Ignore storage errors
+      }
+    };
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', handleSystemThemeChange);
+      return () => mediaQuery.removeEventListener('change', handleSystemThemeChange);
+    } else if (typeof mediaQuery.addListener === 'function') {
+      // Fallback for older Safari / mobile WebViews
+      mediaQuery.addListener(handleSystemThemeChange);
+      return () => mediaQuery.removeListener(handleSystemThemeChange);
+    }
+  }, []);
+
+  // Cross-tab synchronization if theme preference is changed in another tab
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'adoio_theme_preference') {
+        const next = event.newValue;
+        if (next === 'dark' || next === 'light' || next === 'system') {
+          setThemePreference(next);
+        } else {
+          setThemePreference('system');
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Apply active theme to <html>, native color-scheme, and PWA status bar meta tag
   useEffect(() => {
     const root = document.documentElement;
-    if (isDarkMode) {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
+    root.classList.toggle('dark', isDarkMode);
+    root.style.colorScheme = isDarkMode ? 'dark' : 'light';
+
+    const metaThemeColor =
+      document.getElementById('meta-theme-color') ||
+      document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute('content', isDarkMode ? '#11190D' : '#233416');
     }
+  }, [isDarkMode]);
+
+  const handleToggleDarkMode = () => {
+    const nextDark = !isDarkMode;
+    // If the user toggles back to what the system currently prefers, resume automatic 'system' tracking
+    const nextPref: 'system' | 'light' | 'dark' =
+      nextDark === systemPrefersDark ? 'system' : nextDark ? 'dark' : 'light';
+    setThemePreference(nextPref);
     try {
-      localStorage.setItem('adoio_theme_mode', isDarkMode ? 'dark' : 'light');
+      if (nextPref === 'system') {
+        localStorage.removeItem('adoio_theme_preference');
+      } else {
+        localStorage.setItem('adoio_theme_preference', nextPref);
+      }
     } catch {
       // Ignore storage errors
     }
-  }, [isDarkMode]);
+  };
 
   useEffect(() => {
     const handleQuotaExceeded = () => setGmpQuotaExceeded(true);
@@ -436,7 +507,8 @@ export default function App() {
         onOpenOfflineGuides={() => setIsOfflineGuidesOpen(true)}
         offlineCachedCount={offlineCachedCount}
         isDarkMode={isDarkMode}
-        onToggleDarkMode={() => setIsDarkMode((prev) => !prev)}
+        isSystemTheme={themePreference === 'system'}
+        onToggleDarkMode={handleToggleDarkMode}
       />
 
       {/* Thematic Silo Navigation Bar (Breadcrumb + 4 Topic Clusters Switcher) */}
