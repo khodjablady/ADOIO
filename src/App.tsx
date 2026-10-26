@@ -88,6 +88,91 @@ const SectionSkeleton: React.FC<{ id?: string; label: string }> = ({ id, label }
   </div>
 );
 
+interface NetworkInformationLike {
+  saveData?: boolean;
+  effectiveType?: string;
+}
+
+function isSlowOrSaveDataConnection(): boolean {
+  try {
+    const nav = navigator as Navigator & { connection?: NetworkInformationLike };
+    if (!nav.connection) return false;
+    return (
+      Boolean(nav.connection.saveData) ||
+      nav.connection.effectiveType === 'slow-2g' ||
+      nav.connection.effectiveType === '2g' ||
+      nav.connection.effectiveType === '3g'
+    );
+  } catch {
+    return false;
+  }
+}
+
+interface DeferredSectionProps {
+  id: string;
+  label: string;
+  forceMount?: boolean;
+  children: React.ReactNode;
+}
+
+const DeferredSection: React.FC<DeferredSectionProps> = ({
+  id,
+  label,
+  forceMount = false,
+  children,
+}) => {
+  const [shouldRender, setShouldRender] = useState<boolean>(forceMount);
+  const placeholderRef = React.useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (forceMount && !shouldRender) {
+      setShouldRender(true);
+    }
+  }, [forceMount, shouldRender]);
+
+  useEffect(() => {
+    if (shouldRender) return;
+
+    const handleBeforePrint = () => setShouldRender(true);
+    window.addEventListener('beforeprint', handleBeforePrint);
+
+    const node = placeholderRef.current;
+    if (!node || typeof IntersectionObserver === 'undefined') {
+      setShouldRender(true);
+      return () => window.removeEventListener('beforeprint', handleBeforePrint);
+    }
+
+    // Use tighter pre-fetch margin on slow/Save-Data connections to conserve mobile bandwidth
+    const margin = isSlowOrSaveDataConnection() ? '350px 0px' : '850px 0px';
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setShouldRender(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: margin }
+    );
+
+    observer.observe(node);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('beforeprint', handleBeforePrint);
+    };
+  }, [shouldRender]);
+
+  if (!shouldRender) {
+    return (
+      <div ref={placeholderRef}>
+        <SectionSkeleton id={id} label={label} />
+      </div>
+    );
+  }
+
+  return <Suspense fallback={<SectionSkeleton id={id} label={label} />}>{children}</Suspense>;
+};
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('adoio');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -95,6 +180,7 @@ export default function App() {
   const [isSitemapOpen, setIsSitemapOpen] = useState<boolean>(false);
   const [showFloatingTop, setShowFloatingTop] = useState<boolean>(false);
   const [gmpQuotaExceeded, setGmpQuotaExceeded] = useState<boolean>(false);
+  const [forcedSections, setForcedSections] = useState<Record<string, boolean>>({});
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     try {
       const savedTheme = localStorage.getItem('adoio_theme_mode');
@@ -126,7 +212,7 @@ export default function App() {
     return () => window.removeEventListener('gmp-quota-exceeded', handleQuotaExceeded);
   }, []);
 
-  // Unified scroll handler with URL hash sync
+  // Unified scroll handler with URL hash sync & instant lazy section hydration
   const scrollToSection = (sectionId: string) => {
     // Normalize aliases for backward compatibility & SEO slugs
     const slugMap: Record<string, string> = {
@@ -178,6 +264,20 @@ export default function App() {
     };
 
     const targetId = slugMap[sectionId] || sectionId;
+    const parentDeferredId =
+      targetId === 'alertes-meteo'
+        ? 'pratiques'
+        : targetId === 'alertes-recolte-optimale'
+          ? 'simulateur'
+          : targetId;
+
+    // Immediately mount the target deferred section (and preceding sections if needed)
+    setForcedSections((prev) => ({
+      ...prev,
+      [parentDeferredId]: true,
+      [targetId]: true,
+    }));
+
     if (targetId !== 'hero' && targetId !== 'alertes-meteo' && targetId !== 'alertes-recolte-optimale') {
       setActiveTab(targetId);
     } else if (targetId === 'alertes-meteo') {
@@ -186,11 +286,17 @@ export default function App() {
       setActiveTab('simulateur');
     }
 
-    const element = document.getElementById(targetId);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-      window.history.replaceState(null, '', `#${targetId}`);
-    }
+    const performScroll = (attemptsLeft: number) => {
+      const element = document.getElementById(targetId) || document.getElementById(parentDeferredId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+        window.history.replaceState(null, '', `#${targetId}`);
+      } else if (attemptsLeft > 0) {
+        setTimeout(() => performScroll(attemptsLeft - 1), 80);
+      }
+    };
+
+    performScroll(6);
   };
 
   // Scroll to hash on page load & listen to hashchange
@@ -349,14 +455,22 @@ export default function App() {
           <AdoioSection onOpenAdhesion={() => setIsAdhesionOpen(true)} />
 
           {/* Potentialities & Official Figures (Verger, 52 communes) */}
-          <Suspense fallback={<SectionSkeleton id="potential" label="Chiffres & Verger" />}>
+          <DeferredSection
+            id="potential"
+            label="Chiffres & Verger"
+            forceMount={Boolean(forcedSections['potential'])}
+          >
             <StatsAndPotential />
-          </Suspense>
+          </DeferredSection>
 
           {/* Olive Landscapes Gallery of Béjaïa */}
-          <Suspense fallback={<SectionSkeleton id="galerie-paysages" label="Galerie des Paysages" />}>
+          <DeferredSection
+            id="galerie-paysages"
+            label="Galerie des Paysages"
+            forceMount={Boolean(forcedSections['galerie-paysages'])}
+          >
             <OliveLandscapesGallery />
-          </Suspense>
+          </DeferredSection>
 
           {/* Inter-Silo Contextual Bridge : Silo 1 -> Silo 2 */}
           <div className="bg-[#233416] text-[#FAF7F2] border-y border-[#8CBE5D]/30 py-5 px-4 no-print">
@@ -393,14 +507,22 @@ export default function App() {
         {/* ============================================================ */}
         <div id="carte-moulins" className="scroll-mt-44 cv-auto" role="region" aria-label="Pilier 2 : Cartographie SIG et Annuaire des Huileries">
           {/* Interactive Geographical Map of Communes & Registered Mills */}
-          <Suspense fallback={<SectionSkeleton id="carte-interactive" label="Carte Interactive SIG" />}>
+          <DeferredSection
+            id="carte-interactive"
+            label="Carte Interactive SIG"
+            forceMount={Boolean(forcedSections['carte-interactive'])}
+          >
             <InteractiveOliveMap />
-          </Suspense>
+          </DeferredSection>
 
           {/* Mills & Producers Directory (Modern continuous & traditional) */}
-          <Suspense fallback={<SectionSkeleton id="annuaire" label="Annuaire des 448 Huileries" />}>
+          <DeferredSection
+            id="annuaire"
+            label="Annuaire des 448 Huileries"
+            forceMount={Boolean(forcedSections['annuaire']) || Boolean(searchQuery)}
+          >
             <MillsDirectory initialSearch={searchQuery} />
-          </Suspense>
+          </DeferredSection>
 
           {/* Inter-Silo Contextual Bridge : Silo 2 -> Silo 3 */}
           <div className="bg-[#233416] text-[#FAF7F2] border-y border-[#8CBE5D]/30 py-5 px-4 no-print">
@@ -449,24 +571,40 @@ export default function App() {
         {/* ============================================================ */}
         <div id="varietes-degustation" className="scroll-mt-44 cv-auto" role="region" aria-label="Pilier 3 : Variétés, Guide du Consommateur, Concours et Glossaire Oléicole">
           {/* Kabylie Varieties Guide with Social Sharing */}
-          <Suspense fallback={<SectionSkeleton id="varietes" label="Guide des Variétés" />}>
+          <DeferredSection
+            id="varietes"
+            label="Guide des Variétés"
+            forceMount={Boolean(forcedSections['varietes'])}
+          >
             <VarietiesGuide />
-          </Suspense>
+          </DeferredSection>
 
           {/* Tasting & Quality Standards (Consumer Guide ADOIO, COI Norms, Sensory) */}
-          <Suspense fallback={<SectionSkeleton id="degustation" label="Guide du Consommateur & Normes COI" />}>
+          <DeferredSection
+            id="degustation"
+            label="Guide du Consommateur & Normes COI"
+            forceMount={Boolean(forcedSections['degustation'])}
+          >
             <TastingAndQuality />
-          </Suspense>
+          </DeferredSection>
 
           {/* Annual Competition for the Best Olive Oil of the Season (Fête de l'Olive) */}
-          <Suspense fallback={<SectionSkeleton id="concours" label="Concours Meilleure Huile 2026" />}>
+          <DeferredSection
+            id="concours"
+            label="Concours Meilleure Huile 2026"
+            forceMount={Boolean(forcedSections['concours'])}
+          >
             <OilCompetitionSection />
-          </Suspense>
+          </DeferredSection>
 
           {/* Technical Olive-Growing Glossary for Producers & Millers */}
-          <Suspense fallback={<SectionSkeleton id="glossaire-oleicole" label="Glossaire Oléicole" />}>
+          <DeferredSection
+            id="glossaire-oleicole"
+            label="Glossaire Oléicole"
+            forceMount={Boolean(forcedSections['glossaire-oleicole'])}
+          >
             <OliveGlossarySection onNavigate={scrollToSection} />
-          </Suspense>
+          </DeferredSection>
 
           {/* Inter-Silo Contextual Bridge : Silo 3 -> Silo 4 */}
           <div className="bg-[#233416] text-[#FAF7F2] border-y border-[#8CBE5D]/30 py-5 px-4 no-print">
@@ -515,49 +653,81 @@ export default function App() {
         {/* ============================================================ */}
         <div id="outils-pratiques" className="scroll-mt-44 cv-auto" role="region" aria-label="Pilier 4 : Outils Agronomiques, Sous-Produits, Diagnostic et Bonnes Pratiques">
           {/* Harvest & Multi-Season Yield Simulator with Carbon Footprint */}
-          <Suspense fallback={<SectionSkeleton id="simulateur" label="Simulateur de Rendement" />}>
+          <DeferredSection
+            id="simulateur"
+            label="Simulateur de Rendement"
+            forceMount={Boolean(forcedSections['simulateur'])}
+          >
             <YieldSimulator />
-          </Suspense>
+          </DeferredSection>
 
           {/* Organic Fertilization Calculator based on parcel size & olive tree age */}
           <div id="fertilisation" className="scroll-mt-44 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <Suspense fallback={<SectionSkeleton label="Calculateur de Fertilisation" />}>
+            <DeferredSection
+              id="fertilisation-module"
+              label="Calculateur de Fertilisation"
+              forceMount={Boolean(forcedSections['fertilisation'])}
+            >
               <OrganicFertilizationCalculator />
-            </Suspense>
+            </DeferredSection>
           </div>
 
           {/* Interactive Irrigation Guide & Water Needs Simulator */}
-          <Suspense fallback={<SectionSkeleton id="irrigation" label="Guide d'Irrigation" />}>
+          <DeferredSection
+            id="irrigation"
+            label="Guide d'Irrigation"
+            forceMount={Boolean(forcedSections['irrigation'])}
+          >
             <IrrigationGuide />
-          </Suspense>
+          </DeferredSection>
 
           {/* Valorization of Olive By-products (Grignons, Margines, Compost, Biomass, Cosmetics, Tourism) */}
-          <Suspense fallback={<SectionSkeleton id="sous-produits" label="Valorisation des Sous-Produits" />}>
+          <DeferredSection
+            id="sous-produits"
+            label="Valorisation des Sous-Produits"
+            forceMount={Boolean(forcedSections['sous-produits'])}
+          >
             <ByproductsValorizationSection />
-          </Suspense>
+          </DeferredSection>
 
           {/* Interactive Phytosanitary Diagnosis & Bio Treatments Module */}
-          <Suspense fallback={<SectionSkeleton id="diagnostic-phytosanitaire" label="Diagnostic Phytosanitaire Bio" />}>
+          <DeferredSection
+            id="diagnostic-phytosanitaire"
+            label="Diagnostic Phytosanitaire Bio"
+            forceMount={Boolean(forcedSections['diagnostic-phytosanitaire'])}
+          >
             <PhytosanitaryDiagnosis />
-          </Suspense>
+          </DeferredSection>
 
           {/* Seasonal Calendar & Best Agricultural Practices */}
-          <Suspense fallback={<SectionSkeleton id="pratiques" label="Calendrier Agronomique" />}>
+          <DeferredSection
+            id="pratiques"
+            label="Calendrier Agronomique"
+            forceMount={Boolean(forcedSections['pratiques'])}
+          >
             <CalendarAndPractices />
-          </Suspense>
+          </DeferredSection>
 
           {/* AI-Powered Agronomic Assistant Chatbot (Pruning, Olive Diseases & Bejaia Calendar) */}
-          <Suspense fallback={<SectionSkeleton id="assistant-adoio" label="Assistant Agronomique ADOIO" />}>
+          <DeferredSection
+            id="assistant-adoio"
+            label="Assistant Agronomique ADOIO"
+            forceMount={Boolean(forcedSections['assistant-adoio'])}
+          >
             <AdoioAssistantChatbot />
-          </Suspense>
+          </DeferredSection>
 
           {/* Interactive FAQ on Pruning, Bio Treatments, and Harvesting */}
-          <Suspense fallback={<SectionSkeleton id="faq-oleiculture" label="FAQ Oléicole" />}>
+          <DeferredSection
+            id="faq-oleiculture"
+            label="FAQ Oléicole"
+            forceMount={Boolean(forcedSections['faq-oleiculture'])}
+          >
             <FaqOleiculture
               onOpenAdhesion={() => setIsAdhesionOpen(true)}
               onOpenSimulator={() => scrollToSection('simulateur')}
             />
-          </Suspense>
+          </DeferredSection>
         </div>
       </main>
 

@@ -4,6 +4,7 @@ import express from 'express';
 import { createServer as createHttpServer } from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import zlib from 'zlib';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 
@@ -263,12 +264,43 @@ async function startServer() {
     }
   });
 
-  // Security & caching headers for static assets (images, icons, PDFs)
+  // Security, caching & lightweight Gzip/Brotli compression for mobile/3G performance
   app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     if (req.url.startsWith('/images/') || req.url.startsWith('/assets/')) {
       res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
     }
+
+    // Compress JSON API and text responses when client supports gzip/br
+    const acceptEncoding = String(req.headers['accept-encoding'] || '');
+    const origSend = res.send.bind(res);
+    res.send = function (body: unknown): express.Response {
+      if (
+        !res.headersSent &&
+        (typeof body === 'string' || Buffer.isBuffer(body)) &&
+        !res.getHeader('Content-Encoding')
+      ) {
+        const rawBuf = Buffer.isBuffer(body) ? body : Buffer.from(body);
+        if (rawBuf.byteLength > 1024) {
+          res.setHeader('Vary', 'Accept-Encoding');
+          if (acceptEncoding.includes('br')) {
+            res.setHeader('Content-Encoding', 'br');
+            const compressed = zlib.brotliCompressSync(rawBuf, {
+              params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 4 },
+            });
+            res.setHeader('Content-Length', compressed.byteLength);
+            return origSend(compressed);
+          } else if (acceptEncoding.includes('gzip')) {
+            res.setHeader('Content-Encoding', 'gzip');
+            const compressed = zlib.gzipSync(rawBuf, { level: 6 });
+            res.setHeader('Content-Length', compressed.byteLength);
+            return origSend(compressed);
+          }
+        }
+      }
+      return origSend(body);
+    };
+
     next();
   });
 

@@ -11,7 +11,9 @@ import {
   ArrowRight,
   Copy,
   Check,
+  Trophy,
 } from 'lucide-react';
+import { OliveQuiz } from './OliveQuiz';
 
 export type GlossaryCategory =
   | 'all'
@@ -271,6 +273,7 @@ export const OliveGlossarySection: React.FC<OliveGlossarySectionProps> = ({ onNa
   const [selectedCategory, setSelectedCategory] = useState<GlossaryCategory>('all');
   const [selectedLetter, setSelectedLetter] = useState<string>('ALL');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [highlightedTermId, setHighlightedTermId] = useState<string | null>(null);
 
   const categories: {
     id: GlossaryCategory;
@@ -332,6 +335,29 @@ export const OliveGlossarySection: React.FC<OliveGlossarySectionProps> = ({ onNa
     }
   };
 
+  const handleSelectGlossaryTerm = (termId: string) => {
+    setSelectedCategory('all');
+    setSelectedLetter('ALL');
+    setSearchQuery('');
+    setHighlightedTermId(termId);
+    setTimeout(() => {
+      const el = document.getElementById(`glossary-term-${termId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 80);
+    setTimeout(() => {
+      setHighlightedTermId((prev) => (prev === termId ? null : prev));
+    }, 4500);
+  };
+
+  const scrollToQuiz = () => {
+    const el = document.getElementById('quiz-oleicole');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   return (
     <section
       id="glossaire-oleicole"
@@ -353,23 +379,34 @@ export const OliveGlossarySection: React.FC<OliveGlossarySectionProps> = ({ onNa
             </p>
           </div>
 
-          {/* Summary Counter */}
-          <div className="flex items-center gap-4 text-xs text-[#436229] bg-[#F4EEE1] px-4 py-3 rounded-2xl border border-[#E6DEC9] shrink-0 tabular-nums">
-            <div>
-              <span className="font-serif font-bold text-xl text-[#18230F] block leading-none">
-                {filteredTerms.length} / {OLIVE_GLOSSARY_TERMS.length}
+          {/* Summary Counter & Quiz CTA */}
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <div className="flex items-center gap-4 text-xs text-[#436229] bg-[#F4EEE1] px-4 py-3 rounded-2xl border border-[#E6DEC9] tabular-nums">
+              <div>
+                <span className="font-serif font-bold text-xl text-[#18230F] block leading-none">
+                  {filteredTerms.length} / {OLIVE_GLOSSARY_TERMS.length}
+                </span>
+                <span className="text-[11px] text-[#567B34] font-medium">
+                  termes techniques affichés
+                </span>
+              </div>
+              <span aria-hidden="true" className="text-[#E6DEC9] text-lg">
+                |
               </span>
-              <span className="text-[11px] text-[#567B34] font-medium">
-                termes techniques affichés
-              </span>
+              <div className="text-[11px] text-[#31491E] leading-snug">
+                <strong className="block text-[#18230F]">Normes COI & Terrain</strong>
+                <span>Français · Tamazight (Kabyle)</span>
+              </div>
             </div>
-            <span aria-hidden="true" className="text-[#E6DEC9] text-lg">
-              |
-            </span>
-            <div className="text-[11px] text-[#31491E] leading-snug">
-              <strong className="block text-[#18230F]">Normes COI & Terrain</strong>
-              <span>Français · Tamazight (Kabyle)</span>
-            </div>
+
+            <button
+              type="button"
+              onClick={scrollToQuiz}
+              className="inline-flex items-center gap-2 px-4 py-3.5 rounded-2xl bg-[#18230F] text-[#FAF7F2] hover:bg-[#31491E] text-xs font-bold transition-colors shadow-sm cursor-pointer"
+            >
+              <Trophy className="w-4 h-4 text-[#E6AB3C]" />
+              <span>Quiz Oléicole (3 Niveaux)</span>
+            </button>
           </div>
         </div>
 
@@ -503,10 +540,16 @@ export const OliveGlossarySection: React.FC<OliveGlossarySectionProps> = ({ onNa
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {filteredTerms.map((item) => {
               const isCopied = copiedId === item.id;
+              const isHighlighted = highlightedTermId === item.id;
               return (
                 <article
                   key={item.id}
-                  className="bg-white rounded-2xl p-6 border border-[#E6DEC9] hover:border-[#8CBE5D] transition-all flex flex-col justify-between space-y-4"
+                  id={`glossary-term-${item.id}`}
+                  className={`bg-white rounded-2xl p-6 border transition-all flex flex-col justify-between space-y-4 scroll-mt-36 ${
+                    isHighlighted
+                      ? 'border-[#31491E] ring-2 ring-[#E6AB3C] shadow-md bg-[#FAF7F2]'
+                      : 'border-[#E6DEC9] hover:border-[#8CBE5D]'
+                  }`}
                 >
                   <div className="space-y-3">
                     {/* Unboxed clean metadata kicker with typographic separators */}
@@ -590,6 +633,14 @@ export const OliveGlossarySection: React.FC<OliveGlossarySectionProps> = ({ onNa
             })}
           </div>
         )}
+
+        {/* Interactive Quiz Oléicole with 3-Level Progression */}
+        <div className="mt-12 pt-10 border-t border-[#E6DEC9]">
+          <OliveQuiz
+            onSelectGlossaryTerm={handleSelectGlossaryTerm}
+            onNavigate={onNavigate}
+          />
+        </div>
       </div>
     </section>
   );

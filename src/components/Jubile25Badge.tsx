@@ -21,25 +21,13 @@ export const Jubile25Badge: React.FC<Jubile25BadgeProps> = ({
 
   useEffect(() => {
     // Check localStorage first for user-uploaded custom logo
-    const stored = localStorage.getItem('adoio_jubile_25_logo');
-    if (stored) {
-      setImageSrc(stored);
-      return;
-    }
-
-    // Try loading /25e-jubilé5.png or /25e-jubile.png
-    const candidates = ['/25e-jubilé5.png', '/25e-jubile5.png', '/25e-jubile.png', '/jubile25.png'];
-    let found = false;
-
-    for (const url of candidates) {
-      const img = new Image();
-      img.src = url;
-      img.onload = () => {
-        if (!found) {
-          found = true;
-          setImageSrc(url);
-        }
-      };
+    try {
+      const stored = localStorage.getItem('adoio_jubile_25_logo');
+      if (stored) {
+        setImageSrc(stored);
+      }
+    } catch {
+      // Ignore storage errors
     }
   }, []);
 

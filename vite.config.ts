@@ -46,9 +46,24 @@ export default defineConfig(() => {
         },
         workbox: {
           importScripts: ['/sw-push.js'],
-          // Precache only core application shell assets (avoid forcing 1MB+ of gallery photos on initial 3G load)
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+          // Precache core application shell without forcing heavy below-the-fold vendor chunks on initial 3G load
+          globPatterns: ['**/*.{css,html,ico,svg,woff,woff2}', 'assets/index-*.js', 'assets/vendor-react-*.js', 'assets/vendor-icons-*.js'],
+          globIgnores: ['**/vendor-charts-*.js', '**/vendor-maps-*.js', '**/vendor-motion-*.js', '**/images/paysages/**'],
           runtimeCaching: [
+            {
+              urlPattern: /\/assets\/.*\.js$/i,
+              handler: 'StaleWhileRevalidate',
+              options: {
+                cacheName: 'adoio-js-chunks-cache',
+                expiration: {
+                  maxEntries: 40,
+                  maxAgeSeconds: 60 * 60 * 24 * 30,
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
               handler: 'CacheFirst',
@@ -153,6 +168,17 @@ export default defineConfig(() => {
     build: {
       target: 'es2020',
       cssCodeSplit: true,
+      modulePreload: {
+        // Prevent preloading lazy chunks in index.html so below-the-fold libraries only download when needed
+        resolveDependencies: (_filename, deps) => {
+          return deps.filter(
+            (dep) =>
+              !dep.includes('vendor-charts') &&
+              !dep.includes('vendor-maps') &&
+              !dep.includes('vendor-motion')
+          );
+        },
+      },
       rollupOptions: {
         output: {
           manualChunks(id) {
@@ -162,6 +188,9 @@ export default defineConfig(() => {
               }
               if (id.includes('@vis.gl/react-google-maps')) {
                 return 'vendor-maps';
+              }
+              if (id.includes('framer-motion') || id.includes('motion')) {
+                return 'vendor-motion';
               }
               if (id.includes('lucide-react')) {
                 return 'vendor-icons';

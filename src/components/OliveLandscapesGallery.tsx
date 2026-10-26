@@ -81,7 +81,7 @@ export const LANDSCAPES_DATA: LandscapeItem[] = [
     description: 'Ouvrages paysans en terrasses empierrées épousant les versants escarpés avec échappée vers la Méditerranée. Chef-d’œuvre d’ingénierie paysanne kabyle retenant la terre végétale et les pluies d’orage pour une concentration oléique exceptionnelle.',
     agronomicNote: 'Pentes supérieures à 35% protégées de l’érosion hydrique. Arbres rustiques produisant une huile aux notes herbacées intenses et forte teneur en polyphénols.',
     accentColor: '#6B8E23',
-    imageFileName: '2-Banquettes.jpg',
+    imageFileName: '/assets/aistudio/6-Verger-sidi-aich2_4fd7f2ad.jpg',
     imageAlt: 'Ouvrages paysans en terrasses empierrées épousant les versants escarpés avec échappée vers la Méditerranée',
     photoCredit: 'Terrasses de Chemini · Versants du Djurdjura',
     svgType: 'mountain_terraces'
@@ -153,7 +153,7 @@ export const LANDSCAPES_DATA: LandscapeItem[] = [
     description: 'Panorama sur les collines et vergers de la moyenne Soummam, les hameaux traditionnels et le pic conique en arrière-plan. Un paysage vallonné où l’olivier cohabite harmonieusement avec le figuier de Barbarie et les amandiers.',
     agronomicNote: 'Densité de 100 arbres/ha conduite en gobelet traditionnel aéré pour maximiser l’interception de la lumière solaire.',
     accentColor: '#436229',
-    imageFileName: '6-Verger-sidi-aich.jpg',
+    imageFileName: '/assets/aistudio/6-Verger-sidi-aich2_4fd7f2ad.jpg',
     imageAlt: 'Panorama sur les collines et vergers de la moyenne Soummam, les hameaux traditionnels et le pic conique en arrière-plan',
     photoCredit: 'Plateau oléicole de Sidi-Aïch · Moyenne Soummam',
     svgType: 'seddouk_plateau'
@@ -416,17 +416,21 @@ const LandscapePhoto: React.FC<LandscapePhotoProps> = ({
 }) => {
   const [hasError, setHasError] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
-  const primaryPath = customSrc || `/images/paysages/${item.imageFileName}`;
+  const resolveImagePath = (fileName: string, custom?: string) => {
+    if (custom) return custom;
+    return fileName.startsWith('/') ? fileName : `/images/paysages/${fileName}`;
+  };
+  const primaryPath = resolveImagePath(item.imageFileName, customSrc);
   const [currentPath, setCurrentPath] = useState(primaryPath);
 
   useEffect(() => {
-    setCurrentPath(customSrc || `/images/paysages/${item.imageFileName}`);
+    setCurrentPath(resolveImagePath(item.imageFileName, customSrc));
     setHasError(false);
     setIsLoaded(false);
   }, [item.imageFileName, customSrc]);
 
   const handleImageError = () => {
-    if (currentPath === `/images/paysages/${item.imageFileName}` && !customSrc) {
+    if (!item.imageFileName.startsWith('/') && currentPath === `/images/paysages/${item.imageFileName}` && !customSrc) {
       setCurrentPath(`/${item.imageFileName}`);
     } else {
       setHasError(true);
@@ -457,6 +461,7 @@ const LandscapePhoto: React.FC<LandscapePhotoProps> = ({
         alt={item.imageAlt}
         width={960}
         height={604}
+        sizes={isLarge ? '(max-width: 1024px) 100vw, 66vw' : '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw'}
         decoding="async"
         fetchPriority="low"
         className={`w-full h-full object-cover transition-transform duration-700 ${
@@ -507,14 +512,18 @@ const LandscapeLightboxViewer: React.FC<LandscapeLightboxViewerProps> = ({
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
   const [hasError, setHasError] = useState<boolean>(false);
 
-  const primaryPath = customSrc || `/images/paysages/${item.imageFileName}`;
+  const resolveImagePath = (fileName: string, custom?: string) => {
+    if (custom) return custom;
+    return fileName.startsWith('/') ? fileName : `/images/paysages/${fileName}`;
+  };
+  const primaryPath = resolveImagePath(item.imageFileName, customSrc);
   const [currentPath, setCurrentPath] = useState<string>(primaryPath);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const touchStartRef = useRef<{ x: number; y: number; dist?: number }>({ x: 0, y: 0 });
 
   useEffect(() => {
-    setCurrentPath(customSrc || `/images/paysages/${item.imageFileName}`);
+    setCurrentPath(resolveImagePath(item.imageFileName, customSrc));
     setHasError(false);
     setIsLoaded(false);
     setZoom(1);
@@ -523,7 +532,7 @@ const LandscapeLightboxViewer: React.FC<LandscapeLightboxViewerProps> = ({
   }, [item.id, item.imageFileName, customSrc]);
 
   const handleImageError = () => {
-    if (currentPath === `/images/paysages/${item.imageFileName}` && !customSrc) {
+    if (!item.imageFileName.startsWith('/') && currentPath === `/images/paysages/${item.imageFileName}` && !customSrc) {
       setCurrentPath(`/${item.imageFileName}`);
     } else {
       setHasError(true);
@@ -882,7 +891,7 @@ const LandscapeLightboxViewer: React.FC<LandscapeLightboxViewerProps> = ({
           <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto py-1 scrollbar-none flex-1 justify-center sm:justify-start">
             {landscapes.map((l, idx) => {
               const isActive = l.id === item.id;
-              const thumbSrc = customImages[l.id] || `/images/paysages/${l.imageFileName}`;
+              const thumbSrc = customImages[l.id] || (l.imageFileName.startsWith('/') ? l.imageFileName : `/images/paysages/${l.imageFileName}`);
               return (
                 <button
                   key={l.id}
