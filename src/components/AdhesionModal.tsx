@@ -123,7 +123,7 @@ export const AdhesionModal: React.FC<AdhesionModalProps> = ({ isOpen, onClose })
                 <Award className="w-4 h-4 text-[#E6AB3C]" />
                 <span>Affiliation & Contact Officiel</span>
               </div>
-              <h3 className="font-serif text-2xl font-bold text-[#18230F] mt-1">
+              <h3 id="adhesion-modal-title" className="font-serif text-2xl font-bold text-[#18230F] mt-1">
                 Rejoindre l'Association ADOIO
               </h3>
               <p className="text-xs text-[#436229] mt-1">
@@ -133,10 +133,10 @@ export const AdhesionModal: React.FC<AdhesionModalProps> = ({ isOpen, onClose })
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Profile Type */}
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-[#18230F] block">
+              <div className="space-y-1" role="group" aria-labelledby="adhesion-profile-label">
+                <span id="adhesion-profile-label" className="text-xs font-bold text-[#18230F] block">
                   Votre profil :
-                </label>
+                </span>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {[
                     { id: 'oleiculteur', label: 'Oléiculteur / Planteur' },
@@ -149,6 +149,7 @@ export const AdhesionModal: React.FC<AdhesionModalProps> = ({ isOpen, onClose })
                     <button
                       key={p.id}
                       type="button"
+                      aria-pressed={profileType === p.id}
                       onClick={() => setProfileType(p.id)}
                       className={`py-2 px-2.5 rounded-xl border text-[11px] font-bold text-center transition-all cursor-pointer ${
                         profileType === p.id
@@ -165,10 +166,11 @@ export const AdhesionModal: React.FC<AdhesionModalProps> = ({ isOpen, onClose })
               {/* Full Name & Farm Name */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-[#18230F]">
+                  <label htmlFor="adhesion-fullname" className="text-xs font-semibold text-[#18230F]">
                     Nom & Prénom *
                   </label>
                   <input
+                    id="adhesion-fullname"
                     type="text"
                     required
                     value={fullName}
@@ -179,10 +181,11 @@ export const AdhesionModal: React.FC<AdhesionModalProps> = ({ isOpen, onClose })
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-[#18230F]">
+                  <label htmlFor="adhesion-farmname" className="text-xs font-semibold text-[#18230F]">
                     Nom de l'exploitation / Huilerie (si applicable)
                   </label>
                   <input
+                    id="adhesion-farmname"
                     type="text"
                     value={farmName}
                     onChange={(e) => setFarmName(e.target.value)}
@@ -195,10 +198,11 @@ export const AdhesionModal: React.FC<AdhesionModalProps> = ({ isOpen, onClose })
               {/* Commune & Phone */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-[#18230F]">
+                  <label htmlFor="adhesion-commune" className="text-xs font-semibold text-[#18230F]">
                     Commune (Wilaya de Béjaïa) *
                   </label>
                   <select
+                    id="adhesion-commune"
                     value={commune}
                     onChange={(e) => setCommune(e.target.value)}
                     className="w-full px-3 py-2 text-xs rounded-xl border border-[#E6DEC9] bg-white focus:outline-none focus:border-[#31491E]"
@@ -214,10 +218,11 @@ export const AdhesionModal: React.FC<AdhesionModalProps> = ({ isOpen, onClose })
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-[#18230F]">
+                  <label htmlFor="adhesion-phone" className="text-xs font-semibold text-[#18230F]">
                     Téléphone *
                   </label>
                   <input
+                    id="adhesion-phone"
                     type="tel"
                     required
                     value={phone}
@@ -231,10 +236,11 @@ export const AdhesionModal: React.FC<AdhesionModalProps> = ({ isOpen, onClose })
               {/* Email & Details */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-[#18230F]">
+                  <label htmlFor="adhesion-email" className="text-xs font-semibold text-[#18230F]">
                     Adresse Email (optionnelle)
                   </label>
                   <input
+                    id="adhesion-email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -244,10 +250,11 @@ export const AdhesionModal: React.FC<AdhesionModalProps> = ({ isOpen, onClose })
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-[#18230F]">
+                  <label htmlFor="adhesion-details" className="text-xs font-semibold text-[#18230F]">
                     Nombre d'arbres ou capacité (facultatif)
                   </label>
                   <input
+                    id="adhesion-details"
                     type="text"
                     value={detailsCount}
                     onChange={(e) => setDetailsCount(e.target.value)}
@@ -259,10 +266,11 @@ export const AdhesionModal: React.FC<AdhesionModalProps> = ({ isOpen, onClose })
 
               {/* Message */}
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-[#18230F]">
+                <label htmlFor="adhesion-message" className="text-xs font-semibold text-[#18230F]">
                   Message ou besoins spécifiques :
                 </label>
                 <textarea
+                  id="adhesion-message"
                   rows={3}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}

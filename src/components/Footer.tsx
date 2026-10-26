@@ -261,11 +261,16 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick, onOpenAdhesion, onOp
                   {ADOIO_INFO.mobile}
                 </a>
               </div>
-              <div className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-[#E6AB3C] shrink-0" />
-                <a href={`mailto:${ADOIO_INFO.email}`} className="hover:text-white underline">
-                  {ADOIO_INFO.email}
-                </a>
+              <div className="flex items-start gap-2">
+                <Mail className="w-4 h-4 text-[#E6AB3C] shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <a href={`mailto:${ADOIO_INFO.email}`} className="hover:text-white underline block">
+                    {ADOIO_INFO.email}
+                  </a>
+                  <a href={`mailto:${ADOIO_INFO.contactSecondary}`} className="hover:text-white underline block">
+                    {ADOIO_INFO.contactSecondary}
+                  </a>
+                </div>
               </div>
             </div>
 

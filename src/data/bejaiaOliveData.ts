@@ -1,3 +1,23 @@
+export interface OliveMillTechnicalSpecs {
+  hourlyThroughputKg: number;
+  minBatchKg: number;
+  equipmentBrand: string;
+  extractionProcess: string;
+  malaxationTemp: string;
+  storageCapacityLiters: number;
+  storageType: string;
+  avgYieldRange: string;
+  avgAcidity: string;
+  byproductsValorization: string;
+}
+
+export interface OliveMillCampaignInfo {
+  openingHours: string;
+  pricingInfo: string;
+  averageWaitTime: string;
+  appointmentRequired: boolean;
+}
+
 export interface OliveMill {
   id: string;
   name: string;
@@ -17,6 +37,9 @@ export interface OliveMill {
   igCandidate?: boolean;
   description: string;
   speciality: string;
+  technicalSpecs: OliveMillTechnicalSpecs;
+  services: string[];
+  campaignInfo: OliveMillCampaignInfo;
 }
 
 export interface OliveVariety {
@@ -181,7 +204,7 @@ export const ADOIO_INFO = {
   phone: "+213 661630658",
   mobile: "+213 661 77 80 80",
   email: "infos@blady-product.com",
-  contactSecondary: "contact@olive-bejaia.dz",
+  contactSecondary: "adoio.bejaia@gmail.com",
   presidentMessage: "L'olivier est bien plus qu'une culture en Kabylie : c'est notre âme, notre histoire et un moteur d'avenir économique. L'ADOIO œuvre chaque jour aux côtés des oléiculteurs et mouliniers pour hisser l'Huile d'Olive de Béjaïa aux plus hauts standards internationaux de pureté et d'authenticité.",
   keyMissions: [
     {
@@ -448,7 +471,33 @@ export const REPRESENTATIVE_MILLS: OliveMill[] = [
     certifiedBio: true,
     igCandidate: true,
     description: "Huilerie de référence équipée des dernières technologies de centrifugation à froid sans adjonction d'eau. Centre pilote pour les formations de l'ADOIO et la recherche sur la valorisation des grignons.",
-    speciality: "Fruité vert d'exception, acidité garantie inférieure à 0.3%."
+    speciality: "Fruité vert d'exception, acidité garantie inférieure à 0.3%.",
+    technicalSpecs: {
+      hourlyThroughputKg: 1000,
+      minBatchKg: 150,
+      equipmentBrand: "Pieralisi Protoreattore & Décanteur 2 Phases",
+      extractionProcess: "Extraction à froid intégrale sans ajout d'eau (Éco-2-Phases)",
+      malaxationTemp: "22°C – 25°C (Sondes thermiques numériques par cuve)",
+      storageCapacityLiters: 45000,
+      storageType: "Cuves Inox 316L alimentaires inertées à l'azote",
+      avgYieldRange: "19 à 23 L / quintal",
+      avgAcidity: "≤ 0,28 % acide oléique",
+      byproductsValorization: "Séparation noyau/pulpe (biométhanisation & bûches écologiques) + compostage grignon humide"
+    },
+    services: [
+      "Trituration à façon par lot individuel traçable",
+      "Effeuillage pneumatique & double lavage à l'eau claire",
+      "Analyse physico-chimique rapide (acidité & indice de peroxyde)",
+      "Filtration sur plaques de cellulose & embouteillage verre fumé",
+      "Prêt de caisses plastiques ajourées (palox 25 kg et 300 kg)",
+      "Ateliers de dégustation sensorielle & conseil agronomique ADOIO"
+    ],
+    campaignInfo: {
+      openingHours: "7j/7 de 06h00 à 22h00 (octobre à février)",
+      pricingInfo: "14 DA / kg d'olives ou retenue en huile (10 %)",
+      averageWaitTime: "Moins de 6h sur rendez-vous téléphonique",
+      appointmentRequired: true
+    }
   },
   {
     id: "mill-02",
@@ -468,7 +517,32 @@ export const REPRESENTATIVE_MILLS: OliveMill[] = [
     certifiedBio: true,
     igCandidate: true,
     description: "Exploitation familiale de 40 hectares d'oliviers Chemlal et Bouchouk conduits en agriculture raisonnée. Récolte manuelle au filet et trituration sous 8 heures.",
-    speciality: "Huile monovariétale Chemlal primée aux concours nationaux."
+    speciality: "Huile monovariétale Chemlal primée aux concours nationaux.",
+    technicalSpecs: {
+      hourlyThroughputKg: 750,
+      minBatchKg: 200,
+      equipmentBrand: "Alfa Laval Olive Oil (Ligne Continue Compacte)",
+      extractionProcess: "Broyage à marteaux inox & décantation centrifuge à froid",
+      malaxationTemp: "23°C – 26°C (Malaxeurs hermétiques anti-oxydation)",
+      storageCapacityLiters: 32000,
+      storageType: "Chai climatisé (16°C) avec cuves Inox à fond conique",
+      avgYieldRange: "20 à 24 L / quintal",
+      avgAcidity: "≤ 0,32 % acide oléique",
+      byproductsValorization: "Épandage raisonné des grignons compostés sur les 40 ha du domaine"
+    },
+    services: [
+      "Trituration express sous 8h pour lots récoltés en caisses",
+      "Conditionnement à façon en bouteilles personnalisées et bidons métalliques",
+      "Garde en cuve inox climatisée pour producteurs partenaires",
+      "Vente directe au domaine & dégustation des cuvées monovariétales",
+      "Pesée électronique certifiée avec bon de traçabilité parcellaire"
+    ],
+    campaignInfo: {
+      openingHours: "Tous les jours de 07h00 à 20h00",
+      pricingInfo: "15 DA / kg (remise pour lots certifiés sans sacs plastique)",
+      averageWaitTime: "Créneau garanti sous 8h sur réservation",
+      appointmentRequired: true
+    }
   },
   {
     id: "mill-03",
@@ -488,7 +562,32 @@ export const REPRESENTATIVE_MILLS: OliveMill[] = [
     certifiedBio: false,
     igCandidate: true,
     description: "Trituration traditionnelle perpétuée depuis trois générations. Écrasement lent sous lourdes meules en pierre de granit préservant la texture onctueuse et la saveur douce d'antan.",
-    speciality: "Huile douce fruitée mûre, arômes de fruits secs et de pâte d'olive."
+    speciality: "Huile douce fruitée mûre, arômes de fruits secs et de pâte d'olive.",
+    technicalSpecs: {
+      hourlyThroughputKg: 300,
+      minBatchKg: 100,
+      equipmentBrand: "2 Meules de Granit Massif + 3 Super-Presses Hydrauliques 350 bars",
+      extractionProcess: "Détritage lent sur pierre, empilage sur scourtins lavés à chaud & décantation naturelle",
+      malaxationTemp: "Température ambiante naturelle (sans chauffage excessif)",
+      storageCapacityLiters: 10000,
+      storageType: "Cuves inox & jarres traditionnelles de décantation",
+      avgYieldRange: "18 à 21 L / quintal",
+      avgAcidity: "0,6 % à 1,2 % (profil traditionnel fruité mûr)",
+      byproductsValorization: "Grignon sec redistribué aux oléiculteurs pour le chauffage domestique"
+    },
+    services: [
+      "Pressage artisanal de petits lots familiaux (dès 100 kg)",
+      "Décantation naturelle par gravité à l'ancienne",
+      "Restitution intégrale du grignon sec de presse au producteur",
+      "Accueil des récoltes villageoises avec ou sans rendez-vous",
+      "Vente directe d'huile traditionnelle de terroir"
+    ],
+    campaignInfo: {
+      openingHours: "6j/7 de 06h30 à 19h30 (fermé le vendredi matin)",
+      pricingInfo: "12 DA / kg ou dîme coutumière (1 L sur 10 L produits)",
+      averageWaitTime: "12h à 24h selon affluence de la semaine",
+      appointmentRequired: false
+    }
   },
   {
     id: "mill-04",
@@ -508,7 +607,32 @@ export const REPRESENTATIVE_MILLS: OliveMill[] = [
     certifiedBio: false,
     igCandidate: true,
     description: "Regroupe plus de 280 petits producteurs des flancs du Djurdjura et de la vallée. Mise en commun d'outils modernes de tri, de lavage et de décantation centrifuge.",
-    speciality: "Assemblage équilibré Chemlal et Aberkane de haute altitude."
+    speciality: "Assemblage équilibré Chemlal et Aberkane de haute altitude.",
+    technicalSpecs: {
+      hourlyThroughputKg: 900,
+      minBatchKg: 120,
+      equipmentBrand: "Rapanelli 3 Phases + Séparateurs Centrifuges Verticaux",
+      extractionProcess: "Chaîne continue coopérative avec double station de lavage haute pression",
+      malaxationTemp: "24°C – 26,5°C (4 bacs de malaxage indépendants pour suivi des lots)",
+      storageCapacityLiters: 55000,
+      storageType: "Batterie de 12 silos Inox alimentaires de 4 500 L",
+      avgYieldRange: "19 à 22,5 L / quintal",
+      avgAcidity: "≤ 0,45 % acide oléique",
+      byproductsValorization: "Unité collective d'épuisement et séchage des grignons + bassins de lagunage"
+    },
+    services: [
+      "Tarif solidaire préférentiel pour les adhérents de la coopérative",
+      "Collecte groupée par camion plateau dans les villages d'altitude",
+      "Location à prix coûtant de filets de récolte et peignes vibreurs",
+      "Commercialisation collective sous marque coopérative 'L'Étoile du Djurdjura'",
+      "Pesée pont-bascule & stockage collectif sécurisé"
+    ],
+    campaignInfo: {
+      openingHours: "7j/7 de 06h00 à 21h00 en pleine campagne",
+      pricingInfo: "10 DA / kg (adhérents) · 13 DA / kg (non-adhérents)",
+      averageWaitTime: "Planification par village (passage sous 12h)",
+      appointmentRequired: true
+    }
   },
   {
     id: "mill-05",
@@ -528,7 +652,32 @@ export const REPRESENTATIVE_MILLS: OliveMill[] = [
     certifiedBio: true,
     igCandidate: true,
     description: "Moulin moderne ultra-propre avec cuves de stockage en inox sous atmosphère d'azote pour éviter toute oxydation prématurée.",
-    speciality: "Fruité vert intense aux notes d'artichaut et de feuille fraîche."
+    speciality: "Fruité vert intense aux notes d'artichaut et de feuille fraîche.",
+    technicalSpecs: {
+      hourlyThroughputKg: 650,
+      minBatchKg: 150,
+      equipmentBrand: "Alfa Laval NX X19 (Ligne Inox Intégrale)",
+      extractionProcess: "Extraction centrifuge à froid avec échangeur thermique tubulaire",
+      malaxationTemp: "21°C – 24°C (Refroidissement initial de la pâte pour arômes verts)",
+      storageCapacityLiters: 28000,
+      storageType: "Cuves Inox 304L/316L sous couverture d'azote alimentaire",
+      avgYieldRange: "18,5 à 22 L / quintal",
+      avgAcidity: "≤ 0,30 % acide oléique",
+      byproductsValorization: "Valorisation des noyaux concassés en biocombustible pour chaudières"
+    },
+    services: [
+      "Trituration spéciale 'Récolte Précoce / Fruité Vert'",
+      "Filtration immédiate sur plaques pour éliminer l'humidité résiduelle",
+      "Conditionnement en bouteilles verre sombre anti-UV (25 cl, 50 cl, 75 cl)",
+      "Mise à disposition gratuite de caisses ventilées pour les clients fidèles",
+      "Suivi par SMS dès que le lot est pressé et prêt à être récupéré"
+    ],
+    campaignInfo: {
+      openingHours: "Tous les jours de 06h30 à 21h30",
+      pricingInfo: "14 DA / kg ou équivalent en huile vierge extra",
+      averageWaitTime: "Moins de 8h avec ticket horodaté",
+      appointmentRequired: true
+    }
   },
   {
     id: "mill-06",
@@ -548,7 +697,31 @@ export const REPRESENTATIVE_MILLS: OliveMill[] = [
     certifiedBio: true,
     igCandidate: true,
     description: "Monument d'histoire oléicole avec son pressoir à scourtins en fibres végétales. Visites pédagogiques organisées en saison pour les écoles et passionnés du patrimoine.",
-    speciality: "Huile de garde traditionnelle, ambrée et parfumée."
+    speciality: "Huile de garde traditionnelle, ambrée et parfumée.",
+    technicalSpecs: {
+      hourlyThroughputKg: 220,
+      minBatchKg: 80,
+      equipmentBrand: "Bassin à Meule de Pierre + Pressoir à Scourtins Végétaux",
+      extractionProcess: "Première pression mécanique douce et séparation par décantation en bassins carrelés",
+      malaxationTemp: "20°C – 25°C (Travail lent à température de cave voûtée)",
+      storageCapacityLiters: 8000,
+      storageType: "Jarres en terre cuite vernissée & fûts inox alimentaires",
+      avgYieldRange: "19 à 22 L / quintal",
+      avgAcidity: "0,5 % à 1,0 %",
+      byproductsValorization: "Briquettes de grignon sec pressé pour foyers villageois"
+    },
+    services: [
+      "Trituration à l'ancienne de petits lots dès 80 kg",
+      "Visites guidées patrimoniales et démonstration du savoir-faire kabyle",
+      "Dégustation traditionnelle avec galette d'orge (Aghroum) au moulin",
+      "Vente directe d'huile de garde non filtrée en cruches et bidons"
+    ],
+    campaignInfo: {
+      openingHours: "Tous les jours de 07h00 à 18h30",
+      pricingInfo: "11 DA / kg ou 10 % en huile",
+      averageWaitTime: "Passage dans la journée selon ordre d'arrivée",
+      appointmentRequired: false
+    }
   },
   {
     id: "mill-07",
@@ -568,7 +741,32 @@ export const REPRESENTATIVE_MILLS: OliveMill[] = [
     certifiedBio: true,
     igCandidate: true,
     description: "Grande unité moderne certifiée ISO 22000 et HACCP, exportant vers les marchés maghrébins et européens. Laboratoire interne de contrôle de l'acidité et des peroxydes.",
-    speciality: "Huile d'olive extra-vierge filtrée pour exportation."
+    speciality: "Huile d'olive extra-vierge filtrée pour exportation.",
+    technicalSpecs: {
+      hourlyThroughputKg: 1200,
+      minBatchKg: 250,
+      equipmentBrand: "Double Ligne Pieralisi Leopard DMF (2 Phases sans eau)",
+      extractionProcess: "Extraction haute cadence automatisée avec contrôle optique des fruits",
+      malaxationTemp: "22°C – 24,5°C (Pilotage automate PLC et traçabilité par lot)",
+      storageCapacityLiters: 85000,
+      storageType: "Chai isotherme 18 cuves Inox 316L sous azote + ligne d'embouteillage automatique",
+      avgYieldRange: "19,5 à 23,5 L / quintal",
+      avgAcidity: "≤ 0,25 % acide oléique (Certifié Export)",
+      byproductsValorization: "Extraction de pâté d'olive (antioxydants cosmétiques) et granulés biomasse"
+    },
+    services: [
+      "Laboratoire interne d'analyse certifié (acidité, peroxydes, K232/K270)",
+      "Ligne d'embouteillage, capsulage et étiquetage aux normes export (UE / Canada)",
+      "Achat direct des récoltes d'olives saines sur contrat auprès des producteurs",
+      "Trituration dédiée aux lots certifiés Agriculture Biologique (ECOCERT)",
+      "Logistique de collecte par camions-bennes alimentaires dans toute la wilaya"
+    ],
+    campaignInfo: {
+      openingHours: "24h/24 et 7j/7 en période de pic de récolte (3 équipes)",
+      pricingInfo: "15 DA / kg (trituration simple) · Forfait conditionnement sur devis",
+      averageWaitTime: "Moins de 4h grâce à la double ligne continue",
+      appointmentRequired: true
+    }
   },
   {
     id: "mill-08",
@@ -588,7 +786,32 @@ export const REPRESENTATIVE_MILLS: OliveMill[] = [
     certifiedBio: true,
     igCandidate: true,
     description: "Située en bordure de la majestueuse forêt de chênes d'Akfadou. Les oliviers bénéficient d'un microclimat montagnard vivifiant conférant à l'huile une teneur record en antioxydants.",
-    speciality: "Arômes sauvages, notes de thym et de genêt de montagne."
+    speciality: "Arômes sauvages, notes de thym et de genêt de montagne.",
+    technicalSpecs: {
+      hourlyThroughputKg: 450,
+      minBatchKg: 100,
+      equipmentBrand: "Oliomio / Mori-TEM 2 Phases (Spécial Lots de Terroir)",
+      extractionProcess: "Micro-huilerie de précision à couteaux inox et malaxage court",
+      malaxationTemp: "21°C – 23°C (Préservation maximale des polyphénols de montagne)",
+      storageCapacityLiters: 16000,
+      storageType: "Cuves Inox sous gaz inerte en cave semi-enterrée",
+      avgYieldRange: "17,5 à 20,5 L / quintal (haute concentration polyphénolique)",
+      avgAcidity: "≤ 0,29 % acide oléique",
+      byproductsValorization: "Compostage forestier enrichi aux feuilles d'olivier pour amendement"
+    },
+    services: [
+      "Trituration de micro-lots parcellaires dès 100 kg",
+      "Sélection spéciale cuvées haute teneur en polyphénols (> 450 mg/kg)",
+      "Mise en bouteille verre sombre numérotée à la propriété",
+      "Conseil en récolte précoce de montagne et prêt de caisses ajourées",
+      "Expédition de coffrets dégustation dans les 58 wilayas"
+    ],
+    campaignInfo: {
+      openingHours: "Tous les jours de 07h00 à 19h30",
+      pricingInfo: "15 DA / kg ou 10 % en huile",
+      averageWaitTime: "Moins de 6h sur prise de rendez-vous",
+      appointmentRequired: true
+    }
   },
   {
     id: "mill-09",
@@ -608,7 +831,31 @@ export const REPRESENTATIVE_MILLS: OliveMill[] = [
     certifiedBio: true,
     igCandidate: true,
     description: "Installations de trituration récentes axées sur les oliveraies de la plaine d'Amizour et du contrefort d'Oued Amassine.",
-    speciality: "Fruité équilibré et grande douceur en bouche."
+    speciality: "Fruité équilibré et grande douceur en bouche.",
+    technicalSpecs: {
+      hourlyThroughputKg: 600,
+      minBatchKg: 150,
+      equipmentBrand: "Barracane 2 Phases Inox",
+      extractionProcess: "Lavage hydro-pneumatique, broyage doux et décantation horizontale",
+      malaxationTemp: "23°C – 25,5°C",
+      storageCapacityLiters: 24000,
+      storageType: "Cuves Inox alimentaires avec filtration sur demande",
+      avgYieldRange: "19 à 22 L / quintal",
+      avgAcidity: "≤ 0,35 % acide oléique",
+      byproductsValorization: "Séparation du noyau sec vendu comme biocombustible écologique"
+    },
+    services: [
+      "Trituration à façon par lot individuel avec pesée électronique",
+      "Filtration fine et remplissage en bidons alimentaires 5 L / 10 L / 20 L",
+      "Prêt de caisses de récolte ventilées aux oléiculteurs de la daïra",
+      "Parking poids lourds et quai de déchargement rapide"
+    ],
+    campaignInfo: {
+      openingHours: "7j/7 de 06h30 à 21h00",
+      pricingInfo: "13 DA / kg ou retenue de 10 %",
+      averageWaitTime: "6h à 10h en moyenne",
+      appointmentRequired: false
+    }
   },
   {
     id: "mill-10",
@@ -628,7 +875,31 @@ export const REPRESENTATIVE_MILLS: OliveMill[] = [
     certifiedBio: false,
     igCandidate: true,
     description: "Perchée sur les hauteurs dominant la Soummam, cette huilerie familiale perpétue l'art de la trituration artisanale des vieilles souches de Chemlal.",
-    speciality: "Robe vert sombre, arômes d'amande et d'herbe séchée."
+    speciality: "Robe vert sombre, arômes d'amande et d'herbe séchée.",
+    technicalSpecs: {
+      hourlyThroughputKg: 350,
+      minBatchKg: 100,
+      equipmentBrand: "Meules de Granit + Presses Hydrauliques Inox + Séparateur Final",
+      extractionProcess: "Procédé mixte : broyage sur pierre de granit suivi d'une séparation centrifuge",
+      malaxationTemp: "22°C – 26°C",
+      storageCapacityLiters: 12000,
+      storageType: "Cuves Inox alimentaires & décanteurs",
+      avgYieldRange: "19 à 22,5 L / quintal",
+      avgAcidity: "≤ 0,55 % acide oléique",
+      byproductsValorization: "Grignon sec pressé valorisé pour les fours traditionnels et vergers"
+    },
+    services: [
+      "Trituration mixte alliant goût traditionnel des meules et pureté centrifuge",
+      "Acceptation des petits lots familiaux dès 100 kg",
+      "Conseil sur la maturité optimale des vergers de montagne",
+      "Vente directe d'huile vierge du terroir de Timezrit"
+    ],
+    campaignInfo: {
+      openingHours: "Tous les jours de 06h30 à 20h00",
+      pricingInfo: "12 DA / kg ou 10 % en huile",
+      averageWaitTime: "Moins de 12h",
+      appointmentRequired: false
+    }
   },
   {
     id: "mill-11",
@@ -648,7 +919,31 @@ export const REPRESENTATIVE_MILLS: OliveMill[] = [
     certifiedBio: true,
     igCandidate: true,
     description: "Coopérative villageoise réunissant les arboriculteurs des versants escarpés de l'Akfadou. Récolte méticuleuse et respect du calendrier floral.",
-    speciality: "Notes prononcées de pomme verte et d'artichaut."
+    speciality: "Notes prononcées de pomme verte et d'artichaut.",
+    technicalSpecs: {
+      hourlyThroughputKg: 520,
+      minBatchKg: 100,
+      equipmentBrand: "Amenduni 2 Phases & Effeuilleuse Haute Capacité",
+      extractionProcess: "Extraction coopérative à froid avec traçabilité par village (Ath Waghlis)",
+      malaxationTemp: "22°C – 25°C",
+      storageCapacityLiters: 22000,
+      storageType: "Cuves Inox collectives et individuelles scellées",
+      avgYieldRange: "18,5 à 21,5 L / quintal",
+      avgAcidity: "≤ 0,34 % acide oléique",
+      byproductsValorization: "Plateforme de compostage collectif pour les vergers en terrasses"
+    },
+    services: [
+      "Trituration solidaire par lot villageois ou individuel (dès 100 kg)",
+      "Mise en commun de filets, échelles légères et caisses ajourées",
+      "Formation annuelle à la taille de fructification et au contrôle du Dacus",
+      "Conditionnement collectif pour les foires nationales et salons agricoles"
+    ],
+    campaignInfo: {
+      openingHours: "7j/7 de 06h30 à 20h30",
+      pricingInfo: "11 DA / kg (coopérateurs) · 13 DA / kg (extérieurs)",
+      averageWaitTime: "Créneau planifié par comité de village (< 10h)",
+      appointmentRequired: true
+    }
   },
   {
     id: "mill-12",
@@ -668,7 +963,31 @@ export const REPRESENTATIVE_MILLS: OliveMill[] = [
     certifiedBio: true,
     igCandidate: true,
     description: "Située sur le flanc oriental de la wilaya, traitant les olives montagnardes bénéficiant d'une pluviométrie abondante et de sols forestiers riches.",
-    speciality: "Huile de caractère puissant et ardence marquée."
+    speciality: "Huile de caractère puissant et ardence marquée.",
+    technicalSpecs: {
+      hourlyThroughputKg: 700,
+      minBatchKg: 150,
+      equipmentBrand: "Pieralisi 3 Phases & Double Séparateur Vertical",
+      extractionProcess: "Lavage par hydro-cyclone, broyage inox et centrifugation à basse température",
+      malaxationTemp: "23°C – 25°C",
+      storageCapacityLiters: 30000,
+      storageType: "Cuves Inox 316L thermorégulées",
+      avgYieldRange: "19 à 22,5 L / quintal",
+      avgAcidity: "≤ 0,33 % acide oléique",
+      byproductsValorization: "Bassin d'évaporation écologique sécurisé & valorisation du grignon sec"
+    },
+    services: [
+      "Trituration à façon pour les producteurs du bassin oriental (Darguina, Kherrata, Souk El Tenine)",
+      "Service de navette et collecte des récoltes en zones montagneuses",
+      "Filtration et conditionnement en bouteilles verre et bidons alimentaires",
+      "Contrôle gratuit du taux d'acidité à la sortie du séparateur"
+    ],
+    campaignInfo: {
+      openingHours: "7j/7 de 06h00 à 21h30",
+      pricingInfo: "13 DA / kg ou retenue de 10 % en huile",
+      averageWaitTime: "Moins de 8h sur réservation",
+      appointmentRequired: true
+    }
   }
 ];
 

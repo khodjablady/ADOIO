@@ -13,6 +13,9 @@ import { Footer } from './components/Footer';
 import { OfflineIndicator } from './components/OfflineIndicator';
 
 // Lazy-loaded below-the-fold sections & modals for fast initial paint on mobile/3G
+const OfflineGuidesModal = lazy(() =>
+  import('./components/OfflineGuidesModal').then((m) => ({ default: m.OfflineGuidesModal }))
+);
 const StatsAndPotential = lazy(() =>
   import('./components/StatsAndPotential').then((m) => ({ default: m.StatsAndPotential }))
 );
@@ -91,20 +94,24 @@ const SectionSkeleton: React.FC<{ id?: string; label: string }> = ({ id, label }
 interface NetworkInformationLike {
   saveData?: boolean;
   effectiveType?: string;
+  downlink?: number;
 }
 
-function isSlowOrSaveDataConnection(): boolean {
+function getAdaptiveRootMargin(): string {
   try {
     const nav = navigator as Navigator & { connection?: NetworkInformationLike };
-    if (!nav.connection) return false;
-    return (
-      Boolean(nav.connection.saveData) ||
-      nav.connection.effectiveType === 'slow-2g' ||
-      nav.connection.effectiveType === '2g' ||
-      nav.connection.effectiveType === '3g'
-    );
+    const conn = nav.connection;
+    if (!conn) return '650px 0px';
+    if (conn.saveData || conn.effectiveType === 'slow-2g' || conn.effectiveType === '2g') {
+      // Ultra-tight prefetch window on 2G / Save-Data to avoid competing with visible assets
+      return '80px 0px';
+    }
+    if (conn.effectiveType === '3g' || (typeof conn.downlink === 'number' && conn.downlink < 1.5)) {
+      return '260px 0px';
+    }
+    return '650px 0px';
   } catch {
-    return false;
+    return '650px 0px';
   }
 }
 
@@ -142,8 +149,8 @@ const DeferredSection: React.FC<DeferredSectionProps> = ({
       return () => window.removeEventListener('beforeprint', handleBeforePrint);
     }
 
-    // Use tighter pre-fetch margin on slow/Save-Data connections to conserve mobile bandwidth
-    const margin = isSlowOrSaveDataConnection() ? '350px 0px' : '850px 0px';
+    // Granular pre-fetch margin adapted to 2G / 3G / Save-Data conditions
+    const margin = getAdaptiveRootMargin();
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) {
@@ -178,6 +185,8 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isAdhesionOpen, setIsAdhesionOpen] = useState<boolean>(false);
   const [isSitemapOpen, setIsSitemapOpen] = useState<boolean>(false);
+  const [isOfflineGuidesOpen, setIsOfflineGuidesOpen] = useState<boolean>(false);
+  const [offlineCachedCount, setOfflineCachedCount] = useState<number>(5);
   const [showFloatingTop, setShowFloatingTop] = useState<boolean>(false);
   const [gmpQuotaExceeded, setGmpQuotaExceeded] = useState<boolean>(false);
   const [forcedSections, setForcedSections] = useState<Record<string, boolean>>({});
@@ -424,6 +433,8 @@ export default function App() {
         onOpenAdhesion={() => setIsAdhesionOpen(true)}
         onOpenSimulator={() => scrollToSection('simulateur')}
         onOpenSitemap={() => setIsSitemapOpen(true)}
+        onOpenOfflineGuides={() => setIsOfflineGuidesOpen(true)}
+        offlineCachedCount={offlineCachedCount}
         isDarkMode={isDarkMode}
         onToggleDarkMode={() => setIsDarkMode((prev) => !prev)}
       />
@@ -777,6 +788,18 @@ export default function App() {
             isOpen={isSitemapOpen}
             onClose={() => setIsSitemapOpen(false)}
             onNavigate={scrollToSection}
+          />
+        </Suspense>
+      )}
+
+      {/* Offline Guides & Service Worker Cache Storage Modal (Lazy-loaded on demand) */}
+      {isOfflineGuidesOpen && (
+        <Suspense fallback={null}>
+          <OfflineGuidesModal
+            isOpen={isOfflineGuidesOpen}
+            onClose={() => setIsOfflineGuidesOpen(false)}
+            onNavigateToSection={scrollToSection}
+            onCacheCountChange={setOfflineCachedCount}
           />
         </Suspense>
       )}

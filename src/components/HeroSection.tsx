@@ -24,9 +24,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (localSearch.trim()) {
-      onSearch(localSearch.trim());
-    }
+    onSearch(localSearch.trim());
   };
 
   return (

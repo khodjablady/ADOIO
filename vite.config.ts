@@ -48,7 +48,7 @@ export default defineConfig(() => {
           importScripts: ['/sw-push.js'],
           // Precache core application shell without forcing heavy below-the-fold vendor chunks on initial 3G load
           globPatterns: ['**/*.{css,html,ico,svg,woff,woff2}', 'assets/index-*.js', 'assets/vendor-react-*.js', 'assets/vendor-icons-*.js'],
-          globIgnores: ['**/vendor-charts-*.js', '**/vendor-maps-*.js', '**/vendor-motion-*.js', '**/images/paysages/**'],
+          globIgnores: ['**/vendor-charts-*.js', '**/vendor-maps-*.js', '**/vendor-motion-*.js', '**/images/paysages/**', '**/assets/aistudio/**'],
           runtimeCaching: [
             {
               urlPattern: /\/assets\/.*\.js$/i,
@@ -107,12 +107,12 @@ export default defineConfig(() => {
               },
             },
             {
-              urlPattern: /\/images\/.*\.(?:jpg|jpeg|png|webp|svg)$/i,
+              urlPattern: /\/(?:images|assets\/aistudio)\/.*\.(?:jpg|jpeg|png|webp|svg)$/i,
               handler: 'CacheFirst',
               options: {
                 cacheName: 'adoio-images-cache',
                 expiration: {
-                  maxEntries: 30,
+                  maxEntries: 40,
                   maxAgeSeconds: 60 * 60 * 24 * 30,
                 },
                 cacheableResponse: {
@@ -182,6 +182,9 @@ export default defineConfig(() => {
       rollupOptions: {
         output: {
           manualChunks(id) {
+            if (id.includes('src/data/bejaiaOliveData')) {
+              return 'data-terroir';
+            }
             if (id.includes('node_modules')) {
               if (id.includes('recharts') || id.includes('d3-')) {
                 return 'vendor-charts';

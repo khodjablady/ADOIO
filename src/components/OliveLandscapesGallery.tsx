@@ -401,21 +401,55 @@ const LandscapeArtwork: React.FC<{ type: LandscapeItem['svgType']; title: string
   }
 };
 
+function detectInitialLowBandwidth(): boolean {
+  try {
+    const nav = navigator as Navigator & {
+      connection?: { saveData?: boolean; effectiveType?: string };
+    };
+    const conn = nav.connection;
+    if (!conn) return false;
+    return (
+      Boolean(conn.saveData) ||
+      conn.effectiveType === 'slow-2g' ||
+      conn.effectiveType === '2g'
+    );
+  } catch {
+    return false;
+  }
+}
+
+function getWebpSources(jpgPath: string): { smWebp: string; lgWebp: string } | null {
+  if (!jpgPath || jpgPath.startsWith('data:') || !/\.jpe?g$/i.test(jpgPath)) {
+    return null;
+  }
+  const base = jpgPath.replace(/\.jpe?g$/i, '');
+  return {
+    smWebp: `${base}-sm.webp`,
+    lgWebp: `${base}.webp`,
+  };
+}
+
 interface LandscapePhotoProps {
   item: LandscapeItem;
   className?: string;
   isLarge?: boolean;
   customSrc?: string;
+  lowBandwidthMode?: boolean;
 }
 
 const LandscapePhoto: React.FC<LandscapePhotoProps> = ({ 
   item, 
   className = '', 
   isLarge = false,
-  customSrc 
+  customSrc,
+  lowBandwidthMode = false,
 }) => {
   const [hasError, setHasError] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isInView, setIsInView] = useState(false);
+  const [manualLoadRequested, setManualLoadRequested] = useState(false);
+  const cardMediaRef = useRef<HTMLDivElement | null>(null);
+
   const resolveImagePath = (fileName: string, custom?: string) => {
     if (custom) return custom;
     return fileName.startsWith('/') ? fileName : `/images/paysages/${fileName}`;
@@ -429,6 +463,32 @@ const LandscapePhoto: React.FC<LandscapePhotoProps> = ({
     setIsLoaded(false);
   }, [item.imageFileName, customSrc]);
 
+  // Granular per-card IntersectionObserver so heavy gallery photos only load one card at a time
+  useEffect(() => {
+    if (isInView) return;
+    const el = cardMediaRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      setIsInView(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setIsInView(true);
+          observer.disconnect();
+        }
+      },
+      {
+        rootMargin: lowBandwidthMode ? '20px 0px' : '160px 0px',
+        threshold: 0.05,
+      }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isInView, lowBandwidthMode]);
+
   const handleImageError = () => {
     if (!item.imageFileName.startsWith('/') && currentPath === `/images/paysages/${item.imageFileName}` && !customSrc) {
       setCurrentPath(`/${item.imageFileName}`);
@@ -436,6 +496,10 @@ const LandscapePhoto: React.FC<LandscapePhotoProps> = ({
       setHasError(true);
     }
   };
+
+  const shouldDeferForEcoMode = lowBandwidthMode && !manualLoadRequested && !customSrc;
+  const shouldMountImage = isInView && !shouldDeferForEcoMode;
+  const webpSources = !customSrc ? getWebpSources(currentPath) : null;
 
   if (hasError && !customSrc) {
     return (
@@ -450,28 +514,71 @@ const LandscapePhoto: React.FC<LandscapePhotoProps> = ({
   }
 
   return (
-    <div className={`w-full h-full relative overflow-hidden bg-[#18230F] ${className}`}>
+    <div ref={cardMediaRef} className={`w-full h-full relative overflow-hidden bg-[#18230F] ${className}`}>
+      {/* Zero-network-cost vector LQIP placeholder rendered until photo finishes decoding */}
       {!isLoaded && (
-        <div className="absolute inset-0 bg-[#233416] animate-pulse flex items-center justify-center">
-          <Camera className="w-6 h-6 text-[#8CBE5D]/40" />
+        <div className="absolute inset-0">
+          <LandscapeArtwork type={item.svgType} title={item.title} />
+          {shouldDeferForEcoMode ? (
+            <div className="absolute inset-0 bg-[#18230F]/45 flex flex-col items-center justify-end p-3">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setManualLoadRequested(true);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-[#FAF7F2]/95 hover:bg-white text-[#18230F] text-[11px] font-bold shadow-lg border border-[#E6AB3C] flex items-center gap-1.5 transition-all cursor-pointer z-20"
+                title="Charger la photographie compressée WebP"
+              >
+                <Download className="w-3.5 h-3.5 text-[#31491E]" />
+                <span>Charger la photo WebP (~25 Ko)</span>
+              </button>
+            </div>
+          ) : (
+            <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-[#18230F]/80 text-[#FAF7F2] text-[10px] backdrop-blur-xs flex items-center gap-1.5 border border-white/10">
+              <Camera className="w-3 h-3 text-[#8CBE5D] animate-pulse" />
+              <span>Aperçu vectoriel · Chargement WebP...</span>
+            </div>
+          )}
         </div>
       )}
-      <img
-        src={currentPath}
-        alt={item.imageAlt}
-        width={960}
-        height={604}
-        sizes={isLarge ? '(max-width: 1024px) 100vw, 66vw' : '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw'}
-        decoding="async"
-        fetchPriority="low"
-        className={`w-full h-full object-cover transition-transform duration-700 ${
-          isLoaded ? 'opacity-100' : 'opacity-0'
-        } ${!isLarge ? 'group-hover:scale-105' : ''}`}
-        onLoad={() => setIsLoaded(true)}
-        onError={handleImageError}
-        referrerPolicy="no-referrer"
-        loading="lazy"
-      />
+
+      {shouldMountImage && (
+        <picture>
+          {webpSources && (
+            <source
+              type="image/webp"
+              srcSet={
+                lowBandwidthMode
+                  ? `${webpSources.smWebp} 480w`
+                  : `${webpSources.smWebp} 480w, ${webpSources.lgWebp} 960w`
+              }
+              sizes={
+                lowBandwidthMode
+                  ? '480px'
+                  : isLarge
+                    ? '(max-width: 1024px) 100vw, 66vw'
+                    : '(max-width: 640px) 480px, (max-width: 1024px) 50vw, 33vw'
+              }
+            />
+          )}
+          <img
+            src={currentPath}
+            alt={item.imageAlt}
+            width={960}
+            height={604}
+            decoding="async"
+            fetchPriority="low"
+            className={`w-full h-full object-cover transition-transform duration-700 ${
+              isLoaded ? 'opacity-100' : 'opacity-0'
+            } ${!isLarge ? 'group-hover:scale-105' : ''}`}
+            onLoad={() => setIsLoaded(true)}
+            onError={handleImageError}
+            referrerPolicy="no-referrer"
+            loading="lazy"
+          />
+        </picture>
+      )}
     </div>
   );
 };
@@ -1050,6 +1157,7 @@ export const OliveLandscapesGallery: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'soummam' | 'terrasses' | 'centenaires' | 'recolte'>('all');
   const [activeLandscape, setActiveLandscape] = useState<LandscapeItem | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [lowBandwidthMode, setLowBandwidthMode] = useState<boolean>(() => detectInitialLowBandwidth());
 
   const [customImages, setCustomImages] = useState<Record<string, string>>(() => {
     try {
@@ -1198,6 +1306,21 @@ export const OliveLandscapesGallery: React.FC = () => {
             <Sun className="w-3.5 h-3.5 text-[#B47A16]" />
             <span>Récolte & Traditions</span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => setLowBandwidthMode((prev) => !prev)}
+            aria-pressed={lowBandwidthMode}
+            className={`ml-auto px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+              lowBandwidthMode
+                ? 'bg-[#E6AB3C]/20 text-[#18230F] border-[#E6AB3C]'
+                : 'bg-[#FAF7F2] text-[#436229] border-[#E6DEC9] hover:border-[#8CBE5D]'
+            }`}
+            title="Activer l'aperçu vectoriel instantané et le chargement WebP basse consommation pour les connexions 2G/3G"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-[#B47A16]" />
+            <span>{lowBandwidthMode ? 'Mode Bas Débit 2G/3G : Actif' : 'Mode Bas Débit (2G/3G)'}</span>
+          </button>
         </div>
 
         {/* Responsive Grid Layout */}
@@ -1217,6 +1340,7 @@ export const OliveLandscapesGallery: React.FC = () => {
                   <LandscapePhoto 
                     item={landscape} 
                     customSrc={customImages[landscape.id]} 
+                    lowBandwidthMode={lowBandwidthMode}
                   />
 
                   {/* Top Badges */}

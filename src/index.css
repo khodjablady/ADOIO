@@ -258,10 +258,90 @@ html.dark .shadow-xl {
 }
 
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
   header,
   footer,
-  .no-print {
+  nav,
+  .no-print,
+  .mill-modal-no-print {
     display: none !important;
+  }
+
+  html,
+  body,
+  html.dark body {
+    background: #ffffff !important;
+    color: #18230f !important;
+    font-size: 11pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* When a mill modal is open or triggered via 'Imprimer la fiche', isolate only the mill sheet */
+  body.printing-mill-sheet #main-content > *:not(#carte-moulins),
+  body:has(.mill-modal-print-sheet) #main-content > *:not(#carte-moulins) {
+    display: none !important;
+  }
+
+  body.printing-mill-sheet #carte-moulins > *:not(#annuaire),
+  body:has(.mill-modal-print-sheet) #carte-moulins > *:not(#annuaire) {
+    display: none !important;
+  }
+
+  body.printing-mill-sheet .annuaire-screen-content,
+  body:has(.mill-modal-print-sheet) .annuaire-screen-content {
+    display: none !important;
+  }
+
+  #annuaire {
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    background: #ffffff !important;
+  }
+
+  .mill-modal-print-overlay {
+    position: static !important;
+    inset: auto !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+  }
+
+  .mill-modal-print-sheet {
+    position: static !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: 1px solid #d8ceb8 !important;
+    border-radius: 12px !important;
+    padding: 16px !important;
+    background: #ffffff !important;
+    color: #18230f !important;
+  }
+
+  .mill-modal-print-sheet * {
+    color: #18230f !important;
+    border-color: #d8ceb8 !important;
+  }
+
+  .mill-print-section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    background: #ffffff !important;
+    box-shadow: none !important;
+  }
+
+  .print-only-mill-block {
+    display: block !important;
   }
 }
 

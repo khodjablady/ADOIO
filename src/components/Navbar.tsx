@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, X, Droplets, MapPin, Phone, Award, Calculator, BookOpen, Building2, ListOrdered, Bell, Trophy, Recycle, Stethoscope, Moon, Sun, Sparkles } from 'lucide-react';
+import { Menu, X, Droplets, MapPin, Phone, Award, Calculator, BookOpen, Building2, ListOrdered, Bell, Trophy, Recycle, Stethoscope, Moon, Sun, Sparkles, WifiOff } from 'lucide-react';
 import { AdoioLogo } from './AdoioLogo';
 import { PWAInstallButton } from './PWAInstallButton';
 
@@ -9,6 +9,8 @@ interface NavbarProps {
   onOpenAdhesion: () => void;
   onOpenSimulator: () => void;
   onOpenSitemap?: () => void;
+  onOpenOfflineGuides?: () => void;
+  offlineCachedCount?: number;
   isDarkMode?: boolean;
   onToggleDarkMode?: () => void;
 }
@@ -19,6 +21,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAdhesion,
   onOpenSimulator,
   onOpenSitemap,
+  onOpenOfflineGuides,
+  offlineCachedCount = 5,
   isDarkMode = false,
   onToggleDarkMode,
 }) => {
@@ -194,6 +198,23 @@ export const Navbar: React.FC<NavbarProps> = ({
                 )}
               </button>
             )}
+            {onOpenOfflineGuides && (
+              <button
+                type="button"
+                onClick={onOpenOfflineGuides}
+                className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg bg-[#E8F4D9] hover:bg-[#D4E8BF] text-[#233416] text-xs font-bold border border-[#8CBE5D]/50 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                title="Mode Hors-Ligne : Consulter la liste des guides techniques enregistrés dans le Cache Storage du Service Worker"
+                aria-label="Mode Hors-Ligne : Guides techniques consultables sans connexion"
+              >
+                <WifiOff className="w-3.5 h-3.5 text-[#31491E]" aria-hidden="true" />
+                <span>Mode Hors-Ligne</span>
+                {offlineCachedCount > 0 && (
+                  <span className="text-[10px] font-extrabold text-[#31491E] tabular-nums">
+                    ({offlineCachedCount})
+                  </span>
+                )}
+              </button>
+            )}
             {onOpenSitemap && (
               <button
                 onClick={onOpenSitemap}
@@ -235,6 +256,17 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Mobile menu toggle button */}
           <div className="flex md:hidden items-center gap-1.5">
+            {onOpenOfflineGuides && (
+              <button
+                type="button"
+                onClick={onOpenOfflineGuides}
+                className="p-2 rounded-lg bg-[#E8F4D9] text-[#233416] border border-[#8CBE5D]/40"
+                aria-label="Mode Hors-Ligne : Guides techniques sans connexion"
+                title="Mode Hors-Ligne"
+              >
+                <WifiOff className="w-5 h-5 text-[#31491E]" />
+              </button>
+            )}
             {onToggleDarkMode && (
               <button
                 onClick={onToggleDarkMode}
@@ -312,6 +344,19 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           <div className="pt-4 border-t border-[#E6DEC9] flex flex-col gap-2">
+            {onOpenOfflineGuides && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenOfflineGuides();
+                }}
+                className="w-full py-2.5 px-4 rounded-lg bg-[#E8F4D9] text-[#233416] text-sm font-bold flex items-center justify-center gap-2 border border-[#8CBE5D]/50"
+              >
+                <WifiOff className="w-4 h-4 text-[#31491E]" />
+                <span>Mode Hors-Ligne · Guides en Cache ({offlineCachedCount})</span>
+              </button>
+            )}
             {onToggleDarkMode && (
               <button
                 onClick={onToggleDarkMode}

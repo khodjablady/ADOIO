@@ -13,7 +13,18 @@ import {
   Star,
   MessageSquare,
   Heart,
-  Trash2
+  Trash2,
+  Cpu,
+  CheckCircle2,
+  Thermometer,
+  Droplets,
+  Clock,
+  Award,
+  Wrench,
+  Scale,
+  Recycle,
+  Navigation,
+  Printer
 } from 'lucide-react';
 import { 
   getStoredReviews, 
@@ -58,12 +69,33 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
   const [modalTab, setModalTab] = useState<'info' | 'reviews'>('info');
 
   useEffect(() => {
+    if (!activeModalMill) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setActiveModalMill(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeModalMill]);
+
+  useEffect(() => {
     try {
       localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favoriteIds));
     } catch {
       // Ignore storage quota errors
     }
   }, [favoriteIds]);
+
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === FAVORITES_STORAGE_KEY) {
+        setFavoriteIds(loadStoredFavorites());
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   const toggleFavorite = (millId: string, e?: React.MouseEvent) => {
     if (e) {
@@ -167,6 +199,24 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
     setModalTab(tab);
   };
 
+  const handlePrintMillSheet = () => {
+    if (!activeModalMill) return;
+    document.body.classList.add('printing-mill-sheet');
+    const triggerPrint = () => {
+      window.print();
+      setTimeout(() => {
+        document.body.classList.remove('printing-mill-sheet');
+      }, 300);
+    };
+
+    if (modalTab !== 'info') {
+      setModalTab('info');
+      setTimeout(triggerPrint, 120);
+    } else {
+      triggerPrint();
+    }
+  };
+
   const activeMillStats: MillStats | null = useMemo(() => {
     if (!activeModalMill) return null;
     return calculateMillStats(activeModalMill.id, reviews);
@@ -194,6 +244,7 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
   return (
     <section id="annuaire" className="py-16 sm:py-24 bg-[#FAF7F2] border-b border-[#E6DEC9] scroll-mt-28">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="annuaire-screen-content">
         {/* Section Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
           <div>
@@ -547,21 +598,21 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                             ? 'Retirer de mes huileries favorites'
                             : 'Sauvegarder dans mes huileries favorites (accès rapide)'
                         }
-                        className={`p-2 -m-1 rounded-xl border transition-all cursor-pointer shrink-0 flex items-center gap-1 text-[11px] font-bold ${
+                        className={`px-2.5 py-1.5 -my-1 rounded-xl border transition-all cursor-pointer shrink-0 flex items-center gap-1.5 text-[11px] font-bold shadow-2xs active:scale-95 ${
                           isFavorite
-                            ? 'bg-[#FAF7F2] border-[#AF4D24]/40 text-[#AF4D24]'
-                            : 'bg-transparent border-transparent text-[#567B34] hover:bg-[#FAF7F2] hover:border-[#E6DEC9] hover:text-[#AF4D24]'
+                            ? 'bg-[#AF4D24] border-[#AF4D24] text-white'
+                            : 'bg-[#FAF7F2] border-[#E6DEC9] text-[#436229] hover:bg-[#F4EEE1] hover:border-[#AF4D24]/50 hover:text-[#AF4D24]'
                         }`}
                       >
                         <Heart
-                          className={`w-4 h-4 transition-transform ${
+                          className={`w-3.5 h-3.5 transition-transform ${
                             isFavorite
-                              ? 'fill-[#AF4D24] text-[#AF4D24] scale-110'
-                              : 'text-current'
+                              ? 'fill-white text-white scale-110'
+                              : 'text-[#AF4D24]'
                           }`}
                           aria-hidden="true"
                         />
-                        {isFavorite && <span className="pr-0.5">Favori</span>}
+                        <span>Favori</span>
                       </button>
                     </div>
 
@@ -602,22 +653,24 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                       )}
                     </div>
 
-                    {/* Capacity, Brands, Speciality */}
+                    {/* Capacity, Technical Summary & Services Preview */}
                     <div className="space-y-2 pt-2 border-t border-[#E6DEC9] text-xs text-[#436229]">
                       <div className="flex justify-between items-center">
-                        <span className="text-[#567B34]">Capacité</span>
-                        <span className="font-bold text-[#18230F] tabular-nums">{mill.capacityQxPerDay} qx / jour</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-[#567B34]">Marques</span>
-                        <span className="font-semibold text-[#18230F] text-right truncate max-w-[180px]">
-                          {mill.brands.join(', ')}
+                        <span className="text-[#567B34]">Capacité & Cadence</span>
+                        <span className="font-bold text-[#18230F] tabular-nums">
+                          {mill.capacityQxPerDay} qx/j · {mill.technicalSpecs.hourlyThroughputKg} kg/h
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-[#567B34]">Spécialité</span>
-                        <span className="font-semibold text-[#31491E] text-right truncate max-w-[180px]">
-                          {mill.speciality}
+                        <span className="text-[#567B34]">Lot min. / Cuverie</span>
+                        <span className="font-semibold text-[#18230F] tabular-nums">
+                          Dès {mill.technicalSpecs.minBatchKg} kg · {(mill.technicalSpecs.storageCapacityLiters / 1000).toFixed(0)}k L inox
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[#567B34]">Services oléicoles</span>
+                        <span className="font-semibold text-[#31491E] text-right truncate max-w-[190px]">
+                          {mill.services.length} prestations ({mill.services[0].split(' ').slice(0, 2).join(' ')}…)
                         </span>
                       </div>
                     </div>
@@ -628,10 +681,13 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => handleOpenMill(mill, 'info')}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenMill(mill, 'info');
+                        }}
                         className="text-xs font-bold text-[#31491E] hover:underline flex items-center gap-1 cursor-pointer"
                       >
-                        <span>Fiche</span>
+                        <span>Détails & Services</span>
                         <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
                       </button>
                       <span className="text-gray-300" aria-hidden="true">|</span>
@@ -680,90 +736,149 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
             })}
           </div>
         )}
+        </div>
 
-        {/* Modal: Mill Details & Reviews System */}
+        {/* Modal: Comprehensive Mill Details, Technical Capacities, Specific Services & Reviews */}
         {activeModalMill && activeMillStats && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200">
-            <div className="bg-[#FAF7F2] rounded-3xl border border-[#E6DEC9] max-w-3xl w-full p-6 sm:p-8 shadow-2xl relative max-h-[92vh] overflow-y-auto">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-mill-title"
+            onClick={() => setActiveModalMill(null)}
+            className="mill-modal-print-overlay fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200"
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="mill-modal-print-sheet bg-[#FAF7F2] rounded-3xl border border-[#E6DEC9] max-w-4xl w-full p-5 sm:p-8 shadow-2xl relative max-h-[92vh] overflow-y-auto"
+            >
               <button
                 type="button"
                 onClick={() => setActiveModalMill(null)}
-                className="absolute top-5 right-5 p-2 rounded-full bg-white hover:bg-gray-100 text-gray-500 hover:text-black transition-colors cursor-pointer shadow-xs"
-                title="Fermer la vue"
+                className="mill-modal-no-print absolute top-5 right-5 p-2 rounded-full bg-white hover:bg-gray-100 text-gray-500 hover:text-black transition-colors cursor-pointer shadow-xs"
+                title="Fermer la vue (Échap)"
                 aria-label="Fermer la fiche de l'huilerie"
               >
                 <X className="w-5 h-5" />
               </button>
 
               <div className="space-y-6">
+                {/* Print-only Institutional Letterhead */}
+                <div className="print-only-mill-block hidden pb-3 mb-2 border-b-2 border-[#18230F]">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#31491E]">
+                        ADOIO Béjaïa · Annuaire Officiel des Huileries & Moulins de Kabylie
+                      </p>
+                      <p className="text-xs font-semibold text-[#18230F] mt-0.5">
+                        Fiche Technique d'Unité de Trituration — Réf. #{activeModalMill.id.toUpperCase()}
+                      </p>
+                    </div>
+                    <div className="text-right text-[10px] text-[#31491E]">
+                      <p className="font-bold">Wilaya de Béjaïa (06)</p>
+                      <p>Édité le {new Date().toLocaleDateString('fr-FR')}</p>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Header */}
                 <div className="pr-10">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#567B34]">
+                    <div className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#567B34]">
                       <MapPin className="w-4 h-4 text-[#E6AB3C]" aria-hidden="true" />
-                      <span>{activeModalMill.commune} · Wilaya de Béjaïa</span>
+                      <span>{activeModalMill.commune} · Daïra de {activeModalMill.daira}</span>
+                      {activeModalMill.certifiedBio && (
+                        <span className="text-[11px] font-bold text-[#31491E] normal-case">
+                          · Certifié Bio / Raisonné
+                        </span>
+                      )}
+                      {activeModalMill.igCandidate && (
+                        <span className="text-[11px] font-bold text-[#AF4D24] normal-case">
+                          · Éligible IGP Kabylie
+                        </span>
+                      )}
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={(e) => toggleFavorite(activeModalMill.id, e)}
-                      aria-pressed={favoriteIds.includes(activeModalMill.id)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition-colors cursor-pointer ${
-                        favoriteIds.includes(activeModalMill.id)
-                          ? 'bg-[#AF4D24] text-white border-[#AF4D24]'
-                          : 'bg-white text-[#233416] border-[#E6DEC9] hover:border-[#AF4D24]'
-                      }`}
-                    >
-                      <Heart
-                        className={`w-3.5 h-3.5 ${
+                    <div className="mill-modal-no-print flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handlePrintMillSheet}
+                        className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-white text-[#18230F] border border-[#E6DEC9] hover:border-[#31491E] hover:bg-[#E8F4D9]/50 transition-colors cursor-pointer"
+                        title="Imprimer la fiche technique complète au format papier A4"
+                      >
+                        <Printer className="w-3.5 h-3.5 text-[#31491E]" aria-hidden="true" />
+                        <span>Imprimer la fiche</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => toggleFavorite(activeModalMill.id, e)}
+                        aria-pressed={favoriteIds.includes(activeModalMill.id)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition-colors cursor-pointer ${
                           favoriteIds.includes(activeModalMill.id)
-                            ? 'fill-white text-white'
-                            : 'text-[#AF4D24]'
+                            ? 'bg-[#AF4D24] text-white border-[#AF4D24]'
+                            : 'bg-white text-[#233416] border-[#E6DEC9] hover:border-[#AF4D24]'
                         }`}
-                        aria-hidden="true"
-                      />
-                      <span>
-                        {favoriteIds.includes(activeModalMill.id)
-                          ? 'Sauvegardée dans mes favoris'
-                          : 'Sauvegarder en favori'}
-                      </span>
-                    </button>
+                      >
+                        <Heart
+                          className={`w-3.5 h-3.5 ${
+                            favoriteIds.includes(activeModalMill.id)
+                              ? 'fill-white text-white'
+                              : 'text-[#AF4D24]'
+                          }`}
+                          aria-hidden="true"
+                        />
+                        <span>
+                          {favoriteIds.includes(activeModalMill.id)
+                            ? 'Sauvegardée dans mes favoris'
+                            : 'Sauvegarder en favori'}
+                        </span>
+                      </button>
+                    </div>
                   </div>
 
-                  <h3 className="font-serif text-2xl sm:text-3xl font-bold text-[#18230F] mt-1">
+                  <h3
+                    id="modal-mill-title"
+                    className="font-serif text-2xl sm:text-3xl font-bold text-[#18230F] mt-1.5"
+                  >
                     {activeModalMill.name}
                   </h3>
                   <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-[#567B34]">
-                    <span className="font-medium">{activeModalMill.typeLabel}</span>
+                    <span className="font-semibold text-[#233416]">{activeModalMill.typeLabel}</span>
                     <span aria-hidden="true">·</span>
-                    <span>Établie en {activeModalMill.yearEstablished}</span>
+                    <span>En activité depuis {activeModalMill.yearEstablished}</span>
                     <span aria-hidden="true">·</span>
                     <div className="flex items-center gap-1 font-bold text-[#18230F]">
                       <Star className="w-3.5 h-3.5 fill-[#E6AB3C] text-[#E6AB3C]" aria-hidden="true" />
-                      <span>{activeMillStats.averageRating > 0 ? activeMillStats.averageRating.toFixed(1) : 'Nouveau'}</span>
-                      <span className="text-[#567B34] font-normal">({activeMillStats.totalReviews} avis)</span>
+                      <span>
+                        {activeMillStats.averageRating > 0
+                          ? activeMillStats.averageRating.toFixed(1)
+                          : 'Nouveau'}
+                      </span>
+                      <span className="text-[#567B34] font-normal">
+                        ({activeMillStats.totalReviews} avis)
+                      </span>
                     </div>
                   </div>
                 </div>
 
                 {/* Tab Selector */}
-                <div className="flex items-center border-b border-[#E6DEC9] gap-4">
+                <div className="mill-modal-no-print flex items-center border-b border-[#E6DEC9] gap-4 overflow-x-auto">
                   <button
                     type="button"
                     onClick={() => setModalTab('info')}
-                    className={`pb-3 text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer border-b-2 ${
+                    className={`pb-3 text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer border-b-2 whitespace-nowrap ${
                       modalTab === 'info'
                         ? 'border-[#31491E] text-[#31491E]'
                         : 'border-transparent text-gray-400 hover:text-[#18230F]'
                     }`}
                   >
-                    <Building2 className="w-4 h-4" />
-                    <span>Fiche & Coordonnées</span>
+                    <Cpu className="w-4 h-4" />
+                    <span>Capacités Techniques, Services & Coordonnées</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setModalTab('reviews')}
-                    className={`pb-3 text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer border-b-2 ${
+                    className={`pb-3 text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer border-b-2 whitespace-nowrap ${
                       modalTab === 'reviews'
                         ? 'border-[#31491E] text-[#31491E]'
                         : 'border-transparent text-gray-400 hover:text-[#18230F]'
@@ -774,67 +889,294 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                   </button>
                 </div>
 
-                {/* Tab 1: Informations & Procédés */}
+                {/* Tab 1: Complete Technical Capacities, Specific Services & Practical Info */}
                 {modalTab === 'info' && (
                   <div className="space-y-6 animate-in fade-in duration-150">
-                    <div className="bg-white p-5 rounded-2xl border border-[#E6DEC9] space-y-3">
-                      <h4 className="font-bold text-xs uppercase tracking-wider text-[#18230F]">
-                        Description & Procédé de Trituration
-                      </h4>
+                    {/* Overview & Organoleptic Profile */}
+                    <div className="mill-print-section bg-white p-5 rounded-2xl border border-[#E6DEC9] space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h4 className="font-bold text-xs uppercase tracking-wider text-[#18230F] flex items-center gap-1.5">
+                          <Building2 className="w-4 h-4 text-[#31491E]" aria-hidden="true" />
+                          <span>Présentation & Profil Organoleptique</span>
+                        </h4>
+                        <span className="text-xs font-semibold text-[#567B34]">
+                          Marques : <strong className="text-[#18230F]">{activeModalMill.brands.join(', ')}</strong>
+                        </span>
+                      </div>
                       <p className="text-xs sm:text-sm text-[#436229] leading-relaxed">
                         {activeModalMill.description}
                       </p>
-                      <div className="p-3 bg-[#E8F4D9] rounded-xl text-xs text-[#233416]">
-                        <strong>Profil organoleptique :</strong> {activeModalMill.speciality}
+                      <div className="p-3 bg-[#E8F4D9] rounded-xl text-xs text-[#233416] flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <strong>Spécialité & Profil sensoriel :</strong> {activeModalMill.speciality}
+                        </div>
+                        <div className="font-bold text-[#31491E]">
+                          Acidité visée : {activeModalMill.technicalSpecs.avgAcidity}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="bg-white p-4 rounded-xl border border-[#E6DEC9]">
-                        <span className="text-[11px] text-[#567B34] block">Capacité Journalière</span>
-                        <span className="font-serif text-lg font-bold text-[#18230F]">
-                          {activeModalMill.capacityQxPerDay} quintaux / jour
+                    {/* Section 1: Capacités Techniques & Chaîne d'Extraction */}
+                    <div className="mill-print-section bg-white p-5 rounded-2xl border border-[#E6DEC9] space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-bold text-xs uppercase tracking-wider text-[#18230F] flex items-center gap-1.5">
+                          <Cpu className="w-4 h-4 text-[#31491E]" aria-hidden="true" />
+                          <span>Capacités Techniques & Paramètres d'Extraction</span>
+                        </h4>
+                        <span className="text-[11px] font-semibold text-[#567B34]">
+                          Données techniques vérifiées
                         </span>
                       </div>
-                      <div className="bg-white p-4 rounded-xl border border-[#E6DEC9]">
-                        <span className="text-[11px] text-[#567B34] block">Marques Commerciales</span>
-                        <span className="font-serif text-sm font-bold text-[#31491E] block truncate">
-                          {activeModalMill.brands.join(', ')}
+
+                      {/* Key Numeric Metrics Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className="bg-[#FAF7F2] p-3.5 rounded-xl border border-[#E6DEC9]">
+                          <div className="flex items-center gap-1.5 text-[11px] text-[#567B34] mb-1">
+                            <Scale className="w-3.5 h-3.5 text-[#31491E]" aria-hidden="true" />
+                            <span>Capacité / jour</span>
+                          </div>
+                          <span className="font-serif text-lg font-bold text-[#18230F] tabular-nums block">
+                            {activeModalMill.capacityQxPerDay} qx / j
+                          </span>
+                          <span className="text-[11px] text-[#567B34] tabular-nums">
+                            Cadence : {activeModalMill.technicalSpecs.hourlyThroughputKg} kg/h
+                          </span>
+                        </div>
+
+                        <div className="bg-[#FAF7F2] p-3.5 rounded-xl border border-[#E6DEC9]">
+                          <div className="flex items-center gap-1.5 text-[11px] text-[#567B34] mb-1">
+                            <Wrench className="w-3.5 h-3.5 text-[#31491E]" aria-hidden="true" />
+                            <span>Lot minimum</span>
+                          </div>
+                          <span className="font-serif text-lg font-bold text-[#18230F] tabular-nums block">
+                            {activeModalMill.technicalSpecs.minBatchKg} kg
+                          </span>
+                          <span className="text-[11px] text-[#567B34]">
+                            Pressage individuel
+                          </span>
+                        </div>
+
+                        <div className="bg-[#FAF7F2] p-3.5 rounded-xl border border-[#E6DEC9]">
+                          <div className="flex items-center gap-1.5 text-[11px] text-[#567B34] mb-1">
+                            <Droplets className="w-3.5 h-3.5 text-[#31491E]" aria-hidden="true" />
+                            <span>Cuverie & Garde</span>
+                          </div>
+                          <span className="font-serif text-lg font-bold text-[#18230F] tabular-nums block">
+                            {activeModalMill.technicalSpecs.storageCapacityLiters.toLocaleString('fr-FR')} L
+                          </span>
+                          <span className="text-[11px] text-[#567B34]">
+                            Rendement : {activeModalMill.technicalSpecs.avgYieldRange}
+                          </span>
+                        </div>
+
+                        <div className="bg-[#FAF7F2] p-3.5 rounded-xl border border-[#E6DEC9]">
+                          <div className="flex items-center gap-1.5 text-[11px] text-[#567B34] mb-1">
+                            <Thermometer className="w-3.5 h-3.5 text-[#AF4D24]" aria-hidden="true" />
+                            <span>Malaxage</span>
+                          </div>
+                          <span className="font-serif text-sm font-bold text-[#18230F] block leading-snug">
+                            {activeModalMill.technicalSpecs.malaxationTemp.split('(')[0].trim()}
+                          </span>
+                          <span className="text-[11px] text-[#567B34]">
+                            Contrôle thermique
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Detailed Equipment & Process Breakdown */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 text-xs">
+                        <div className="p-3.5 rounded-xl bg-[#FAF7F2] border border-[#E6DEC9]/80 space-y-1">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#567B34] block">
+                            Équipement & Ligne de Trituration
+                          </span>
+                          <p className="font-semibold text-[#18230F]">
+                            {activeModalMill.technicalSpecs.equipmentBrand}
+                          </p>
+                          <p className="text-[#436229] text-[11px]">
+                            {activeModalMill.technicalSpecs.extractionProcess}
+                          </p>
+                        </div>
+
+                        <div className="p-3.5 rounded-xl bg-[#FAF7F2] border border-[#E6DEC9]/80 space-y-1">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#567B34] block">
+                            Stockage & Maîtrise de l'Oxydation
+                          </span>
+                          <p className="font-semibold text-[#18230F]">
+                            {activeModalMill.technicalSpecs.storageType}
+                          </p>
+                          <p className="text-[#436229] text-[11px]">
+                            Température de malaxage : {activeModalMill.technicalSpecs.malaxationTemp}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Byproducts Valorization */}
+                      <div className="p-3.5 rounded-xl bg-[#F4EEE1] border border-[#E6DEC9] flex items-start gap-2.5 text-xs text-[#233416]">
+                        <Recycle className="w-4 h-4 text-[#31491E] shrink-0 mt-0.5" aria-hidden="true" />
+                        <div>
+                          <span className="font-bold">Économie circulaire (Grignons & Margines) : </span>
+                          <span>{activeModalMill.technicalSpecs.byproductsValorization}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 2: Services Spécifiques Proposés par le Moulin */}
+                    <div className="mill-print-section bg-white p-5 rounded-2xl border border-[#E6DEC9] space-y-3.5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h4 className="font-bold text-xs uppercase tracking-wider text-[#18230F] flex items-center gap-1.5">
+                          <Award className="w-4 h-4 text-[#E6AB3C]" aria-hidden="true" />
+                          <span>Services Spécifiques Proposés aux Oléiculteurs ({activeModalMill.services.length})</span>
+                        </h4>
+                        <span className="text-[11px] text-[#567B34]">
+                          Prestations disponibles sur place
                         </span>
                       </div>
-                    </div>
 
-                    <div className="bg-white p-5 rounded-2xl border border-[#E6DEC9] space-y-3 text-xs text-[#31491E]">
-                      <h4 className="font-bold text-xs uppercase tracking-wider text-[#18230F]">
-                        Coordonnées & Maître Moulinier
-                      </h4>
-                      <div className="space-y-2">
-                        <p>
-                          <strong>Responsable / Contact :</strong> {activeModalMill.contactPerson}
-                        </p>
-                        <p>
-                          <strong>Localisation exacte :</strong> {activeModalMill.address}
-                        </p>
-                        <p>
-                          <strong>Téléphone :</strong>{' '}
-                          <a href={`tel:${activeModalMill.phone}`} className="text-[#31491E] underline font-semibold">
-                            {activeModalMill.phone}
-                          </a>
-                        </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {activeModalMill.services.map((service, idx) => (
+                          <div
+                            key={`${activeModalMill.id}-service-${idx}`}
+                            className="flex items-start gap-2.5 p-3 rounded-xl bg-[#FAF7F2] border border-[#E6DEC9] text-xs text-[#18230F]"
+                          >
+                            <CheckCircle2
+                              className="w-4 h-4 text-[#31491E] shrink-0 mt-0.5"
+                              aria-hidden="true"
+                            />
+                            <span className="font-medium leading-snug">{service}</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
 
-                    <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200/80 flex items-center justify-between">
+                    {/* Section 3: Modalités de Campagne & Coordonnées */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Campaign Reception Info */}
+                      <div className="mill-print-section bg-white p-5 rounded-2xl border border-[#E6DEC9] space-y-3 text-xs text-[#31491E]">
+                        <h4 className="font-bold text-xs uppercase tracking-wider text-[#18230F] flex items-center gap-1.5">
+                          <Clock className="w-4 h-4 text-[#31491E]" aria-hidden="true" />
+                          <span>Modalités de Réception en Campagne</span>
+                        </h4>
+                        <div className="space-y-2">
+                          <p>
+                            <strong className="text-[#18230F]">Horaires d'ouverture :</strong>{' '}
+                            {activeModalMill.campaignInfo.openingHours}
+                          </p>
+                          <p>
+                            <strong className="text-[#18230F]">Tarif / Dîme de trituration :</strong>{' '}
+                            {activeModalMill.campaignInfo.pricingInfo}
+                          </p>
+                          <p>
+                            <strong className="text-[#18230F]">Délai moyen de passage :</strong>{' '}
+                            {activeModalMill.campaignInfo.averageWaitTime}
+                          </p>
+                          <p>
+                            <strong className="text-[#18230F]">Réservation :</strong>{' '}
+                            <span className="font-semibold text-[#AF4D24]">
+                              {activeModalMill.campaignInfo.appointmentRequired
+                                ? 'Rendez-vous téléphonique recommandé avant apport'
+                                : 'Réception directe selon ordre d’arrivée'}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Contact & Master Miller */}
+                      <div className="mill-print-section bg-white p-5 rounded-2xl border border-[#E6DEC9] space-y-3 text-xs text-[#31491E]">
+                        <h4 className="font-bold text-xs uppercase tracking-wider text-[#18230F] flex items-center gap-1.5">
+                          <MapPin className="w-4 h-4 text-[#E6AB3C]" aria-hidden="true" />
+                          <span>Coordonnées & Maître Moulinier</span>
+                        </h4>
+                        <div className="space-y-2">
+                          <p>
+                            <strong className="text-[#18230F]">Responsable / Contact :</strong>{' '}
+                            {activeModalMill.contactPerson}
+                          </p>
+                          <p>
+                            <strong className="text-[#18230F]">Adresse :</strong>{' '}
+                            {activeModalMill.address}
+                          </p>
+                          <p>
+                            <strong className="text-[#18230F]">Téléphone direct :</strong>{' '}
+                            <a
+                              href={`tel:${activeModalMill.phone.split('/')[0].trim()}`}
+                              className="text-[#31491E] underline font-bold"
+                            >
+                              {activeModalMill.phone}
+                            </a>
+                          </p>
+                          <p>
+                            <strong className="text-[#18230F]">Coordonnées GPS :</strong>{' '}
+                            <span className="font-mono text-[11px] text-[#567B34] tabular-nums">
+                              {activeModalMill.lat.toFixed(4)}° N, {activeModalMill.lng.toFixed(4)}° E
+                            </span>
+                          </p>
+                          <div className="mill-modal-no-print pt-2 flex flex-wrap items-center gap-2">
+                            <a
+                              href={`https://www.google.com/maps/dir/?api=1&destination=${activeModalMill.lat},${activeModalMill.lng}&travelmode=driving`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#E8F4D9] hover:bg-[#D4E8BF] text-[#18230F] text-xs font-bold border border-[#8CBE5D]/50 transition-colors"
+                              title={`Calculer l'itinéraire Google Maps vers ${activeModalMill.name} (${activeModalMill.lat}, ${activeModalMill.lng})`}
+                            >
+                              <Navigation className="w-3.5 h-3.5 text-[#31491E]" aria-hidden="true" />
+                              <span>Itinéraire Google Maps</span>
+                              <ExternalLink className="w-3 h-3 text-[#567B34]" aria-hidden="true" />
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveModalMill(null);
+                                const mapEl = document.getElementById('carte-interactive');
+                                if (mapEl) {
+                                  mapEl.scrollIntoView({ behavior: 'smooth' });
+                                }
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF7F2] hover:bg-[#F4EEE1] text-[#31491E] text-xs font-bold border border-[#E6DEC9] transition-colors cursor-pointer"
+                            >
+                              <MapPin className="w-3.5 h-3.5 text-[#AF4D24]" aria-hidden="true" />
+                              <span>Voir sur la carte SIG</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Print-only Farmer Field Notes & Batch Tracking Box */}
+                    <div className="print-only-mill-block hidden mill-print-section p-4 rounded-xl border border-[#18230F] bg-white space-y-2 text-xs text-[#18230F]">
+                      <div className="font-bold uppercase tracking-wider text-[11px] border-b border-gray-300 pb-1">
+                        Cadre réservé à l'oléiculteur — Suivi du lot d'olives apporté au moulin
+                      </div>
+                      <div className="grid grid-cols-4 gap-3 pt-1 text-[11px]">
+                        <div className="border border-gray-300 rounded p-2">
+                          <span className="font-bold block text-gray-600">Date & Heure de dépôt :</span>
+                          <div className="h-5" />
+                        </div>
+                        <div className="border border-gray-300 rounded p-2">
+                          <span className="font-bold block text-gray-600">Poids net apporté (kg / qx) :</span>
+                          <div className="h-5" />
+                        </div>
+                        <div className="border border-gray-300 rounded p-2">
+                          <span className="font-bold block text-gray-600">Volume d'huile obtenu (L) :</span>
+                          <div className="h-5" />
+                        </div>
+                        <div className="border border-gray-300 rounded p-2">
+                          <span className="font-bold block text-gray-600">Rendement (%) & Lot n° :</span>
+                          <div className="h-5" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mill-modal-no-print p-4 bg-amber-50 rounded-2xl border border-amber-200/80 flex flex-wrap items-center justify-between gap-3">
                       <div className="flex items-center gap-2 text-xs text-amber-950 font-medium">
                         <Star className="w-4 h-4 fill-amber-500 text-amber-500 shrink-0" />
-                        <span>Vous avez déjà fait presser vos olives dans ce moulin ?</span>
+                        <span>Vous avez déjà fait presser vos olives dans ce moulin ? Partagez votre retour sur le rendement et l'accueil.</span>
                       </div>
                       <button
                         type="button"
                         onClick={() => setModalTab('reviews')}
                         className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition-colors cursor-pointer shrink-0"
                       >
-                        Donner votre avis
+                        Consulter / Donner un avis ({activeMillStats.totalReviews})
                       </button>
                     </div>
                   </div>
@@ -842,7 +1184,7 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
 
                 {/* Tab 2: Avis & Notations */}
                 {modalTab === 'reviews' && (
-                  <div className="animate-in fade-in duration-150">
+                  <div className="mill-modal-no-print animate-in fade-in duration-150">
                     <MillReviewsSection
                       mill={activeModalMill}
                       stats={activeMillStats}
@@ -853,14 +1195,34 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                 )}
 
                 {/* Modal Footer */}
-                <div className="flex flex-wrap gap-3 pt-2 border-t border-[#E6DEC9]">
+                <div className="mill-modal-no-print flex flex-wrap gap-3 pt-2 border-t border-[#E6DEC9]">
                   <a
                     href={`tel:${activeModalMill.phone.split('/')[0].trim()}`}
-                    className="flex-1 py-3 px-4 rounded-xl bg-[#31491E] hover:bg-[#233416] text-[#FAF7F2] font-bold text-xs uppercase tracking-wider text-center flex items-center justify-center gap-2 transition-all shadow-md"
+                    className="flex-1 min-w-[180px] py-3 px-4 rounded-xl bg-[#31491E] hover:bg-[#233416] text-[#FAF7F2] font-bold text-xs uppercase tracking-wider text-center flex items-center justify-center gap-2 transition-all shadow-md"
                   >
                     <Phone className="w-4 h-4 text-[#E6AB3C]" />
                     <span>Appeler l'huilerie</span>
                   </a>
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${activeModalMill.lat},${activeModalMill.lng}&travelmode=driving`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 min-w-[160px] py-3 px-4 rounded-xl bg-[#E8F4D9] hover:bg-[#D4E8BF] text-[#18230F] border border-[#8CBE5D]/60 font-bold text-xs uppercase tracking-wider text-center flex items-center justify-center gap-2 transition-all shadow-xs"
+                    title={`Ouvrir l'itinéraire Google Maps vers les coordonnées GPS ${activeModalMill.lat}, ${activeModalMill.lng}`}
+                  >
+                    <Navigation className="w-4 h-4 text-[#31491E]" aria-hidden="true" />
+                    <span>Itinéraire</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-[#567B34]" aria-hidden="true" />
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handlePrintMillSheet}
+                    className="py-3 px-4 rounded-xl bg-white border border-[#E6DEC9] hover:border-[#31491E] hover:bg-[#FAF7F2] text-[#18230F] font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                    title="Imprimer la fiche complète de l'huilerie (format A4 optimisé)"
+                  >
+                    <Printer className="w-4 h-4 text-[#31491E]" aria-hidden="true" />
+                    <span>Imprimer la fiche</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => setActiveModalMill(null)}
