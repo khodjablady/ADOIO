@@ -156,9 +156,21 @@ export const VarietiesGuide: React.FC = () => {
   const metricsB =
     VARIETY_AGRONOMIC_METRICS[varietyB.id] || VARIETY_AGRONOMIC_METRICS.azeradj;
 
-  // Read URL hash or search param to automatically select shared variety
+  // Read URL hash or search param (?variety=...) to automatically select shared variety
   useEffect(() => {
-    const handleHash = () => {
+    const handleHashOrQuery = () => {
+      const params = new URLSearchParams(window.location.search);
+      const queryVar = params.get('variety');
+      if (queryVar) {
+        const foundByQuery = OLIVE_VARIETIES.find(
+          (v) => v.id.toLowerCase() === queryVar.toLowerCase()
+        );
+        if (foundByQuery) {
+          setSelectedVariety(foundByQuery);
+          return;
+        }
+      }
+
       const hash = window.location.hash;
       if (hash.startsWith('#varietes-')) {
         const id = hash.replace('#varietes-', '');
@@ -167,9 +179,9 @@ export const VarietiesGuide: React.FC = () => {
       }
     };
 
-    handleHash();
-    window.addEventListener('hashchange', handleHash);
-    return () => window.removeEventListener('hashchange', handleHash);
+    handleHashOrQuery();
+    window.addEventListener('hashchange', handleHashOrQuery);
+    return () => window.removeEventListener('hashchange', handleHashOrQuery);
   }, []);
 
   const getVarietyShareData = (variety: OliveVariety) => {

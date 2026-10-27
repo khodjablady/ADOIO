@@ -24,7 +24,9 @@ import {
   Scale,
   Recycle,
   Navigation,
-  Printer
+  Printer,
+  Share2,
+  Check
 } from 'lucide-react';
 import { 
   getStoredReviews, 
@@ -76,12 +78,77 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
   const [reviews, setReviews] = useState<MillReview[]>(() => getStoredReviews());
   const [activeModalMill, setActiveModalMill] = useState<OliveMill | null>(null);
   const [modalTab, setModalTab] = useState<'info' | 'reviews'>('info');
+  const [copiedMillLink, setCopiedMillLink] = useState<boolean>(false);
+
+  // Hydrate initial state from URL search params (?mill=..., ?commune=..., ?tab=favorites)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const millParam = params.get('mill');
+      const communeParam = params.get('commune');
+      const tabParam = params.get('tab');
+
+      if (tabParam === 'favorites') {
+        setActiveDirectoryTab('favorites');
+      }
+      if (communeParam) {
+        const matchedCommune = REPRESENTATIVE_MILLS.find(
+          (m) => m.commune.toLowerCase() === communeParam.toLowerCase()
+        )?.commune;
+        if (matchedCommune) {
+          setSelectedCommune(matchedCommune);
+        }
+      }
+      if (millParam) {
+        const matchedMill = REPRESENTATIVE_MILLS.find(
+          (m) => m.id.toLowerCase() === millParam.toLowerCase()
+        );
+        if (matchedMill) {
+          setActiveModalMill(matchedMill);
+          setModalTab(params.get('view') === 'reviews' ? 'reviews' : 'info');
+        }
+      }
+    } catch {
+      // Ignore URL parsing errors
+    }
+  }, []);
+
+  const syncMillUrlParam = (millId: string | null) => {
+    try {
+      const url = new URL(window.location.href);
+      if (millId) {
+        url.searchParams.set('mill', millId);
+        url.hash = 'annuaire';
+      } else {
+        url.searchParams.delete('mill');
+        url.searchParams.delete('view');
+      }
+      window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+    } catch {
+      // Ignore history API errors
+    }
+  };
+
+  const handleCopyMillDeepLink = async (mill: OliveMill) => {
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('mill', mill.id);
+      url.hash = 'annuaire';
+      await navigator.clipboard.writeText(url.toString());
+      setCopiedMillLink(true);
+      setTimeout(() => setCopiedMillLink(false), 2400);
+    } catch {
+      setCopiedMillLink(true);
+      setTimeout(() => setCopiedMillLink(false), 2000);
+    }
+  };
 
   useEffect(() => {
     if (!activeModalMill) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setActiveModalMill(null);
+        syncMillUrlParam(null);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -216,6 +283,7 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
   const handleOpenMill = (mill: OliveMill, tab: 'info' | 'reviews' = 'info') => {
     setActiveModalMill(mill);
     setModalTab(tab);
+    syncMillUrlParam(mill.id);
   };
 
   const handlePrintMillSheet = () => {
@@ -920,6 +988,25 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                     </div>
 
                     <div className="mill-modal-no-print flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleCopyMillDeepLink(activeModalMill)}
+                        className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-white text-[#18230F] border border-[#E6DEC9] hover:border-[#31491E] hover:bg-[#E8F4D9]/50 transition-colors cursor-pointer"
+                        title="Copier le lien direct vers la fiche de cette huilerie"
+                      >
+                        {copiedMillLink ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-[#31491E]" aria-hidden="true" />
+                            <span>Lien copié !</span>
+                          </>
+                        ) : (
+                          <>
+                            <Share2 className="w-3.5 h-3.5 text-[#31491E]" aria-hidden="true" />
+                            <span>Partager la fiche</span>
+                          </>
+                        )}
+                      </button>
+
                       <button
                         type="button"
                         onClick={handlePrintMillSheet}

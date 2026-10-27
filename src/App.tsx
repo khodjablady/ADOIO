@@ -379,10 +379,28 @@ export default function App() {
     performScroll(6);
   };
 
-  // Scroll to hash on page load & listen to hashchange
+  // Scroll to hash or deep-link query params on page load & listen to hashchange
   useEffect(() => {
     const applyHashNavigation = () => {
+      const params = new URLSearchParams(window.location.search);
       const hash = window.location.hash.replace('#', '');
+
+      if (params.has('mill') || params.has('commune') || params.get('tab') === 'favorites') {
+        setForcedSections((prev) => ({ ...prev, annuaire: true }));
+        setTimeout(() => {
+          scrollToSection('annuaire');
+        }, 180);
+        return;
+      }
+
+      if (params.has('variety') || hash.startsWith('varietes-')) {
+        setForcedSections((prev) => ({ ...prev, varietes: true }));
+        setTimeout(() => {
+          scrollToSection('varietes');
+        }, 180);
+        return;
+      }
+
       if (hash) {
         setTimeout(() => {
           scrollToSection(hash);

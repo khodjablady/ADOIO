@@ -217,6 +217,12 @@ export const AdoioAssistantChatbot: React.FC = () => {
     setInput('');
     setIsLoading(true);
 
+    const botMsgId = `model-${Date.now()}`;
+    const replyTime = new Date().toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
     try {
       const historyPayload = nextMessages
         .filter((m) => m.id !== 'welcome-0')
@@ -234,28 +240,89 @@ export const AdoioAssistantChatbot: React.FC = () => {
         body: JSON.stringify({
           message: trimmed,
           history: historyPayload,
+          stream: true,
         }),
       });
 
-      const data = await response.json();
+      const contentType = response.headers.get('content-type') || '';
 
-      if (!response.ok || data.error) {
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
         throw new Error(
-          data.error || "Impossible de joindre l'assistant agronomique ADOIO pour le moment."
+          errData.error || "Impossible de joindre l'assistant agronomique ADOIO pour le moment."
         );
       }
 
-      const botMsg: ChatMessage = {
-        id: `model-${Date.now()}`,
-        role: 'model',
-        text: data.reply,
-        timestamp: new Date().toLocaleTimeString('fr-FR', {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
-      };
+      if (contentType.includes('text/event-stream') && response.body) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let accumulated = '';
+        let messageAdded = false;
 
-      setMessages((prev) => [...prev, botMsg]);
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          const events = buffer.split('\n\n');
+          buffer = events.pop() || '';
+
+          for (const evt of events) {
+            const line = evt.trim();
+            if (!line.startsWith('data:')) continue;
+            const jsonStr = line.replace(/^data:\s*/, '');
+            try {
+              const parsed = JSON.parse(jsonStr) as {
+                chunk?: string;
+                error?: string;
+                done?: boolean;
+              };
+              if (parsed.error) {
+                throw new Error(parsed.error);
+              }
+              if (parsed.chunk) {
+                accumulated += parsed.chunk;
+                if (!messageAdded) {
+                  messageAdded = true;
+                  setMessages((prev) => [
+                    ...prev,
+                    {
+                      id: botMsgId,
+                      role: 'model',
+                      text: accumulated,
+                      timestamp: replyTime,
+                    },
+                  ]);
+                } else {
+                  const currentText = accumulated;
+                  setMessages((prev) =>
+                    prev.map((m) => (m.id === botMsgId ? { ...m, text: currentText } : m))
+                  );
+                }
+              }
+            } catch (parseErr) {
+              if (parseErr instanceof Error && parseErr.message !== 'Unexpected end of JSON input') {
+                throw parseErr;
+              }
+            }
+          }
+        }
+      } else {
+        const data = await response.json();
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: botMsgId,
+            role: 'model',
+            text: data.reply,
+            timestamp: replyTime,
+          },
+        ]);
+      }
     } catch (err: unknown) {
       const msg =
         err instanceof Error

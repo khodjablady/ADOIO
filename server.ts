@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import crypto from 'crypto';
+import fs from 'fs';
 import express from 'express';
 import { createServer as createHttpServer } from 'http';
 import path from 'path';
@@ -12,8 +13,36 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PORT = Number(process.env.PORT) || 3000;
+const RUNTIME_STORE_PATH = path.join(__dirname, '.adoio-runtime-store.json');
 
-// Generate an ephemeral P-256 VAPID public key (65-byte uncompressed EC point in Base64URL) for Web Push API PushManager.subscribe
+interface RuntimeStoreData {
+  vapidPublicKey?: string;
+  pushSubscriptions?: StoredPushSubscription[];
+}
+
+function readRuntimeStore(): RuntimeStoreData {
+  try {
+    if (fs.existsSync(RUNTIME_STORE_PATH)) {
+      const raw = fs.readFileSync(RUNTIME_STORE_PATH, 'utf-8');
+      return JSON.parse(raw) as RuntimeStoreData;
+    }
+  } catch {
+    // Ignore read errors in read-only or ephemeral environments
+  }
+  return {};
+}
+
+function writeRuntimeStore(data: RuntimeStoreData): void {
+  try {
+    fs.writeFileSync(RUNTIME_STORE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+  } catch {
+    // Ignore write errors in read-only environments
+  }
+}
+
+const initialStore = readRuntimeStore();
+
+// Generate or restore a P-256 VAPID public key (65-byte uncompressed EC point in Base64URL)
 function generateVapidPublicKeyBase64Url(): string {
   try {
     const { publicKey } = crypto.generateKeyPairSync('ec', {
@@ -32,7 +61,10 @@ function generateVapidPublicKeyBase64Url(): string {
   return 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U';
 }
 
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || generateVapidPublicKeyBase64Url();
+const VAPID_PUBLIC_KEY =
+  process.env.VAPID_PUBLIC_KEY ||
+  initialStore.vapidPublicKey ||
+  generateVapidPublicKeyBase64Url();
 
 interface StoredPushSubscription {
   id: string;
@@ -43,6 +75,80 @@ interface StoredPushSubscription {
 }
 
 const pushSubscriptions = new Map<string, StoredPushSubscription>();
+if (Array.isArray(initialStore.pushSubscriptions)) {
+  for (const sub of initialStore.pushSubscriptions) {
+    if (sub && typeof sub.id === 'string') {
+      pushSubscriptions.set(sub.id, sub);
+    }
+  }
+}
+
+function persistPushSubscriptions(): void {
+  writeRuntimeStore({
+    vapidPublicKey: VAPID_PUBLIC_KEY,
+    pushSubscriptions: Array.from(pushSubscriptions.values()),
+  });
+}
+
+// In-memory LRU Cache for frequent agronomic assistant queries (max 100 entries, 2h TTL)
+interface CachedReplyEntry {
+  reply: string;
+  timestamp: number;
+}
+const ASSISTANT_CACHE_MAX = 100;
+const ASSISTANT_CACHE_TTL_MS = 2 * 60 * 60 * 1000;
+const assistantReplyCache = new Map<string, CachedReplyEntry>();
+
+function buildCacheKey(message: string, historyLength: number): string {
+  const normalized = message
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+  return `${historyLength}:${normalized}`;
+}
+
+function getCachedAssistantReply(key: string): string | null {
+  const entry = assistantReplyCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > ASSISTANT_CACHE_TTL_MS) {
+    assistantReplyCache.delete(key);
+    return null;
+  }
+  // Refresh LRU order
+  assistantReplyCache.delete(key);
+  assistantReplyCache.set(key, entry);
+  return entry.reply;
+}
+
+function setCachedAssistantReply(key: string, reply: string): void {
+  if (assistantReplyCache.size >= ASSISTANT_CACHE_MAX) {
+    const oldestKey = assistantReplyCache.keys().next().value;
+    if (oldestKey) assistantReplyCache.delete(oldestKey);
+  }
+  assistantReplyCache.set(key, { reply, timestamp: Date.now() });
+}
+
+// Per-IP Sliding Window Rate Limiter for API protection
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX_CHAT = 20; // 20 requests/min per IP
+const ipRateBuckets = new Map<string, number[]>();
+
+function checkRateLimit(ip: string, maxRequests: number): { allowed: boolean; remaining: number; retryAfterSec: number } {
+  const now = Date.now();
+  const windowStart = now - RATE_LIMIT_WINDOW_MS;
+  const timestamps = (ipRateBuckets.get(ip) || []).filter((t) => t > windowStart);
+
+  if (timestamps.length >= maxRequests) {
+    const oldestInWindow = timestamps[0] || now;
+    const retryAfterSec = Math.max(1, Math.ceil((oldestInWindow + RATE_LIMIT_WINDOW_MS - now) / 1000));
+    ipRateBuckets.set(ip, timestamps);
+    return { allowed: false, remaining: 0, retryAfterSec };
+  }
+
+  timestamps.push(now);
+  ipRateBuckets.set(ip, timestamps);
+  return { allowed: true, remaining: Math.max(0, maxRequests - timestamps.length), retryAfterSec: 0 };
+}
 
 function getGenAIClient(): GoogleGenAI {
   const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY || 'missing-api-key';
@@ -139,6 +245,7 @@ async function startServer() {
     };
 
     pushSubscriptions.set(id, record);
+    persistPushSubscriptions();
 
     res.json({
       subscribed: true,
@@ -163,6 +270,7 @@ async function startServer() {
       const id = crypto.createHash('sha256').update(endpoint).digest('hex').slice(0, 12);
       pushSubscriptions.delete(id);
     }
+    persistPushSubscriptions();
 
     res.json({
       subscribed: false,
@@ -206,9 +314,24 @@ async function startServer() {
 
   app.post('/api/assistant/chat', async (req, res) => {
     try {
-      const { message, history } = req.body as {
+      const clientIp =
+        String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'local').split(',')[0].trim();
+      const rateStatus = checkRateLimit(clientIp, RATE_LIMIT_MAX_CHAT);
+      res.setHeader('X-RateLimit-Limit', String(RATE_LIMIT_MAX_CHAT));
+      res.setHeader('X-RateLimit-Remaining', String(rateStatus.remaining));
+
+      if (!rateStatus.allowed) {
+        res.setHeader('Retry-After', String(rateStatus.retryAfterSec));
+        res.status(429).json({
+          error: `Trop de requêtes rapprochées. Veuillez patienter ${rateStatus.retryAfterSec}s avant de poser une nouvelle question.`,
+        });
+        return;
+      }
+
+      const { message, history, stream } = req.body as {
         message?: string;
         history?: ChatTurn[];
+        stream?: boolean;
       };
 
       if (!message || typeof message !== 'string' || !message.trim()) {
@@ -216,7 +339,8 @@ async function startServer() {
         return;
       }
 
-      const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
+      const trimmedMessage = message.trim();
+      const validHistory: ChatTurn[] = [];
 
       if (Array.isArray(history)) {
         for (const turn of history.slice(-10)) {
@@ -226,20 +350,81 @@ async function startServer() {
             typeof turn.text === 'string' &&
             turn.text.trim()
           ) {
-            contents.push({
+            validHistory.push({
               role: turn.role,
-              parts: [{ text: turn.text }],
+              text: turn.text.trim(),
             });
           }
         }
       }
 
+      const cacheKey = buildCacheKey(trimmedMessage, validHistory.length);
+      const cachedReply = getCachedAssistantReply(cacheKey);
+
+      if (cachedReply) {
+        if (stream) {
+          res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+          res.setHeader('Cache-Control', 'no-cache, no-transform');
+          res.setHeader('Connection', 'keep-alive');
+          res.write(`data: ${JSON.stringify({ chunk: cachedReply, cached: true, done: true })}\n\n`);
+          res.end();
+          return;
+        }
+        res.json({ reply: cachedReply, cached: true });
+        return;
+      }
+
+      const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> =
+        validHistory.map((turn) => ({
+          role: turn.role,
+          parts: [{ text: turn.text }],
+        }));
+
       contents.push({
         role: 'user',
-        parts: [{ text: message.trim() }],
+        parts: [{ text: trimmedMessage }],
       });
 
       const aiClient = getGenAIClient();
+
+      if (stream) {
+        res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-cache, no-transform');
+        res.setHeader('Connection', 'keep-alive');
+
+        const responseStream = await aiClient.models.generateContentStream({
+          model: 'gemini-3.8-flash',
+          contents,
+          config: {
+            systemInstruction: ADOIO_SYSTEM_INSTRUCTION,
+            temperature: 0.4,
+          },
+        });
+
+        let accumulatedText = '';
+        for await (const chunk of responseStream) {
+          const piece = chunk.text || '';
+          if (piece) {
+            accumulatedText += piece;
+            res.write(`data: ${JSON.stringify({ chunk: piece, done: false })}\n\n`);
+          }
+        }
+
+        if (accumulatedText.trim()) {
+          setCachedAssistantReply(cacheKey, accumulatedText);
+          res.write(`data: ${JSON.stringify({ chunk: '', done: true })}\n\n`);
+        } else {
+          res.write(
+            `data: ${JSON.stringify({
+              error: "L'assistant n'a pas pu générer de réponse pour le moment.",
+              done: true,
+            })}\n\n`
+          );
+        }
+        res.end();
+        return;
+      }
+
       const response = await aiClient.models.generateContent({
         model: 'gemini-3.8-flash',
         contents,
@@ -257,14 +442,20 @@ async function startServer() {
         return;
       }
 
-      res.json({ reply: replyText });
+      setCachedAssistantReply(cacheKey, replyText);
+      res.json({ reply: replyText, cached: false });
     } catch (error: unknown) {
       console.error('Erreur Gemini API (/api/assistant/chat):', error);
       const errMsg =
         error instanceof Error
           ? error.message
           : "Erreur lors de la communication avec l'assistant agronomique ADOIO.";
-      res.status(500).json({ error: errMsg });
+      if (!res.headersSent) {
+        res.status(500).json({ error: errMsg });
+      } else {
+        res.write(`data: ${JSON.stringify({ error: errMsg, done: true })}\n\n`);
+        res.end();
+      }
     }
   });
 
