@@ -39,6 +39,7 @@ import {
   ReferenceLine,
   Cell
 } from 'recharts';
+import { ArticleAudioReader } from './ArticleAudioReader';
 
 export const StatsAndPotential: React.FC = () => {
   const [selectedCommune, setSelectedCommune] = useState<CommuneStat>(BEJAIA_COMMUNES_DATA[0]);
@@ -89,6 +90,15 @@ export const StatsAndPotential: React.FC = () => {
           <p className="mt-3 text-base text-[#436229] leading-relaxed">
             Première région productrice d'huile d'olive en Algérie, Béjaïa conjugue un relief montagneux généreux, un microclimat méditerranéen tempéré et une tradition oléicole millénaire portée par la vallée de la Soummam.
           </p>
+          <div className="mt-4">
+            <ArticleAudioReader
+              sectionId="potential"
+              title="Potentialités Oléicoles et Chiffres Clés de la Wilaya de Béjaïa"
+              text={() =>
+                `Données officielles et potentiel oléicole de la wilaya de Béjaïa. Superficie oléicole totale : 57 400 hectares répartis sur les 52 communes de la wilaya, soit plus de 52 % de la surface agricole arboricole. Le verger compte 5,35 millions d'oliviers dont 4,85 millions d'arbres en plein rapport. Le parc de trituration rassemble 448 huileries actives, dont 192 chaînes modernes en continu (${modernPercent} %) et 256 moulins traditionnels (${tradPercent} %). Béjaïa assure 28,5 % de la production nationale algérienne d'huile d'olive, avec une moyenne quinquennale de ${avg5yOil} millions de litres par campagne et un rendement moyen de ${avgYield5y} litres par quintal. Focus sur la commune sélectionnée (${selectedCommune.commune}, daïra de ${selectedCommune.daira}) : ${selectedCommune.hectares} hectares, ${selectedCommune.treesCount.toLocaleString('fr-FR')} oliviers, ${selectedCommune.millsCount} huileries et une production moyenne de ${selectedCommune.avgProductionLiters.toLocaleString('fr-FR')} litres.`
+              }
+            />
+          </div>
         </div>
 
         {/* 4 Pillars of Potential */}

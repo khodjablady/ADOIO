@@ -16,6 +16,7 @@ import {
   Sparkles,
   ChevronRight
 } from 'lucide-react';
+import { ArticleAudioReader } from './ArticleAudioReader';
 
 interface AdoioSectionProps {
   onOpenAdhesion: () => void;
@@ -48,6 +49,18 @@ export const AdoioSection: React.FC<AdoioSectionProps> = ({ onOpenAdhesion }) =>
             <p className="mt-3 text-base text-[#436229] leading-relaxed">
               L'<strong>Association pour le Développement de l'Oléiculture et des Industries Oléicoles (ADOIO)</strong> célèbre son <strong>25ᵉ Jubilé d'Argent</strong> et rassemble l'ensemble des acteurs de la filière pour hisser la réputation de l'huile kabyle sur les scènes nationale et internationale.
             </p>
+            <div className="mt-4">
+              <ArticleAudioReader
+                sectionId="adoio"
+                title="Présentation et Missions de l'Association ADOIO de Béjaïa"
+                text={() => {
+                  const missionsText = ADOIO_INFO.keyMissions
+                    .map((m) => `${m.title} : ${m.desc}`)
+                    .join(' ');
+                  return `${ADOIO_INFO.fullName}, en tamazight ${ADOIO_INFO.tamazightTitle}, fondée en ${ADOIO_INFO.creationYear} et basée à ${ADOIO_INFO.headquarters}. Message de l'association : ${ADOIO_INFO.presidentMessage} Nos missions principales : ${missionsText}`;
+                }}
+              />
+            </div>
           </div>
 
           <div className="shrink-0 flex items-center gap-3.5 bg-white p-3.5 sm:p-4 rounded-2xl border border-[#E6DEC9] shadow-xs hover:border-[#8CBE5D] transition-all">

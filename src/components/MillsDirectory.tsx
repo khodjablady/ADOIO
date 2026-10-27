@@ -56,9 +56,18 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
   const [selectedCommune, setSelectedCommune] = useState<string>('all');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [onlyBio, setOnlyBio] = useState<boolean>(false);
-  const [onlyFavorites, setOnlyFavorites] = useState<boolean>(false);
+  const [activeDirectoryTab, setActiveDirectoryTab] = useState<'all' | 'favorites'>('all');
   const [minRating, setMinRating] = useState<number | 'all'>('all');
   const [sortBy, setSortBy] = useState<'default' | 'favorites' | 'rating' | 'reviews' | 'capacity'>('default');
+
+  const onlyFavorites = activeDirectoryTab === 'favorites';
+  const setOnlyFavorites = (val: boolean | ((prev: boolean) => boolean)) => {
+    setActiveDirectoryTab((prevTab) => {
+      const prevBool = prevTab === 'favorites';
+      const nextBool = typeof val === 'function' ? val(prevBool) : val;
+      return nextBool ? 'favorites' : 'all';
+    });
+  };
 
   // Favorites state persisted in LocalStorage
   const [favoriteIds, setFavoriteIds] = useState<string[]>(() => loadStoredFavorites());
@@ -103,17 +112,12 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
     }
     setFavoriteIds((prev) => {
       const exists = prev.includes(millId);
-      const next = exists ? prev.filter((id) => id !== millId) : [...prev, millId];
-      if (next.length === 0 && onlyFavorites) {
-        setOnlyFavorites(false);
-      }
-      return next;
+      return exists ? prev.filter((id) => id !== millId) : [...prev, millId];
     });
   };
 
   const clearAllFavorites = () => {
     setFavoriteIds([]);
-    setOnlyFavorites(false);
   };
 
   const refreshReviews = () => {
@@ -124,6 +128,7 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
   useEffect(() => {
     if (initialSearch) {
       setSearchTerm(initialSearch);
+      setActiveDirectoryTab('all');
     }
   }, [initialSearch]);
 
@@ -140,15 +145,31 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
     });
   }, [reviews]);
 
-  // Saved favorite mill objects for quick-access bar
+  // Saved favorite mill objects for the Favorites tab & quick-access bar
   const favoriteMills = useMemo(() => {
     return millsWithStats.filter(({ mill }) => favoriteIds.includes(mill.id));
   }, [millsWithStats, favoriteIds]);
+
+  // Summary statistics for bookmarked mills in the Favorites tab
+  const favoriteSummary = useMemo(() => {
+    const totalCapacityQx = favoriteMills.reduce((sum, { mill }) => sum + mill.capacityQxPerDay, 0);
+    const bioCount = favoriteMills.filter(({ mill }) => mill.certifiedBio).length;
+    const communesList = Array.from(new Set(favoriteMills.map(({ mill }) => mill.commune)));
+    return {
+      totalCapacityQx,
+      bioCount,
+      communesList,
+    };
+  }, [favoriteMills]);
 
   // Filtered and sorted mills
   const filteredMills = useMemo(() => {
     return millsWithStats
       .filter(({ mill, stats }) => {
+        if (onlyFavorites && !favoriteIds.includes(mill.id)) {
+          return false;
+        }
+
         const matchesSearch = 
           mill.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           mill.commune.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -159,7 +180,6 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
         const matchesCommune = selectedCommune === 'all' || mill.commune === selectedCommune;
         const matchesType = selectedType === 'all' || mill.type === selectedType;
         const matchesBio = !onlyBio || mill.certifiedBio;
-        const matchesFavorites = !onlyFavorites || favoriteIds.includes(mill.id);
         const matchesRating = minRating === 'all' || stats.averageRating >= minRating;
 
         return (
@@ -167,7 +187,6 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
           matchesCommune &&
           matchesType &&
           matchesBio &&
-          matchesFavorites &&
           matchesRating
         );
       })
@@ -227,7 +246,6 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
     selectedCommune !== 'all' ||
     selectedType !== 'all' ||
     onlyBio ||
-    onlyFavorites ||
     minRating !== 'all' ||
     sortBy !== 'default';
 
@@ -236,7 +254,6 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
     setSelectedCommune('all');
     setSelectedType('all');
     setOnlyBio(false);
-    setOnlyFavorites(false);
     setMinRating('all');
     setSortBy('default');
   };
@@ -246,7 +263,7 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="annuaire-screen-content">
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-6">
           <div>
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#567B34] mb-2">
               <MapPin className="w-4 h-4 text-[#E6AB3C]" />
@@ -256,7 +273,7 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
               Annuaire des Huileries de Béjaïa
             </h2>
             <p className="mt-2 text-sm text-[#436229] max-w-2xl leading-relaxed">
-              Consultez les huileries modernes à chaîne continue et moulins traditionnels en activité. Sauvegardez vos moulins préférés en favoris pour y accéder en un clic durant la campagne de trituration.
+              Consultez les huileries modernes à chaîne continue et moulins traditionnels en activité. Marquez vos huileries préférées en favoris pour les retrouver à tout moment dans votre onglet dédié.
             </p>
           </div>
           <div className="flex items-center gap-3 text-xs text-[#31491E] font-semibold tabular-nums">
@@ -264,288 +281,391 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
               {filteredMills.length} unité{filteredMills.length > 1 ? 's' : ''} affichée{filteredMills.length > 1 ? 's' : ''}
             </span>
             <span aria-hidden="true" className="text-[#8CBE5D]">·</span>
-            <span className="flex items-center gap-1 text-[#AF4D24]">
+            <button
+              type="button"
+              onClick={() => setActiveDirectoryTab(activeDirectoryTab === 'favorites' ? 'all' : 'favorites')}
+              className="flex items-center gap-1 text-[#AF4D24] hover:underline cursor-pointer"
+            >
               <Heart className="w-3.5 h-3.5 fill-[#AF4D24] text-[#AF4D24]" aria-hidden="true" />
               <span>
                 {favoriteIds.length} favori{favoriteIds.length > 1 ? 's' : ''} sauvegardé{favoriteIds.length > 1 ? 's' : ''}
               </span>
-            </span>
+            </button>
           </div>
         </div>
 
-        {/* Quick-Access Saved Favorites Bar (LocalStorage) */}
-        {favoriteMills.length > 0 && (
+        {/* Primary Directory Tab Navigation: 'Toutes les Huileries' vs 'Favoris' */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-[#E6DEC9]">
+          <div
+            role="tablist"
+            aria-label="Vues de l'annuaire des huileries"
+            className="inline-flex p-1.5 bg-[#F4EEE1] rounded-2xl border border-[#E6DEC9] self-start"
+          >
+            <button
+              type="button"
+              role="tab"
+              id="tab-all-mills"
+              aria-selected={activeDirectoryTab === 'all'}
+              aria-controls="panel-mills-directory"
+              onClick={() => setActiveDirectoryTab('all')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                activeDirectoryTab === 'all'
+                  ? 'bg-[#233416] text-white shadow-xs'
+                  : 'text-[#233416] hover:bg-white/70'
+              }`}
+            >
+              <Building2 className="w-4 h-4" aria-hidden="true" />
+              <span>Toutes les Huileries</span>
+              <span
+                className={`px-2 py-0.5 rounded-lg text-[11px] font-bold tabular-nums ${
+                  activeDirectoryTab === 'all'
+                    ? 'bg-[#31491E] text-[#E6AB3C]'
+                    : 'bg-[#E6DEC9]/70 text-[#233416]'
+                }`}
+              >
+                {REPRESENTATIVE_MILLS.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              role="tab"
+              id="tab-favorite-mills"
+              aria-selected={activeDirectoryTab === 'favorites'}
+              aria-controls="panel-mills-directory"
+              onClick={() => setActiveDirectoryTab('favorites')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                activeDirectoryTab === 'favorites'
+                  ? 'bg-[#AF4D24] text-white shadow-xs'
+                  : 'text-[#233416] hover:bg-white/70'
+              }`}
+            >
+              <Heart
+                className={`w-4 h-4 ${
+                  activeDirectoryTab === 'favorites'
+                    ? 'fill-white text-white'
+                    : 'fill-[#AF4D24] text-[#AF4D24]'
+                }`}
+                aria-hidden="true"
+              />
+              <span>Favoris</span>
+              <span
+                className={`px-2 py-0.5 rounded-lg text-[11px] font-bold tabular-nums ${
+                  activeDirectoryTab === 'favorites'
+                    ? 'bg-white/20 text-white'
+                    : favoriteIds.length > 0
+                    ? 'bg-[#AF4D24]/15 text-[#AF4D24]'
+                    : 'bg-[#E6DEC9]/70 text-[#567B34]'
+                }`}
+              >
+                {favoriteIds.length}
+              </span>
+            </button>
+          </div>
+
+          {activeDirectoryTab === 'all' && favoriteMills.length > 0 && (
+            <div className="flex items-center gap-3 text-xs bg-[#F4EEE1] px-3.5 py-2 rounded-xl border border-[#E6DEC9]">
+              <Heart className="w-3.5 h-3.5 fill-[#AF4D24] text-[#AF4D24] shrink-0" aria-hidden="true" />
+              <span className="text-[#233416] font-medium">
+                Vous avez <strong>{favoriteMills.length}</strong> huilerie{favoriteMills.length > 1 ? 's' : ''} en favoris
+              </span>
+              <button
+                type="button"
+                onClick={() => setActiveDirectoryTab('favorites')}
+                className="font-bold text-[#AF4D24] hover:underline cursor-pointer shrink-0"
+              >
+                Ouvrir l'onglet Favoris →
+              </button>
+            </div>
+          )}
+
+          {activeDirectoryTab === 'favorites' && favoriteMills.length > 0 && (
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setActiveDirectoryTab('all')}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-[#233416] hover:bg-[#E8F4D9] border border-[#E6DEC9] transition-colors cursor-pointer"
+              >
+                + Parcourir tout l'annuaire
+              </button>
+              <button
+                type="button"
+                onClick={clearAllFavorites}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#AF4D24] bg-white border border-[#AF4D24]/30 hover:bg-[#AF4D24]/10 transition-colors cursor-pointer"
+                title="Supprimer toutes les huileries de vos favoris"
+              >
+                <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>Vider mes favoris</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Favorites Tab Summary Banner (Shown when in 'Favorites' tab with at least 1 saved mill) */}
+        {activeDirectoryTab === 'favorites' && favoriteMills.length > 0 && (
           <div
             role="region"
-            aria-label="Accès rapide à vos huileries favorites"
-            className="mb-6 bg-[#F4EEE1] rounded-2xl border border-[#E6DEC9] p-4 sm:p-5 space-y-3"
+            aria-label="Synthèse de vos huileries favorites"
+            className="mb-6 bg-[#F4EEE1] rounded-3xl border border-[#E6DEC9] p-5 space-y-4"
           >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Heart className="w-4 h-4 fill-[#AF4D24] text-[#AF4D24]" aria-hidden="true" />
-                <h3 className="font-serif text-base font-bold text-[#18230F]">
-                  Mes Huileries Favorites ({favoriteMills.length})
-                </h3>
-                <span className="text-xs text-[#567B34] hidden sm:inline">
-                  · Sauvegardées sur cet appareil pour un accès rapide
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Heart className="w-4 h-4 fill-[#AF4D24] text-[#AF4D24]" aria-hidden="true" />
+                  <h3 className="font-serif text-lg font-bold text-[#18230F]">
+                    Vos Huileries Sauvegardées ({favoriteMills.length})
+                  </h3>
+                </div>
+                <p className="text-xs text-[#567B34] mt-0.5">
+                  Conservation automatique dans le stockage local de votre navigateur (disponible hors-ligne).
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="px-3 py-1.5 rounded-xl bg-white border border-[#E6DEC9] font-bold text-[#18230F] tabular-nums">
+                  Capacité cumulée : {favoriteSummary.totalCapacityQx} qx/jour
+                </span>
+                <span className="px-3 py-1.5 rounded-xl bg-white border border-[#E6DEC9] font-bold text-[#31491E] tabular-nums">
+                  {favoriteSummary.bioCount} certifiée{favoriteSummary.bioCount > 1 ? 's' : ''} Bio
+                </span>
+                <span className="px-3 py-1.5 rounded-xl bg-white border border-[#E6DEC9] font-semibold text-[#436229]">
+                  Communes : {favoriteSummary.communesList.join(', ')}
                 </span>
               </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setOnlyFavorites((prev) => !prev)}
-                  aria-pressed={onlyFavorites}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
-                    onlyFavorites
-                      ? 'bg-[#31491E] text-white'
-                      : 'bg-white text-[#233416] hover:bg-[#E8F4D9] border border-[#E6DEC9]'
-                  }`}
-                >
-                  {onlyFavorites ? 'Afficher tout l’annuaire' : 'Filtrer sur mes favoris'}
-                </button>
-                <button
-                  type="button"
-                  onClick={clearAllFavorites}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-[#AF4D24] hover:underline cursor-pointer"
-                  title="Vider la liste des huileries favorites"
-                >
-                  <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
-                  <span>Tout retirer</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-              {favoriteMills.map(({ mill, stats }) => (
-                <div
-                  key={`fav-quick-${mill.id}`}
-                  className="bg-white rounded-xl border border-[#E6DEC9] hover:border-[#8CBE5D] px-3.5 py-2.5 flex items-center justify-between gap-2 transition-colors"
-                >
-                  <button
-                    type="button"
-                    onClick={() => handleOpenMill(mill, 'info')}
-                    className="text-left min-w-0 flex-1 cursor-pointer group"
-                  >
-                    <p className="font-serif text-sm font-bold text-[#18230F] group-hover:text-[#31491E] truncate">
-                      {mill.name}
-                    </p>
-                    <p className="text-[11px] text-[#567B34] truncate">
-                      {mill.commune} · {mill.capacityQxPerDay} qx/j
-                      {stats.averageRating > 0 ? ` · ★ ${stats.averageRating.toFixed(1)}` : ''}
-                    </p>
-                  </button>
-
-                  <div className="flex items-center gap-1 shrink-0">
-                    <a
-                      href={`tel:${mill.phone.split('/')[0].trim()}`}
-                      className="p-2 rounded-lg bg-[#FAF7F2] hover:bg-[#E8F4D9] text-[#31491E] transition-colors"
-                      title={`Appeler ${mill.name} (${mill.phone})`}
-                      aria-label={`Appeler ${mill.name}`}
-                    >
-                      <Phone className="w-3.5 h-3.5" aria-hidden="true" />
-                    </a>
-                    <button
-                      type="button"
-                      onClick={(e) => toggleFavorite(mill.id, e)}
-                      className="p-2 rounded-lg text-[#567B34] hover:text-[#AF4D24] hover:bg-[#FAF7F2] transition-colors cursor-pointer"
-                      title={`Retirer ${mill.name} des favoris`}
-                      aria-label={`Retirer ${mill.name} des favoris`}
-                    >
-                      <X className="w-3.5 h-3.5" aria-hidden="true" />
-                    </button>
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
         )}
 
-        {/* Filters Bar */}
-        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-[#E6DEC9] shadow-xs mb-8 space-y-3.5">
-          {/* Row 1: Search, Commune, Type, Sort */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-center">
-            {/* Search Input */}
-            <div className="lg:col-span-4 relative">
-              <Search className="w-4 h-4 text-[#6F9D44] absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                aria-label="Rechercher une huilerie par nom, commune, marque ou spécialité"
-                placeholder="Rechercher par nom, commune, marque ou spécialité..."
-                className="w-full pl-9 pr-8 py-2 text-xs rounded-xl border border-[#E6DEC9] focus:outline-none focus:border-[#31491E] bg-[#FAF7F2]"
-              />
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={() => setSearchTerm('')}
-                  aria-label="Effacer la recherche"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-
-            {/* Commune Filter */}
-            <div className="lg:col-span-3">
-              <select
-                value={selectedCommune}
-                onChange={(e) => setSelectedCommune(e.target.value)}
-                aria-label="Filtrer par commune"
-                className="w-full px-3 py-2 text-xs rounded-xl border border-[#E6DEC9] focus:outline-none focus:border-[#31491E] bg-[#FAF7F2] font-medium text-[#18230F] cursor-pointer"
-              >
-                <option value="all">Toutes les communes</option>
-                {communes.filter((c) => c !== 'all').map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Technology Type Filter */}
-            <div className="lg:col-span-2">
-              <select
-                value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value)}
-                aria-label="Filtrer par système de trituration"
-                className="w-full px-3 py-2 text-xs rounded-xl border border-[#E6DEC9] focus:outline-none focus:border-[#31491E] bg-[#FAF7F2] font-medium text-[#18230F] cursor-pointer"
-              >
-                <option value="all">Tous les systèmes</option>
-                <option value="modern">Moderne Continu</option>
-                <option value="traditional">Presse Traditionnelle</option>
-                <option value="domaine">Domaine Intégré</option>
-                <option value="cooperative">Coopérative</option>
-              </select>
-            </div>
-
-            {/* Sort Filter */}
-            <div className="lg:col-span-3">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                aria-label="Trier les huileries"
-                className="w-full px-3 py-2 text-xs rounded-xl border border-[#E6DEC9] focus:outline-none focus:border-[#31491E] bg-[#FAF7F2] font-bold text-[#233416] cursor-pointer"
-              >
-                <option value="default">Trier : Par défaut</option>
-                <option value="favorites">♥ Mes favoris en premier</option>
-                <option value="rating">★ Mieux notés par les oléiculteurs</option>
-                <option value="reviews">💬 Plus d'avis déposés</option>
-                <option value="capacity">⚡ Plus forte capacité (qx/j)</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Row 2: Secondary Interactive Filters (Favorites, Bio, Min Rating) */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[#E6DEC9]/60">
-            <div className="flex flex-wrap items-center gap-2.5">
-              {/* Favorites Toggle Button */}
-              <button
-                type="button"
-                onClick={() => setOnlyFavorites((prev) => !prev)}
-                aria-pressed={onlyFavorites}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors cursor-pointer select-none ${
-                  onlyFavorites
-                    ? 'bg-[#AF4D24] text-white border-[#AF4D24]'
-                    : 'bg-[#FAF7F2] text-[#233416] border-[#E6DEC9] hover:border-[#AF4D24]/60'
-                }`}
-              >
-                <Heart
-                  className={`w-3.5 h-3.5 ${
-                    onlyFavorites ? 'fill-white text-white' : 'fill-[#AF4D24] text-[#AF4D24]'
-                  }`}
-                  aria-hidden="true"
-                />
-                <span>Mes Favoris ({favoriteIds.length})</span>
-              </button>
-
-              {/* Bio Checkbox */}
-              <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-[#233416] bg-[#FAF7F2] px-3 py-1.5 rounded-xl border border-[#E6DEC9]">
+        {/* Filters Bar (Shown in 'all' tab, or in 'favorites' tab when multiple favorites exist) */}
+        {(activeDirectoryTab === 'all' || favoriteMills.length > 1) && (
+          <div className="bg-white p-4 sm:p-5 rounded-3xl border border-[#E6DEC9] shadow-xs mb-8 space-y-3.5">
+            {/* Row 1: Search, Commune, Type, Sort */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-center">
+              {/* Search Input */}
+              <div className="lg:col-span-4 relative">
+                <Search className="w-4 h-4 text-[#6F9D44] absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true" />
                 <input
-                  type="checkbox"
-                  checked={onlyBio}
-                  onChange={(e) => setOnlyBio(e.target.checked)}
-                  className="rounded border-[#8CBE5D] text-[#31491E] focus:ring-[#31491E] w-3.5 h-3.5 cursor-pointer"
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  aria-label="Rechercher une huilerie par nom, commune, marque ou spécialité"
+                  placeholder={
+                    activeDirectoryTab === 'favorites'
+                      ? 'Rechercher parmi vos huileries favorites...'
+                      : 'Rechercher par nom, commune, marque ou spécialité...'
+                  }
+                  className="w-full pl-9 pr-8 py-2 text-xs rounded-xl border border-[#E6DEC9] focus:outline-none focus:border-[#31491E] bg-[#FAF7F2]"
                 />
-                <span>Certifié Bio / Raisonné</span>
-              </label>
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm('')}
+                    aria-label="Effacer la recherche"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
 
-              {/* Min Rating Filter */}
-              <div className="flex items-center gap-1 bg-[#FAF7F2] p-1 rounded-xl border border-[#E6DEC9] text-xs">
-                <span className="text-[11px] font-semibold text-[#567B34] px-2">Avis :</span>
-                <button
-                  type="button"
-                  onClick={() => setMinRating('all')}
-                  className={`px-2.5 py-0.5 rounded-lg font-bold text-xs transition-colors cursor-pointer ${
-                    minRating === 'all'
-                      ? 'bg-[#31491E] text-white shadow-2xs'
-                      : 'text-[#436229] hover:bg-white'
-                  }`}
+              {/* Commune Filter */}
+              <div className="lg:col-span-3">
+                <select
+                  value={selectedCommune}
+                  onChange={(e) => setSelectedCommune(e.target.value)}
+                  aria-label="Filtrer par commune"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-[#E6DEC9] focus:outline-none focus:border-[#31491E] bg-[#FAF7F2] font-medium text-[#18230F] cursor-pointer"
                 >
-                  Tous
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMinRating(4.5)}
-                  className={`px-2.5 py-0.5 rounded-lg font-bold text-xs transition-colors cursor-pointer flex items-center gap-1 ${
-                    minRating === 4.5
-                      ? 'bg-[#31491E] text-white shadow-2xs'
-                      : 'text-[#436229] hover:bg-white'
-                  }`}
+                  <option value="all">Toutes les communes</option>
+                  {communes.filter((c) => c !== 'all').map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Technology Type Filter */}
+              <div className="lg:col-span-2">
+                <select
+                  value={selectedType}
+                  onChange={(e) => setSelectedType(e.target.value)}
+                  aria-label="Filtrer par système de trituration"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-[#E6DEC9] focus:outline-none focus:border-[#31491E] bg-[#FAF7F2] font-medium text-[#18230F] cursor-pointer"
                 >
-                  <Star className="w-3 h-3 fill-[#E6AB3C] text-[#E6AB3C]" aria-hidden="true" />
-                  <span>4.5+</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMinRating(4.0)}
-                  className={`px-2.5 py-0.5 rounded-lg font-bold text-xs transition-colors cursor-pointer flex items-center gap-1 ${
-                    minRating === 4.0
-                      ? 'bg-[#31491E] text-white shadow-2xs'
-                      : 'text-[#436229] hover:bg-white'
-                  }`}
+                  <option value="all">Tous les systèmes</option>
+                  <option value="modern">Moderne Continu</option>
+                  <option value="traditional">Presse Traditionnelle</option>
+                  <option value="domaine">Domaine Intégré</option>
+                  <option value="cooperative">Coopérative</option>
+                </select>
+              </div>
+
+              {/* Sort Filter */}
+              <div className="lg:col-span-3">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                  aria-label="Trier les huileries"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-[#E6DEC9] focus:outline-none focus:border-[#31491E] bg-[#FAF7F2] font-bold text-[#233416] cursor-pointer"
                 >
-                  <Star className="w-3 h-3 fill-[#E6AB3C] text-[#E6AB3C]" aria-hidden="true" />
-                  <span>4.0+</span>
-                </button>
+                  <option value="default">Trier : Par défaut</option>
+                  <option value="favorites">♥ Mes favoris en premier</option>
+                  <option value="rating">★ Mieux notés par les oléiculteurs</option>
+                  <option value="reviews">💬 Plus d'avis déposés</option>
+                  <option value="capacity">⚡ Plus forte capacité (qx/j)</option>
+                </select>
               </div>
             </div>
 
-            {/* Reset Filters */}
-            {hasActiveFilters && (
+            {/* Row 2: Secondary Interactive Filters (Bio, Min Rating) */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[#E6DEC9]/60">
+              <div className="flex flex-wrap items-center gap-2.5">
+                {/* Bio Checkbox */}
+                <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-[#233416] bg-[#FAF7F2] px-3 py-1.5 rounded-xl border border-[#E6DEC9]">
+                  <input
+                    type="checkbox"
+                    checked={onlyBio}
+                    onChange={(e) => setOnlyBio(e.target.checked)}
+                    className="rounded border-[#8CBE5D] text-[#31491E] focus:ring-[#31491E] w-3.5 h-3.5 cursor-pointer"
+                  />
+                  <span>Certifié Bio / Raisonné</span>
+                </label>
+
+                {/* Min Rating Filter */}
+                <div className="flex items-center gap-1 bg-[#FAF7F2] p-1 rounded-xl border border-[#E6DEC9] text-xs">
+                  <span className="text-[11px] font-semibold text-[#567B34] px-2">Avis :</span>
+                  <button
+                    type="button"
+                    onClick={() => setMinRating('all')}
+                    className={`px-2.5 py-0.5 rounded-lg font-bold text-xs transition-colors cursor-pointer ${
+                      minRating === 'all'
+                        ? 'bg-[#31491E] text-white shadow-2xs'
+                        : 'text-[#436229] hover:bg-white'
+                    }`}
+                  >
+                    Tous
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMinRating(4.5)}
+                    className={`px-2.5 py-0.5 rounded-lg font-bold text-xs transition-colors cursor-pointer flex items-center gap-1 ${
+                      minRating === 4.5
+                        ? 'bg-[#31491E] text-white shadow-2xs'
+                        : 'text-[#436229] hover:bg-white'
+                    }`}
+                  >
+                    <Star className="w-3 h-3 fill-[#E6AB3C] text-[#E6AB3C]" aria-hidden="true" />
+                    <span>4.5+</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMinRating(4.0)}
+                    className={`px-2.5 py-0.5 rounded-lg font-bold text-xs transition-colors cursor-pointer flex items-center gap-1 ${
+                      minRating === 4.0
+                        ? 'bg-[#31491E] text-white shadow-2xs'
+                        : 'text-[#436229] hover:bg-white'
+                    }`}
+                  >
+                    <Star className="w-3 h-3 fill-[#E6AB3C] text-[#E6AB3C]" aria-hidden="true" />
+                    <span>4.0+</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Reset Filters */}
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={resetAllFilters}
+                  className="text-xs text-[#AF4D24] hover:underline font-semibold cursor-pointer"
+                >
+                  Réinitialiser les filtres
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Tab Panel: Mills Grid or Empty States */}
+        <div
+          id="panel-mills-directory"
+          role="tabpanel"
+          aria-labelledby={activeDirectoryTab === 'favorites' ? 'tab-favorite-mills' : 'tab-all-mills'}
+        >
+        {activeDirectoryTab === 'favorites' && favoriteIds.length === 0 ? (
+          <div className="bg-white rounded-3xl p-8 sm:p-12 text-center border border-[#E6DEC9] space-y-6">
+            <div className="w-14 h-14 rounded-2xl bg-[#FAF7F2] border border-[#E6DEC9] flex items-center justify-center mx-auto">
+              <Heart className="w-7 h-7 text-[#AF4D24]" aria-hidden="true" />
+            </div>
+            <div className="space-y-2 max-w-lg mx-auto">
+              <h3 className="font-serif text-xl font-bold text-[#18230F]">
+                Aucune huilerie enregistrée dans vos favoris
+              </h3>
+              <p className="text-xs sm:text-sm text-[#567B34] leading-relaxed">
+                Cliquez sur le bouton <strong>« Favori »</strong> sur la fiche d'un moulin pour le sauvegarder dans votre navigateur. Vos huileries favorites restent mémorisées sur votre appareil pour comparer leurs capacités ou les appeler directement pendant la récolte.
+              </p>
+            </div>
+
+            {/* Quick Bookmark Suggestions */}
+            <div className="max-w-2xl mx-auto pt-2">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[#567B34] mb-3">
+                Ajouter rapidement une huilerie de référence :
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
+                {REPRESENTATIVE_MILLS.slice(0, 3).map((suggestedMill) => (
+                  <div
+                    key={`suggest-${suggestedMill.id}`}
+                    className="p-3.5 rounded-2xl bg-[#FAF7F2] border border-[#E6DEC9] flex flex-col justify-between gap-3"
+                  >
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#567B34]">
+                        {suggestedMill.commune}
+                      </p>
+                      <p className="font-serif text-sm font-bold text-[#18230F] mt-0.5 line-clamp-1">
+                        {suggestedMill.name}
+                      </p>
+                      <p className="text-[11px] text-[#436229] mt-0.5">
+                        {suggestedMill.capacityQxPerDay} qx/j · {suggestedMill.typeLabel}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => toggleFavorite(suggestedMill.id, e)}
+                      className="w-full py-1.5 px-3 rounded-xl bg-white hover:bg-[#AF4D24] text-[#AF4D24] hover:text-white border border-[#AF4D24]/40 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Heart className="w-3.5 h-3.5" aria-hidden="true" />
+                      <span>Ajouter aux favoris</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-2">
               <button
                 type="button"
-                onClick={resetAllFilters}
-                className="text-xs text-[#AF4D24] hover:underline font-semibold cursor-pointer"
+                onClick={() => setActiveDirectoryTab('all')}
+                className="px-5 py-2.5 bg-[#233416] hover:bg-[#31491E] text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
               >
-                Réinitialiser les filtres
+                Parcourir toutes les huileries ({REPRESENTATIVE_MILLS.length})
               </button>
-            )}
+            </div>
           </div>
-        </div>
-
-        {/* Mills Grid */}
-        {filteredMills.length === 0 ? (
+        ) : filteredMills.length === 0 ? (
           <div className="bg-white rounded-3xl p-12 text-center border border-[#E6DEC9] space-y-3">
             <Building2 className="w-12 h-12 text-gray-300 mx-auto" aria-hidden="true" />
             <h3 className="font-serif text-lg font-bold text-[#18230F]">
-              {onlyFavorites && favoriteIds.length === 0
-                ? "Vous n'avez pas encore enregistré d'huilerie en favori"
-                : 'Aucune huilerie ne correspond à vos critères'}
+              Aucune huilerie ne correspond à vos filtres
             </h3>
             <p className="text-xs text-[#567B34] max-w-md mx-auto">
-              {onlyFavorites && favoriteIds.length === 0
-                ? "Cliquez sur l'icône cœur sur les fiches des moulins de votre commune pour les retrouver ici en un clic."
-                : "Essayez d'assouplir vos filtres ou de chercher une autre commune (ex. : Seddouk, Akbou, Chemini)."}
+              Essayez d'assouplir vos critères de recherche ou de réinitialiser les filtres actifs.
             </p>
             <button
               type="button"
               onClick={resetAllFilters}
               className="mt-2 px-4 py-2 bg-[#31491E] text-white rounded-xl text-xs font-bold cursor-pointer"
             >
-              Afficher toutes les huileries
+              Réinitialiser les filtres
             </button>
           </div>
         ) : (
@@ -736,6 +856,7 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
             })}
           </div>
         )}
+        </div>
         </div>
 
         {/* Modal: Comprehensive Mill Details, Technical Capacities, Specific Services & Reviews */}

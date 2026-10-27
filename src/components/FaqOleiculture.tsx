@@ -17,6 +17,7 @@ import {
   Droplets,
   Layers
 } from 'lucide-react';
+import { ArticleAudioReader } from './ArticleAudioReader';
 
 export interface FaqItem {
   id: string;
@@ -265,6 +266,24 @@ export const FaqOleiculture: React.FC<FaqOleicultureProps> = ({
           <p className="mt-3 text-base sm:text-lg text-[#436229] leading-relaxed">
             Retrouvez les réponses et protocoles validés par les ingénieurs agronomes de l'<strong>ADOIO</strong> pour réussir la taille de vos arbres, maîtriser la protection biologique et optimiser la récolte de votre huile.
           </p>
+          <div className="mt-4">
+            <ArticleAudioReader
+              sectionId="faq-oleiculture"
+              title="Questions Fréquentes sur la Conduite de l'Oliveraie"
+              text={() => {
+                const itemsToRead = filteredFaqs.length > 0 ? filteredFaqs : FAQ_DATA;
+                return (
+                  `Foire aux questions agronomiques de l'ADOIO Béjaïa. ` +
+                  itemsToRead
+                    .map(
+                      (faq) =>
+                        `Question : ${faq.question} Réponse : ${faq.shortAnswer} ${faq.detailedAnswer.join(' ')} Recommandation ADOIO : ${faq.adoioRecommendation}`
+                    )
+                    .join(' ')
+                );
+              }}
+            />
+          </div>
         </div>
 
         {/* Filter bar: categories + search input */}

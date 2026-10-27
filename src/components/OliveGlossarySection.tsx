@@ -14,6 +14,7 @@ import {
   Trophy,
 } from 'lucide-react';
 import { OliveQuiz } from './OliveQuiz';
+import { ArticleAudioReader } from './ArticleAudioReader';
 
 export type GlossaryCategory =
   | 'all'
@@ -377,6 +378,24 @@ export const OliveGlossarySection: React.FC<OliveGlossarySectionProps> = ({ onNa
             <p className="mt-3 text-sm sm:text-base text-[#436229] leading-relaxed">
               Définitions claires et repères pratiques pour les oléiculteurs et mouliniers de la wilaya de Béjaïa : maîtrisez les notions clés du verger et du laboratoire COI (<strong>extraction à froid</strong>, <strong>débourrement</strong>, <strong>polyphénols</strong>, <strong>véraison</strong>, <strong>acidité libre</strong>, <strong>ardence</strong>) avec leurs équivalents en langue kabyle.
             </p>
+            <div className="mt-4">
+              <ArticleAudioReader
+                sectionId="glossaire-oleicole"
+                title="Glossaire Oléicole et Terminologie du Moulin"
+                text={() => {
+                  const termsToRead = filteredTerms.length > 0 ? filteredTerms : OLIVE_GLOSSARY_TERMS;
+                  return (
+                    `Ce glossaire technique regroupe ${termsToRead.length} notions essentielles pour les oléiculteurs et mouliniers de Béjaïa. ` +
+                    termsToRead
+                      .map(
+                        (item) =>
+                          `${item.term}${item.kabyleTerm ? `, en kabyle ${item.kabyleTerm}` : ''} : ${item.shortDefinition} Conseil pratique à Béjaïa : ${item.practicalTipBejaia}`
+                      )
+                      .join(' ')
+                  );
+                }}
+              />
+            </div>
           </div>
 
           {/* Summary Counter & Quiz CTA */}

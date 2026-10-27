@@ -22,6 +22,7 @@ import {
   Sliders,
   Sprout
 } from 'lucide-react';
+import { ArticleAudioReader } from './ArticleAudioReader';
 
 export type TreeAgeGroup = 'young' | 'growth' | 'mature' | 'centenarian';
 export type KabyleSoilType = 'argilo_calcaire' | 'schiste_pente' | 'terrasse_muret' | 'alluvionnaire';
@@ -343,7 +344,14 @@ export const IrrigationGuide: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <ArticleAudioReader
+              sectionId="irrigation"
+              title="Guide et Simulateur d'Irrigation Raisonnée de l'Olivier"
+              text={() =>
+                `Guide d'irrigation déficitaire régulée de l'ADOIO Béjaïa. Pour votre verger de ${totalTrees} oliviers (${ageData.title}, ${ageData.rangeYears}) sur un sol de type ${soilData.name} (${soilData.waterRetentionLabel}), au stade phénologique ${stageData.title} (${stageData.months}) : la dose recommandée est de ${calculations.litersPerTreePerSession} litres par arbre tous les ${calculations.daysBetweenIrrigations} jours, soit un volume de ${calculations.sessionVolumeM3} mètres cubes par passage et ${calculations.monthlyVolumeM3} mètres cubes par mois. ${soilData.description} Conseil agronomique : ${stageData.recommendation}`
+              }
+            />
             <button
               type="button"
               onClick={handlePrint}

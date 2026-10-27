@@ -16,6 +16,7 @@ import {
   Sprout,
   Award
 } from 'lucide-react';
+import { ArticleAudioReader } from './ArticleAudioReader';
 
 export type SymptomOrgan = 'feuilles' | 'fruits' | 'rameaux' | 'arbre';
 
@@ -555,6 +556,20 @@ export const PhytosanitaryDiagnosis: React.FC = () => {
             <p className="mt-3 text-base text-[#436229] leading-relaxed">
               Sélectionnez les symptômes observés au verger sur les feuilles, les olives, les fleurs ou les rameaux pour identifier les maladies et ravageurs courants en Kabylie (<strong>mouche de l’olive, verticilliose, œil de paon, psylle, cochenille, teigne, tuberculose</strong>) et obtenir un protocole de lutte biologique respectueux du cahier des charges Vierge Extra.
             </p>
+            <div className="mt-4">
+              <ArticleAudioReader
+                sectionId="diagnostic-phytosanitaire"
+                title="Diagnostic Phytosanitaire et Traitements Biologiques de l'Olivier"
+                text={() => {
+                  const targetDisease = activeDiagnostic.disease;
+                  const treatments = targetDisease.bioTreatments
+                    .map((t) => `${t.title} : ${t.productOrMethod}. Dosage et période : ${t.dosageAndTiming}`)
+                    .join(' ');
+                  const prophylaxis = targetDisease.prophylaxisActions.join(' ');
+                  return `Module de clinique végétale et protection biologique ADOIO Béjaïa. Fiche sanitaire mise en avant : ${targetDisease.name}, nom scientifique ${targetDisease.scientificName}, appelée en kabyle ${targetDisease.kabyleTerm}. Catégorie : ${targetDisease.category}, sévérité ${targetDisease.severity}. Période de risque maximal : ${targetDisease.peakPeriod}. Symptômes caractéristiques : ${targetDisease.primarySymptomsSummary} Conditions favorables : ${targetDisease.favorableConditions} Traitements biologiques homologués : ${treatments} Mesures de prophylaxie au verger : ${prophylaxis}`;
+                }}
+              />
+            </div>
           </div>
 
           {/* Raccourcis de cas cliniques types */}

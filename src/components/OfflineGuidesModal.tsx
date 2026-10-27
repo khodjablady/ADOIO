@@ -25,6 +25,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import { ArticleAudioReader } from './ArticleAudioReader';
 import {
   OLIVE_VARIETIES,
   REPRESENTATIVE_MILLS,
@@ -810,8 +811,16 @@ export const OfflineGuidesModal: React.FC<OfflineGuidesModalProps> = ({
                       </div>
                     </div>
 
-                    {/* Priority & Cache Toggle Controls */}
+                    {/* Priority, Audio & Cache Toggle Controls */}
                     <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0">
+                      <ArticleAudioReader
+                        sectionId={`offline-${guide.id}`}
+                        title={guide.title}
+                        buttonLabel="Écouter ce guide"
+                        text={() =>
+                          `${guide.summary} Cas d'usage au verger : ${guide.fieldUseCase} Points clés à retenir : ${guide.keyTakeaways.join(' ')}`
+                        }
+                      />
                       <button
                         type="button"
                         onClick={() => handleTogglePriority(guide)}

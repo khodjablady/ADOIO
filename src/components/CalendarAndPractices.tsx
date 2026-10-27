@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { BejaiaHarvestWeatherWidget } from './BejaiaHarvestWeatherWidget';
 import { WeatherAlertCenter } from './WeatherAlertCenter';
+import { ArticleAudioReader } from './ArticleAudioReader';
 
 export const CalendarAndPractices: React.FC = () => {
   const [selectedSeasonIdx, setSelectedSeasonIdx] = useState<number>(0);
@@ -41,13 +42,26 @@ export const CalendarAndPractices: React.FC = () => {
             </p>
           </div>
 
-          <button
-            onClick={handlePrintSummary}
-            className="px-4 py-2.5 rounded-xl bg-white border border-[#E6DEC9] text-[#18230F] text-xs font-bold flex items-center gap-2 shadow-xs hover:bg-[#FAF7F2] transition-colors cursor-pointer shrink-0"
-          >
-            <Download className="w-4 h-4 text-[#567B34]" />
-            <span>Imprimer le Guide Synthétique</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <ArticleAudioReader
+              sectionId="pratiques"
+              title={`Calendrier Saisonnier et Bonnes Pratiques Oléicoles — ${currentSeason.season}`}
+              text={() => {
+                const allSeasonsText = AGRICULTURAL_CALENDAR.map(
+                  (s) =>
+                    `${s.season} (en kabyle ${s.kabyleTerm}) — Action principale : ${s.action}. Travaux recommandés : ${s.tasks.join(' ')}`
+                ).join(' ');
+                return `Guide technique du calendrier saisonnier de l'olivier à Béjaïa. Saison actuellement affichée : ${currentSeason.season} (${currentSeason.kabyleTerm}, ${currentSeason.action}). ${allSeasonsText}`;
+              }}
+            />
+            <button
+              onClick={handlePrintSummary}
+              className="px-4 py-2.5 rounded-xl bg-white border border-[#E6DEC9] text-[#18230F] text-xs font-bold flex items-center gap-2 shadow-xs hover:bg-[#FAF7F2] transition-colors cursor-pointer shrink-0"
+            >
+              <Download className="w-4 h-4 text-[#567B34]" />
+              <span>Imprimer le Guide Synthétique</span>
+            </button>
+          </div>
         </div>
 
         {/* Real-time Agricultural Weather Widget for Harvest Planning */}

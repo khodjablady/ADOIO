@@ -27,6 +27,7 @@ import {
   Leaf,
   Scale
 } from 'lucide-react';
+import { ArticleAudioReader } from './ArticleAudioReader';
 
 type ConsumerGuideSubTab =
   | 'categories'
@@ -147,6 +148,22 @@ export const TastingAndQuality: React.FC = () => {
             <p className="mt-3 text-base text-[#436229] leading-relaxed">
               Comprendre, choisir, déguster et conserver l’huile d’olive : retrouvez le <strong>Guide officiel du Consommateur de l’ADOIO Béjaïa</strong>, les critères sensoriels du Conseil Oléicole International (COI) et les accords gastronomiques.
             </p>
+            <div className="mt-4">
+              <ArticleAudioReader
+                sectionId="degustation"
+                title="Guide du Consommateur de l'Huile d'Olive et Normes COI"
+                text={() => {
+                  const categoriesText = CONSUMER_CATEGORIES_TABLE.map(
+                    (c) => `${c.categorie} (${c.badge}) : ${c.description} Usages recommandés : ${c.usages}.`
+                  ).join(' ');
+                  const attributesText = TASTING_GUIDE.positiveAttributes
+                    .map((a) => `${a.name} : ${a.definition} Particularité en Kabylie : ${a.kabyleNotes}`)
+                    .join(' ');
+                  const storageText = TASTING_GUIDE.storageAdvice.join(' ');
+                  return `Guide officiel du consommateur de l'ADOIO Béjaïa. Les catégories commerciales d'huile d'olive selon le Conseil Oléicole International : ${categoriesText} Les trois attributs positifs majeurs à la dégustation sont : ${attributesText} Règles d'or de conservation : ${storageText}`;
+                }}
+              />
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">

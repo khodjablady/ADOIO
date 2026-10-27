@@ -35,6 +35,7 @@ import {
   ReferenceLine
 } from 'recharts';
 import { OptimalHarvestAlertSystem } from './OptimalHarvestAlertSystem';
+import { ArticleAudioReader } from './ArticleAudioReader';
 
 export const YieldSimulator: React.FC = () => {
   // Quick Converter state (top of section: 15% to 25% configurable yield)
@@ -503,6 +504,15 @@ export const YieldSimulator: React.FC = () => {
           <p className="mt-3 text-base text-[#436229] leading-relaxed">
             Estimez le volume d'huile obtenu, le taux d'acidité prévisible et la valeur commerciale de vos olives de Kabylie selon la variété, la date de cueillette et le délai de trituration.
           </p>
+          <div className="mt-4">
+            <ArticleAudioReader
+              sectionId="simulateur"
+              title="Simulateur de Récolte et Rendement en Huile d'Olive"
+              text={() =>
+                `Simulateur décisionnel de récolte et rendement en huile d'olive de Kabylie. Pour un lot de ${totalWeight} kilogrammes d'olives (${totalQuintals.toFixed(1)} quintaux) de variété ${selectedVariety}, le rendement estimé est de ${finalYieldPerQuintal.toFixed(1)} litres par quintal, soit une production totale de ${estimatedOilLiters} litres d'huile d'olive. Taux d'acidité oléique estimé : ${estimatedAcidity} pour cent, correspondant à la catégorie officielle ${qualityGrade}. Règle agronomique essentielle : cueillir au stade de véraison tournante, transporter les olives dans des caisses plastiques ajourées et triturer en moins de 24 à 48 heures à une température inférieure à 27 degrés Celsius.`
+              }
+            />
+          </div>
         </div>
 
         {/* Petit Calculateur Express : Poids des Olives -> Volume d'Huile (15% à 25%) */}

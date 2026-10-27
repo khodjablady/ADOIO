@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { ShareVarietyModal } from './ShareVarietyModal';
 import { VarietyTenYearYieldChart } from './VarietyTenYearYieldChart';
+import { ArticleAudioReader } from './ArticleAudioReader';
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -255,6 +256,20 @@ export const VarietiesGuide: React.FC = () => {
             <p className="mt-3 text-base text-[#436229] leading-relaxed">
               Façonnées par des siècles de sélection paysanne dans les monts du Djurdjura et de la Soummam, les variétés de Béjaïa offrent une palette aromatique unique et une remarquable résistance aux aléas climatiques.
             </p>
+            <div className="mt-4">
+              <ArticleAudioReader
+                sectionId="varietes"
+                title={`Guide des Variétés d'Oliviers de Kabylie — Focus sur ${selectedVariety.name}`}
+                text={() => {
+                  const metrics = VARIETY_AGRONOMIC_METRICS[selectedVariety.id];
+                  return `Les variétés autochtones de Béjaïa résultent d'une sélection paysanne séculaire dans les monts du Djurdjura et de la vallée de la Soummam. Variété actuellement sélectionnée : ${selectedVariety.name}, appelée en kabyle ${selectedVariety.kabyleName}. Part du verger : ${selectedVariety.proportionKabylie}. Rendement moyen en huile : ${selectedVariety.oilYieldPercent}. Période optimale de récolte : ${selectedVariety.harvestWindow}. Description agronomique : ${selectedVariety.description} Caractéristiques du fruit : ${selectedVariety.fruitCharacteristics}. Profil aromatique : ${selectedVariety.flavorProfile.join(', ')}. Résistance : ${selectedVariety.resistance}. Usage recommandé : ${selectedVariety.bestUse}. ${
+                    metrics
+                      ? `Précocité : ${metrics.precocityBadge}, ${metrics.precocityDetail} Tolérance au froid : ${metrics.coldTolerance}. Tolérance à la sécheresse : ${metrics.droughtTolerance}. Pollinisation : ${metrics.pollinationNote}`
+                      : ''
+                  }`;
+                }}
+              />
+            </div>
           </motion.div>
 
           {/* Direct Social Share Bar in Section Header */}

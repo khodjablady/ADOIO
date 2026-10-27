@@ -18,6 +18,7 @@ import {
   Clock,
   Printer
 } from 'lucide-react';
+import { ArticleAudioReader } from './ArticleAudioReader';
 
 export type TreeAgeGroup = 'young' | 'growth' | 'mature' | 'centennial';
 export type OrganicFertilizerType = 'farm_manure' | 'olive_pomace_compost' | 'vegetal_compost' | 'poultry_manure';
@@ -260,14 +261,23 @@ export const OrganicFertilizationCalculator: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={handlePrint}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#FAF7F2] hover:bg-white text-[#233416] border border-[#E6DEC9] text-xs font-bold transition-all shadow-xs cursor-pointer shrink-0"
-          title="Imprimer ou enregistrer en PDF la fiche de fertilisation"
-        >
-          <Printer className="w-4 h-4 text-[#567B34]" />
-          <span>Fiche Récapitulative</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <ArticleAudioReader
+            sectionId="calculateur-fertilisation"
+            title="Calculateur et Guide de Fertilisation Organique de l'Oliveraie"
+            text={() =>
+              `Guide de fertilisation organique ADOIO pour le terroir de Béjaïa. Pour votre verger de ${results.totalTrees} oliviers (${AGE_CONFIGS[ageGroup].label}, ${AGE_CONFIGS[ageGroup].ageSpan}), avec l'amendement ${FERTILIZERS_DATA[fertilizerType].name} : la dose recommandée est de ${results.kgPerTree} kilogrammes par arbre, soit un total de ${results.totalTonnes} tonnes pour la parcelle (${results.wheelbarrows} brouettes). Cet apport restitue ${results.totalNSupply} kilogrammes d'azote, ${results.totalPSupply} kilogrammes de phosphore, ${results.totalKSupply} kilogrammes de potassium et ${results.totalMOSupply} tonnes de matière organique humifiée. ${FERTILIZERS_DATA[fertilizerType].description} Recommandation ADOIO : ${FERTILIZERS_DATA[fertilizerType].adoioNote} Conseil pratique : épandre en couronne à l'aplomb de la frondaison sur un rayon de ${results.crownRadiusMeters} mètres autour du tronc, suivi d'un griffage superficiel.`
+            }
+          />
+          <button
+            onClick={handlePrint}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#FAF7F2] hover:bg-white text-[#233416] border border-[#E6DEC9] text-xs font-bold transition-all shadow-xs cursor-pointer shrink-0"
+            title="Imprimer ou enregistrer en PDF la fiche de fertilisation"
+          >
+            <Printer className="w-4 h-4 text-[#567B34]" />
+            <span>Fiche Récapitulative</span>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-6">

@@ -44,14 +44,17 @@ interface StoredPushSubscription {
 
 const pushSubscriptions = new Map<string, StoredPushSubscription>();
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
+function getGenAIClient(): GoogleGenAI {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY || 'missing-api-key';
+  return new GoogleGenAI({
+    apiKey,
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build',
+      },
     },
-  },
-});
+  });
+}
 
 const ADOIO_SYSTEM_INSTRUCTION = `Tu es l'Assistant Agronomique Officiel de l'ADOIO (Association du Développement de l'Oléiculture et des Industries Oléicoles de la Wilaya de Béjaïa), basée à la Chambre d'Agriculture (CAW) de Béjaïa et présidée par M. Kaci Mohamed.
 
@@ -236,7 +239,8 @@ async function startServer() {
         parts: [{ text: message.trim() }],
       });
 
-      const response = await ai.models.generateContent({
+      const aiClient = getGenAIClient();
+      const response = await aiClient.models.generateContent({
         model: 'gemini-3.8-flash',
         contents,
         config: {

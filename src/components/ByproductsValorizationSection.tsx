@@ -22,6 +22,7 @@ import {
   Award,
   Users
 } from 'lucide-react';
+import { ArticleAudioReader } from './ArticleAudioReader';
 
 type ValorizationTab =
   | 'identification'
@@ -206,6 +207,18 @@ export const ByproductsValorizationSection: React.FC = () => {
               — pouvant contribuer à l’alimentation animale, à la production de compost, à la fertilisation raisonnée,
               à la biomasse énergétique ou à des activités économiques et touristiques complémentaires.
             </p>
+            <div className="mt-4">
+              <ArticleAudioReader
+                sectionId="sous-produits"
+                title="Guide Technique de Valorisation des Sous-Produits Oléicoles"
+                text={() => {
+                  const annexSummary = ANNEX_TECHNICAL_DATA.map(
+                    (d) => `${d.matiere} : ${d.valeur}. Précaution : ${d.precaution}`
+                  ).join(' ');
+                  return `Guide technique de l'ADOIO Béjaïa sur la valorisation des sous-produits oléicoles. La transformation des olives et la taille des vergers génèrent six grandes familles de co-produits : les grignons bruts ou épuisés, les margines, la pulpe d'olive, les feuilles de lavage, ainsi que les ramilles et le bois de taille. Ces ressources peuvent être valorisées selon sept axes complémentaires : 1. L'alimentation animale des ovins et bovins grâce aux feuilles fraîches et aux blocs multi-nutritionnels à base de grignons dénoyautés. 2. Le compostage aérobie en andains associant grignons, fumier et feuilles pour restituer l'humus aux sols pentus de Kabylie. 3. L'épandage agronomique contrôlé des margines après neutralisation à la chaux ou évaporation. 4. La biomasse énergétique avec les noyaux d'olives concassés et briquettes combustibles à haut pouvoir calorifique. 5. La savonnerie artisanale, la cosmétique et l'oléotourisme. Données techniques de référence : ${annexSummary}`;
+                }}
+              />
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 shrink-0">

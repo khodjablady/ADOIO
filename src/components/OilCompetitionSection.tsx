@@ -24,6 +24,7 @@ import {
   Info
 } from 'lucide-react';
 import { CompetitionMedalsChartSection } from './CompetitionMedalsChartSection';
+import { ArticleAudioReader } from './ArticleAudioReader';
 
 export interface ContestRegistration {
   id: string;
@@ -175,6 +176,13 @@ export const OilCompetitionSection: React.FC = () => {
           <p className="mt-3 text-base text-[#436229] leading-relaxed">
             L’Association de l’oléiculture et des industries oléicoles de Bejaia, en collaboration avec la Direction des Services Agricoles de la wilaya, organise chaque année à l'occasion de la Fête de l'Olive, le concours de la meilleure huile d'olive de la saison. Ce concours est ouvert à tous les professionnels du secteur oléicole algérien.
           </p>
+          <div className="mt-4">
+            <ArticleAudioReader
+              sectionId="concours"
+              title="Concours Annuel de la Meilleure Huile d'Olive de Béjaïa"
+              text="L'Association de l'oléiculture et des industries oléicoles de Béjaïa (ADOIO), en collaboration avec la Direction des Services Agricoles de la wilaya, organise chaque année à l'occasion de la Fête de l'Olive le concours de la meilleure huile d'olive de la saison. Trois catégories officielles sont ouvertes aux producteurs et mouliniers : Catégorie 1, meilleure huile d'olive monovariétale Fruité Vert issue d'une récolte précoce à mi-véraison. Catégorie 2, meilleure huile d'olive monovariétale Fruité Mûr issue d'olives à maturité complète. Catégorie 3, meilleure huile d'olive Fruité Goût à l'ancienne valorisant le savoir-faire traditionnel kabyle. Conditions de participation : le lot homogène présenté doit être d'au moins 300 litres d'huile d'olive de la campagne en cours, avec dépôt de deux échantillons de 75 centilitres pour analyse physico-chimique et dégustation à l'aveugle par un jury agréé selon le référentiel du Conseil Oléicole International."
+            />
+          </div>
         </div>
 
         {/* 3 Categories Pills */}
