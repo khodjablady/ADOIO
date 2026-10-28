@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   BEJAIA_GLOBAL_STATS, 
   BEJAIA_COMMUNES_DATA, 
@@ -41,9 +41,182 @@ import {
 } from 'recharts';
 import { ArticleAudioReader } from './ArticleAudioReader';
 
+interface AnimatedCounterProps {
+  end: number;
+  decimals?: number;
+  decimalSeparator?: ',' | '.';
+  thousandsSeparator?: string;
+  prefix?: string;
+  suffix?: string;
+  duration?: number;
+  delay?: number;
+  className?: string;
+}
+
+const formatAnimatedValue = (
+  value: number,
+  decimals: number,
+  decimalSeparator: ',' | '.',
+  thousandsSeparator: string
+): string => {
+  const fixed = value.toFixed(decimals);
+  const [intPart, decPart] = fixed.split('.');
+  const formattedInt = thousandsSeparator
+    ? intPart.replace(/\B(?=(\d{3})+(?!\d))/g, thousandsSeparator)
+    : intPart;
+  return decPart !== undefined ? `${formattedInt}${decimalSeparator}${decPart}` : formattedInt;
+};
+
+const AnimatedCounter: React.FC<AnimatedCounterProps> = ({
+  end,
+  decimals = 0,
+  decimalSeparator = ',',
+  thousandsSeparator = ' ',
+  prefix = '',
+  suffix = '',
+  duration = 1500,
+  delay = 0,
+  className = '',
+}) => {
+  const spanRef = useRef<HTMLSpanElement | null>(null);
+  const [hasEnteredView, setHasEnteredView] = useState(false);
+  const [displayValue, setDisplayValue] = useState(0);
+  const previousEndRef = useRef(0);
+
+  useEffect(() => {
+    const node = spanRef.current;
+    if (!node || typeof IntersectionObserver === 'undefined') {
+      setHasEnteredView(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setHasEnteredView(true);
+            observer.disconnect();
+          }
+        });
+      },
+      { threshold: 0.15, rootMargin: '0px 0px -24px 0px' }
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!hasEnteredView) return;
+
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (prefersReducedMotion) {
+      setDisplayValue(end);
+      previousEndRef.current = end;
+      return;
+    }
+
+    const startValue = previousEndRef.current;
+    const delta = end - startValue;
+    if (delta === 0) {
+      setDisplayValue(end);
+      return;
+    }
+
+    let rafId = 0;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const isInitialRun = startValue === 0;
+    const effectiveDuration = isInitialRun ? duration : Math.min(650, duration);
+    const effectiveDelay = isInitialRun ? delay : 0;
+
+    const startAnimation = () => {
+      const startTime = performance.now();
+
+      const tick = (now: number) => {
+        const elapsed = now - startTime;
+        const progress = Math.min(1, elapsed / effectiveDuration);
+        // Ease-out quartic curve for a smooth, natural deceleration
+        const eased = 1 - Math.pow(1 - progress, 4);
+        const current = startValue + delta * eased;
+        setDisplayValue(current);
+
+        if (progress < 1) {
+          rafId = requestAnimationFrame(tick);
+        } else {
+          setDisplayValue(end);
+          previousEndRef.current = end;
+        }
+      };
+
+      rafId = requestAnimationFrame(tick);
+    };
+
+    if (effectiveDelay > 0) {
+      timeoutId = setTimeout(startAnimation, effectiveDelay);
+    } else {
+      startAnimation();
+    }
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, [end, duration, delay, hasEnteredView]);
+
+  const formatted = formatAnimatedValue(displayValue, decimals, decimalSeparator, thousandsSeparator);
+
+  return (
+    <span
+      ref={spanRef}
+      className={`tabular-nums inline-block ${className}`}
+      aria-label={`${prefix}${formatAnimatedValue(end, decimals, decimalSeparator, thousandsSeparator)}${suffix}`}
+    >
+      {prefix}
+      {formatted}
+      {suffix}
+    </span>
+  );
+};
+
 export const StatsAndPotential: React.FC = () => {
   const [selectedCommune, setSelectedCommune] = useState<CommuneStat>(BEJAIA_COMMUNES_DATA[0]);
   const [sortBy, setSortBy] = useState<'production' | 'trees' | 'hectares' | 'mills'>('production');
+  const [pillarsInView, setPillarsInView] = useState(false);
+  const [modernizationInView, setModernizationInView] = useState(false);
+  const pillarsRef = useRef<HTMLDivElement | null>(null);
+  const modernizationRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') {
+      setPillarsInView(true);
+      setModernizationInView(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            if (entry.target === pillarsRef.current) {
+              setPillarsInView(true);
+            } else if (entry.target === modernizationRef.current) {
+              setModernizationInView(true);
+            }
+          }
+        });
+      },
+      { threshold: 0.15, rootMargin: '0px 0px -30px 0px' }
+    );
+
+    if (pillarsRef.current) observer.observe(pillarsRef.current);
+    if (modernizationRef.current) observer.observe(modernizationRef.current);
+
+    return () => observer.disconnect();
+  }, []);
 
   // 5-Year Historical Production Recharts State
   const [selectedCampaign, setSelectedCampaign] = useState<HistoricalCampaignData>(
@@ -102,8 +275,12 @@ export const StatsAndPotential: React.FC = () => {
         </div>
 
         {/* 4 Pillars of Potential */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-14">
-          <div className="bg-white p-6 rounded-2xl border border-[#E6DEC9] shadow-xs hover:border-[#8CBE5D] transition-all">
+        <div ref={pillarsRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-14">
+          <div
+            className={`bg-white p-6 rounded-2xl border border-[#E6DEC9] shadow-xs hover:border-[#8CBE5D] hover:shadow-md transition-all duration-700 ${
+              pillarsInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+            }`}
+          >
             <div className="w-12 h-12 rounded-xl bg-[#E8F4D9] flex items-center justify-center text-[#31491E] mb-4">
               <Trees className="w-6 h-6 text-[#436229]" />
             </div>
@@ -111,14 +288,25 @@ export const StatsAndPotential: React.FC = () => {
               Superficie Arborée
             </div>
             <div className="font-serif text-3xl font-extrabold text-[#18230F] mt-1">
-              57 400 <span className="text-base font-sans font-medium text-[#567B34]">ha</span>
+              <AnimatedCounter
+                end={BEJAIA_GLOBAL_STATS.oliveSurfaceHectares}
+                decimals={0}
+                thousandsSeparator=" "
+                duration={1600}
+                delay={0}
+              />{' '}
+              <span className="text-base font-sans font-medium text-[#567B34]">ha</span>
             </div>
             <p className="text-xs text-[#567B34] mt-2">
               Soit plus de 52% de la surface agricole utile (SAU) arboricole de la wilaya.
             </p>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl border border-[#E6DEC9] shadow-xs hover:border-[#8CBE5D] transition-all">
+          <div
+            className={`bg-white p-6 rounded-2xl border border-[#E6DEC9] shadow-xs hover:border-[#8CBE5D] hover:shadow-md transition-all duration-700 delay-100 ${
+              pillarsInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+            }`}
+          >
             <div className="w-12 h-12 rounded-xl bg-[#FEF5DB] flex items-center justify-center text-[#B47A16] mb-4">
               <Droplet className="w-6 h-6 text-[#E6AB3C]" />
             </div>
@@ -126,14 +314,26 @@ export const StatsAndPotential: React.FC = () => {
               Arbres Productifs
             </div>
             <div className="font-serif text-3xl font-extrabold text-[#18230F] mt-1">
-              4,85 <span className="text-base font-sans font-medium text-[#567B34]">M arbres</span>
+              <AnimatedCounter
+                end={BEJAIA_GLOBAL_STATS.productiveTrees / 1000000}
+                decimals={2}
+                decimalSeparator=","
+                thousandsSeparator=""
+                duration={1600}
+                delay={120}
+              />{' '}
+              <span className="text-base font-sans font-medium text-[#567B34]">M arbres</span>
             </div>
             <p className="text-xs text-[#567B34] mt-2">
               Sur un total de 5,35 millions d'oliviers, avec 500 000 jeunes plants en cours d'entrée en production.
             </p>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl border border-[#E6DEC9] shadow-xs hover:border-[#8CBE5D] transition-all">
+          <div
+            className={`bg-white p-6 rounded-2xl border border-[#E6DEC9] shadow-xs hover:border-[#8CBE5D] hover:shadow-md transition-all duration-700 delay-200 ${
+              pillarsInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+            }`}
+          >
             <div className="w-12 h-12 rounded-xl bg-[#E8F4D9] flex items-center justify-center text-[#31491E] mb-4">
               <Building2 className="w-6 h-6 text-[#436229]" />
             </div>
@@ -141,14 +341,25 @@ export const StatsAndPotential: React.FC = () => {
               Infrastructures de Trituration
             </div>
             <div className="font-serif text-3xl font-extrabold text-[#18230F] mt-1">
-              448 <span className="text-base font-sans font-medium text-[#567B34]">unités</span>
+              <AnimatedCounter
+                end={BEJAIA_GLOBAL_STATS.activeMills}
+                decimals={0}
+                thousandsSeparator=" "
+                duration={1600}
+                delay={240}
+              />{' '}
+              <span className="text-base font-sans font-medium text-[#567B34]">unités</span>
             </div>
             <p className="text-xs text-[#567B34] mt-2">
               192 chaînes modernes continues (43%) et 256 huileries traditionnelles à super-presses (57%).
             </p>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl border border-[#E6DEC9] shadow-xs hover:border-[#8CBE5D] transition-all">
+          <div
+            className={`bg-white p-6 rounded-2xl border border-[#E6DEC9] shadow-xs hover:border-[#8CBE5D] hover:shadow-md transition-all duration-700 delay-300 ${
+              pillarsInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+            }`}
+          >
             <div className="w-12 h-12 rounded-xl bg-[#FEF5DB] flex items-center justify-center text-[#B47A16] mb-4">
               <TrendingUp className="w-6 h-6 text-[#E6AB3C]" />
             </div>
@@ -156,7 +367,15 @@ export const StatsAndPotential: React.FC = () => {
               Part Nationale
             </div>
             <div className="font-serif text-3xl font-extrabold text-[#18230F] mt-1">
-              28,5 <span className="text-base font-sans font-medium text-[#567B34]">%</span>
+              <AnimatedCounter
+                end={BEJAIA_GLOBAL_STATS.shareOfNationalProductionPercent}
+                decimals={1}
+                decimalSeparator=","
+                thousandsSeparator=""
+                duration={1600}
+                delay={360}
+              />{' '}
+              <span className="text-base font-sans font-medium text-[#567B34]">%</span>
             </div>
             <p className="text-xs text-[#567B34] mt-2">
               Béjaïa assure près d'un tiers de la production algérienne totale d'huile d'olive chaque campagne.
@@ -248,11 +467,31 @@ export const StatsAndPotential: React.FC = () => {
                 Moyenne Quinquennale
               </span>
               <div className="mt-1 flex items-baseline gap-1.5">
-                <span className="font-serif text-2xl font-bold text-[#18230F]">{avg5yOil}</span>
+                <span className="font-serif text-2xl font-bold text-[#18230F]">
+                  <AnimatedCounter
+                    end={Number(avg5yOil)}
+                    decimals={1}
+                    decimalSeparator="."
+                    thousandsSeparator=""
+                    duration={1400}
+                    delay={0}
+                  />
+                </span>
                 <span className="text-xs text-[#567B34] font-semibold">M Litres / an</span>
               </div>
               <p className="text-[11px] text-[#567B34] mt-1">
-                Total cumulé : <strong>{total5yOil.toFixed(1)} M Litres</strong>
+                Total cumulé :{' '}
+                <strong>
+                  <AnimatedCounter
+                    end={total5yOil}
+                    decimals={1}
+                    decimalSeparator="."
+                    thousandsSeparator=" "
+                    suffix=" M Litres"
+                    duration={1400}
+                    delay={60}
+                  />
+                </strong>
               </p>
             </div>
 
@@ -262,7 +501,14 @@ export const StatsAndPotential: React.FC = () => {
               </span>
               <div className="mt-1 flex items-baseline gap-1.5">
                 <span className="font-serif text-2xl font-bold text-[#E6AB3C]">
-                  {maxCampaign.oilProductionMillionLiters}
+                  <AnimatedCounter
+                    end={maxCampaign.oilProductionMillionLiters}
+                    decimals={1}
+                    decimalSeparator="."
+                    thousandsSeparator=""
+                    duration={1400}
+                    delay={100}
+                  />
                 </span>
                 <span className="text-xs text-[#18230F] font-semibold">M Litres</span>
               </div>
@@ -276,7 +522,16 @@ export const StatsAndPotential: React.FC = () => {
                 Essor Vierge Extra
               </span>
               <div className="mt-1 flex items-baseline gap-1.5">
-                <span className="font-serif text-2xl font-bold text-[#31491E]">+{evGrowth}%</span>
+                <span className="font-serif text-2xl font-bold text-[#31491E]">
+                  <AnimatedCounter
+                    end={evGrowth}
+                    decimals={0}
+                    prefix="+"
+                    suffix="%"
+                    duration={1400}
+                    delay={200}
+                  />
+                </span>
                 <span className="text-xs text-[#567B34] font-semibold">en 5 ans</span>
               </div>
               <p className="text-[11px] text-[#567B34] mt-1">
@@ -289,7 +544,16 @@ export const StatsAndPotential: React.FC = () => {
                 Rendement Moyen
               </span>
               <div className="mt-1 flex items-baseline gap-1.5">
-                <span className="font-serif text-2xl font-bold text-[#567B34]">{avgYield5y}</span>
+                <span className="font-serif text-2xl font-bold text-[#567B34]">
+                  <AnimatedCounter
+                    end={Number(avgYield5y)}
+                    decimals={2}
+                    decimalSeparator="."
+                    thousandsSeparator=""
+                    duration={1400}
+                    delay={300}
+                  />
+                </span>
                 <span className="text-xs text-[#567B34] font-semibold">L / quintal</span>
               </div>
               <p className="text-[11px] text-[#567B34] mt-1">
@@ -703,7 +967,13 @@ export const StatsAndPotential: React.FC = () => {
                     </span>
                     <span className="font-serif text-base font-bold text-[#18230F] flex items-center justify-end gap-1">
                       <CloudRain className="w-3.5 h-3.5 text-[#567B34]" />
-                      {selectedCampaign.rainfallMm} mm
+                      <AnimatedCounter
+                        end={selectedCampaign.rainfallMm}
+                        decimals={0}
+                        thousandsSeparator=" "
+                        suffix=" mm"
+                        duration={1200}
+                      />
                     </span>
                   </div>
                   <div className="bg-white px-3.5 py-2 rounded-xl border border-[#E6DEC9] text-right">
@@ -711,7 +981,13 @@ export const StatsAndPotential: React.FC = () => {
                       Prix Indicatif Terroir
                     </span>
                     <span className="font-serif text-base font-bold text-[#E6AB3C]">
-                      {selectedCampaign.marketPriceDzdPerLiter} DZD / L
+                      <AnimatedCounter
+                        end={selectedCampaign.marketPriceDzdPerLiter}
+                        decimals={0}
+                        thousandsSeparator=" "
+                        suffix=" DZD / L"
+                        duration={1200}
+                      />
                     </span>
                   </div>
                 </div>
@@ -722,17 +998,35 @@ export const StatsAndPotential: React.FC = () => {
                 <div className="bg-white p-3 rounded-xl border border-[#E6DEC9]">
                   <span className="text-[11px] text-[#6F9D44] block">Production d'Huile</span>
                   <span className="font-serif text-lg font-bold text-[#18230F]">
-                    {selectedCampaign.oilProductionMillionLiters} M L
+                    <AnimatedCounter
+                      end={selectedCampaign.oilProductionMillionLiters}
+                      decimals={1}
+                      decimalSeparator="."
+                      suffix=" M L"
+                      duration={1300}
+                    />
                   </span>
                   <span className="text-[10px] text-[#567B34] block font-mono">
-                    {selectedCampaign.oilProductionLiters.toLocaleString()} L
+                    <AnimatedCounter
+                      end={selectedCampaign.oilProductionLiters}
+                      decimals={0}
+                      thousandsSeparator=" "
+                      suffix=" L"
+                      duration={1300}
+                    />
                   </span>
                 </div>
 
                 <div className="bg-white p-3 rounded-xl border border-[#E6DEC9]">
                   <span className="text-[11px] text-[#6F9D44] block">Olives Triturées</span>
                   <span className="font-serif text-lg font-bold text-[#18230F]">
-                    {(selectedCampaign.olivesCrushedQuintals / 1000).toFixed(0)}k qx
+                    <AnimatedCounter
+                      end={Math.round(selectedCampaign.olivesCrushedQuintals / 1000)}
+                      decimals={0}
+                      thousandsSeparator=" "
+                      suffix="k qx"
+                      duration={1300}
+                    />
                   </span>
                   <span className="text-[10px] text-[#567B34] block">
                     + {(selectedCampaign.tableOlivesQuintals / 1000).toFixed(0)}k qx table
@@ -742,7 +1036,13 @@ export const StatsAndPotential: React.FC = () => {
                 <div className="bg-white p-3 rounded-xl border border-[#E6DEC9]">
                   <span className="text-[11px] text-[#6F9D44] block">Rendement Moyen</span>
                   <span className="font-serif text-lg font-bold text-[#E6AB3C]">
-                    {selectedCampaign.averageYieldLitersPerQx} L/qx
+                    <AnimatedCounter
+                      end={selectedCampaign.averageYieldLitersPerQx}
+                      decimals={2}
+                      decimalSeparator="."
+                      suffix=" L/qx"
+                      duration={1300}
+                    />
                   </span>
                   <span className="text-[10px] text-[#567B34] block">
                     ≈ {(selectedCampaign.averageYieldLitersPerQx * 0.916).toFixed(1)}% en poids
@@ -752,7 +1052,12 @@ export const StatsAndPotential: React.FC = () => {
                 <div className="bg-white p-3 rounded-xl border border-[#E6DEC9]">
                   <span className="text-[11px] text-[#6F9D44] block">Taux Vierge Extra</span>
                   <span className="font-serif text-lg font-bold text-[#31491E]">
-                    {selectedCampaign.extraVirginSharePercent}%
+                    <AnimatedCounter
+                      end={selectedCampaign.extraVirginSharePercent}
+                      decimals={0}
+                      suffix="%"
+                      duration={1300}
+                    />
                   </span>
                   <span className="text-[10px] text-[#567B34] block">
                     Acidité &lt; 0.8% certifiée
@@ -897,25 +1202,49 @@ export const StatsAndPotential: React.FC = () => {
                   <div className="bg-white p-3.5 rounded-xl border border-[#E6DEC9]">
                     <span className="text-[11px] text-[#6F9D44] block">Superficie</span>
                     <span className="font-serif text-lg font-bold text-[#18230F]">
-                      {selectedCommune.hectares.toLocaleString()} ha
+                      <AnimatedCounter
+                        end={selectedCommune.hectares}
+                        decimals={0}
+                        thousandsSeparator=" "
+                        suffix=" ha"
+                        duration={1200}
+                      />
                     </span>
                   </div>
                   <div className="bg-white p-3.5 rounded-xl border border-[#E6DEC9]">
                     <span className="text-[11px] text-[#6F9D44] block">Oliviers</span>
                     <span className="font-serif text-lg font-bold text-[#18230F]">
-                      {(selectedCommune.treesCount / 1000).toFixed(0)}k arbres
+                      <AnimatedCounter
+                        end={Math.round(selectedCommune.treesCount / 1000)}
+                        decimals={0}
+                        thousandsSeparator=" "
+                        suffix="k arbres"
+                        duration={1200}
+                      />
                     </span>
                   </div>
                   <div className="bg-white p-3.5 rounded-xl border border-[#E6DEC9]">
                     <span className="text-[11px] text-[#6F9D44] block">Huileries</span>
                     <span className="font-serif text-lg font-bold text-[#18230F]">
-                      {selectedCommune.millsCount} moulins
+                      <AnimatedCounter
+                        end={selectedCommune.millsCount}
+                        decimals={0}
+                        thousandsSeparator=" "
+                        suffix=" moulins"
+                        duration={1200}
+                      />
                     </span>
                   </div>
                   <div className="bg-white p-3.5 rounded-xl border border-[#E6DEC9]">
                     <span className="text-[11px] text-[#6F9D44] block">Production</span>
                     <span className="font-serif text-lg font-bold text-[#E6AB3C]">
-                      {(selectedCommune.avgProductionLiters / 1000000).toFixed(2)} M L
+                      <AnimatedCounter
+                        end={selectedCommune.avgProductionLiters / 1000000}
+                        decimals={2}
+                        decimalSeparator="."
+                        suffix=" M L"
+                        duration={1200}
+                      />
                     </span>
                   </div>
                 </div>
@@ -951,12 +1280,18 @@ export const StatsAndPotential: React.FC = () => {
                 <div className="flex justify-between text-xs text-[#567B34] mb-1.5 font-medium">
                   <span>Part dans la production de la wilaya</span>
                   <span className="font-bold text-[#18230F]">
-                    {((selectedCommune.avgProductionLiters / BEJAIA_GLOBAL_STATS.annualOilProductionLitersMin) * 100).toFixed(1)}%
+                    <AnimatedCounter
+                      end={(selectedCommune.avgProductionLiters / BEJAIA_GLOBAL_STATS.annualOilProductionLitersMin) * 100}
+                      decimals={1}
+                      decimalSeparator="."
+                      suffix="%"
+                      duration={1200}
+                    />
                   </span>
                 </div>
                 <div className="w-full h-2.5 bg-[#E6DEC9] rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-[#567B34] to-[#E6AB3C] rounded-full transition-all duration-500"
+                    className="h-full bg-gradient-to-r from-[#567B34] to-[#E6AB3C] rounded-full transition-all duration-700 ease-out"
                     style={{
                       width: `${Math.min(
                         100,
@@ -971,7 +1306,7 @@ export const StatsAndPotential: React.FC = () => {
         </div>
 
         {/* Industrial Modernization vs Tradition Analysis */}
-        <div className="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div ref={modernizationRef} className="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="bg-white p-6 sm:p-8 rounded-3xl border border-[#E6DEC9] space-y-5">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-[#E8F4D9] flex items-center justify-center text-[#31491E]">
@@ -989,10 +1324,26 @@ export const StatsAndPotential: React.FC = () => {
               <div>
                 <div className="flex justify-between text-xs font-semibold text-[#18230F] mb-1">
                   <span>Systèmes Continus Modernes (2 et 3 phases)</span>
-                  <span className="text-[#31491E]">192 unités ({modernPercent}%)</span>
+                  <span className="text-[#31491E]">
+                    <AnimatedCounter
+                      end={BEJAIA_GLOBAL_STATS.modernContinuousMills}
+                      decimals={0}
+                      suffix=" unités ("
+                      duration={1500}
+                    />
+                    <AnimatedCounter
+                      end={modernPercent}
+                      decimals={0}
+                      suffix="%)"
+                      duration={1500}
+                    />
+                  </span>
                 </div>
                 <div className="w-full h-3 bg-[#E6DEC9] rounded-full overflow-hidden">
-                  <div className="h-full bg-[#31491E]" style={{ width: `${modernPercent}%` }}></div>
+                  <div
+                    className="h-full bg-[#31491E] rounded-full transition-all duration-1000 ease-out"
+                    style={{ width: modernizationInView ? `${modernPercent}%` : '0%' }}
+                  ></div>
                 </div>
                 <p className="text-[11px] text-[#567B34] mt-1">
                   Extraction mécanique à froid régulée (&lt; 27°C), séparation centrifuge instantanée, hygiène inox HACCP.
@@ -1002,10 +1353,28 @@ export const StatsAndPotential: React.FC = () => {
               <div>
                 <div className="flex justify-between text-xs font-semibold text-[#18230F] mb-1">
                   <span>Presses Traditionnelles à Scourtins & Meules</span>
-                  <span className="text-[#AF4D24]">256 unités ({tradPercent}%)</span>
+                  <span className="text-[#AF4D24]">
+                    <AnimatedCounter
+                      end={BEJAIA_GLOBAL_STATS.traditionalMills}
+                      decimals={0}
+                      suffix=" unités ("
+                      duration={1500}
+                      delay={150}
+                    />
+                    <AnimatedCounter
+                      end={tradPercent}
+                      decimals={0}
+                      suffix="%)"
+                      duration={1500}
+                      delay={150}
+                    />
+                  </span>
                 </div>
                 <div className="w-full h-3 bg-[#E6DEC9] rounded-full overflow-hidden">
-                  <div className="h-full bg-[#AF4D24]" style={{ width: `${tradPercent}%` }}></div>
+                  <div
+                    className="h-full bg-[#AF4D24] rounded-full transition-all duration-1000 ease-out delay-150"
+                    style={{ width: modernizationInView ? `${tradPercent}%` : '0%' }}
+                  ></div>
                 </div>
                 <p className="text-[11px] text-[#567B34] mt-1">
                   Maintien du patrimoine artisanal de village, production d'huiles au fruité mûr très appréciées localement.

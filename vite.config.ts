@@ -11,18 +11,29 @@ export default defineConfig(() => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['icon.svg', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png', 'sw-push.js'],
+        includeAssets: [
+          'icon.svg',
+          'apple-touch-icon.png',
+          'pwa-192x192.png',
+          'pwa-512x512.png',
+          'pwa-maskable-512x512.png',
+          'sw-push.js',
+        ],
         manifest: {
           id: '/',
           name: 'Olive Béjaïa - Portail Oléicole & ADOIO',
           short_name: 'OliveBéjaïa',
           description: 'Portail oléicole hors-ligne pour les producteurs et oléiculteurs de Béjaïa et de Kabylie.',
+          lang: 'fr',
+          dir: 'ltr',
           theme_color: '#233416',
           background_color: '#FAF7F2',
           display: 'standalone',
           start_url: '/',
           scope: '/',
           orientation: 'portrait-primary',
+          categories: ['agriculture', 'productivity', 'utilities', 'education'],
+          prefer_related_applications: false,
           icons: [
             {
               src: '/pwa-192x192.png',
@@ -42,22 +53,108 @@ export default defineConfig(() => {
               type: 'image/png',
               purpose: 'maskable',
             },
+            {
+              src: '/apple-touch-icon.png',
+              sizes: '180x180',
+              type: 'image/png',
+              purpose: 'any',
+            },
+            {
+              src: '/icon.svg',
+              sizes: 'any',
+              type: 'image/svg+xml',
+              purpose: 'any',
+            },
+          ],
+          shortcuts: [
+            {
+              name: 'Annuaire 448 Huileries',
+              short_name: 'Huileries',
+              description: 'Consulter hors-ligne les 448 moulins et huileries des 52 communes de Béjaïa',
+              url: '/#annuaire',
+              icons: [{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' }],
+            },
+            {
+              name: 'Simulateur de Rendement',
+              short_name: 'Simulateur',
+              description: 'Calculer le rendement en huile (L/qx) par variété et maturité au verger',
+              url: '/#simulateur',
+              icons: [{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' }],
+            },
+            {
+              name: 'Diagnostic Phytosanitaire Bio',
+              short_name: 'Diagnostic Bio',
+              description: 'Identifier les maladies et ravageurs de l’olivier sans réseau mobile',
+              url: '/#diagnostic-phytosanitaire',
+              icons: [{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' }],
+            },
+            {
+              name: 'Calendrier & Taille',
+              short_name: 'Calendrier',
+              description: 'Accéder aux guides techniques de taille, récolte et bonnes pratiques ADOIO',
+              url: '/#pratiques',
+              icons: [{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' }],
+            },
           ],
         },
         workbox: {
           importScripts: ['/sw-push.js'],
-          // Precache core application shell without forcing heavy below-the-fold vendor chunks on initial 3G load
-          globPatterns: ['**/*.{css,html,ico,svg,woff,woff2}', 'assets/index-*.js', 'assets/vendor-react-*.js', 'assets/vendor-icons-*.js'],
-          globIgnores: ['**/vendor-charts-*.js', '**/vendor-maps-*.js', '**/vendor-motion-*.js', '**/images/paysages/**', '**/assets/aistudio/**'],
+          cleanupOutdatedCaches: true,
+          clientsClaim: true,
+          skipWaiting: true,
+          navigateFallback: '/index.html',
+          navigateFallbackDenylist: [/^\/api\//, /^\/offline-guides\//],
+          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+          // Precache all critical manifest assets, HTML shell, CSS, data-terroir (448 mills + varieties), and interactive tool chunks for 100% offline reliability in rural Béjaïa
+          globPatterns: [
+            '**/*.{js,css,html,ico,woff,woff2}',
+            'assets/*.png',
+            'images/medailles/*.svg',
+          ],
+          // Exclude sw-push.js (already in includeAssets) and bulky decorative landscape photography from initial precache (cached on-demand via runtimeCaching)
+          globIgnores: [
+            '**/sw-push.js',
+            '**/images/paysages/**',
+            '**/assets/aistudio/**',
+          ],
           runtimeCaching: [
             {
-              urlPattern: /\/assets\/.*\.js$/i,
+              urlPattern: /\/(?:manifest\.webmanifest|pwa-.*\.png|apple-touch-icon\.png|icon\.svg)$/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'adoio-manifest-critical-assets',
+                expiration: {
+                  maxEntries: 20,
+                  maxAgeSeconds: 60 * 60 * 24 * 90,
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
+            {
+              urlPattern: /\/assets\/.*\.(?:js|css)$/i,
               handler: 'StaleWhileRevalidate',
               options: {
                 cacheName: 'adoio-js-chunks-cache',
                 expiration: {
-                  maxEntries: 40,
-                  maxAgeSeconds: 60 * 60 * 24 * 30,
+                  maxEntries: 60,
+                  maxAgeSeconds: 60 * 60 * 24 * 60,
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
+            {
+              urlPattern: /\/api\/(?:community\/state|weather)/i,
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'adoio-rural-api-cache',
+                networkTimeoutSeconds: 3,
+                expiration: {
+                  maxEntries: 25,
+                  maxAgeSeconds: 60 * 60 * 24 * 7,
                 },
                 cacheableResponse: {
                   statuses: [0, 200],
@@ -94,12 +191,13 @@ export default defineConfig(() => {
             },
             {
               urlPattern: /^https:\/\/api\.open-meteo\.com\/.*/i,
-              handler: 'StaleWhileRevalidate',
+              handler: 'NetworkFirst',
               options: {
                 cacheName: 'weather-api-cache',
+                networkTimeoutSeconds: 3,
                 expiration: {
-                  maxEntries: 10,
-                  maxAgeSeconds: 60 * 60 * 24,
+                  maxEntries: 15,
+                  maxAgeSeconds: 60 * 60 * 24 * 3,
                 },
                 cacheableResponse: {
                   statuses: [0, 200],
@@ -112,8 +210,8 @@ export default defineConfig(() => {
               options: {
                 cacheName: 'adoio-images-cache',
                 expiration: {
-                  maxEntries: 40,
-                  maxAgeSeconds: 60 * 60 * 24 * 30,
+                  maxEntries: 50,
+                  maxAgeSeconds: 60 * 60 * 24 * 60,
                 },
                 cacheableResponse: {
                   statuses: [0, 200],
@@ -126,7 +224,7 @@ export default defineConfig(() => {
               options: {
                 cacheName: 'adoio-pdf-guides-cache',
                 expiration: {
-                  maxEntries: 10,
+                  maxEntries: 15,
                   maxAgeSeconds: 60 * 60 * 24 * 90,
                 },
                 cacheableResponse: {

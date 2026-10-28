@@ -16,6 +16,37 @@ console.error = (...args: unknown[]) => {
   }
 };
 
+function warmCriticalManifestCache() {
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.ready
+    .then((registration) => {
+      const sw = registration.active || navigator.serviceWorker.controller;
+      if (!sw) return;
+
+      const discoveredUrls = new Set<string>([
+        '/',
+        '/index.html',
+        '/manifest.webmanifest',
+        '/icon.svg',
+        '/pwa-192x192.png',
+        '/pwa-512x512.png',
+        '/pwa-maskable-512x512.png',
+        '/apple-touch-icon.png',
+      ]);
+
+      document.querySelectorAll('link[rel="stylesheet"], link[rel="manifest"], link[rel="apple-touch-icon"], link[rel="icon"]').forEach((el) => {
+        const href = el.getAttribute('href');
+        if (href && href.startsWith('/')) discoveredUrls.add(href);
+      });
+
+      sw.postMessage({
+        type: 'PRECACHE_CRITICAL_MANIFEST_ASSETS',
+        urls: Array.from(discoveredUrls),
+      });
+    })
+    .catch(() => {});
+}
+
 // Register full PWA service worker in production; in dev mode, unregister any caching SW and register push-only /sw-push.js
 if (import.meta.env.PROD) {
   registerSW({
@@ -25,8 +56,10 @@ if (import.meta.env.PROD) {
     },
     onOfflineReady() {
       // Cache primed for rural & disconnected regions
+      warmCriticalManifestCache();
     },
   });
+  warmCriticalManifestCache();
 } else if ('serviceWorker' in navigator) {
   navigator.serviceWorker
     .getRegistrations()
@@ -38,9 +71,11 @@ if (import.meta.env.PROD) {
         }
       }
       await navigator.serviceWorker.register('/sw-push.js', { scope: '/' });
+      warmCriticalManifestCache();
     })
     .catch(() => {});
 }
 
 createRoot(document.getElementById('root')!).render(<App />);
+
 

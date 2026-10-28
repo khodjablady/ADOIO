@@ -129,12 +129,40 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
     }
   };
 
-  const handleCopyMillDeepLink = async (mill: OliveMill) => {
+  const buildMillDeepLink = (mill: OliveMill): string => {
     try {
       const url = new URL(window.location.href);
       url.searchParams.set('mill', mill.id);
       url.hash = 'annuaire';
-      await navigator.clipboard.writeText(url.toString());
+      return url.toString();
+    } catch {
+      return `https://adoio-bejaia.dz/?mill=${encodeURIComponent(mill.id)}#annuaire`;
+    }
+  };
+
+  const buildWhatsAppShareUrl = (mill: OliveMill, stats?: MillStats): string => {
+    const deepLink = buildMillDeepLink(mill);
+    const ratingLine =
+      stats && stats.totalReviews > 0
+        ? `⭐ Note oléiculteurs : ${stats.averageRating.toFixed(1)}/5 (${stats.totalReviews} avis)\n`
+        : '';
+    const bioBadge = mill.certifiedBio ? ' · Certifié Bio' : '';
+    const message =
+      `🫒 *Recommandation Huilerie — ADOIO Béjaïa*\n` +
+      `*${mill.name}* (${mill.commune}, Daïra de ${mill.daira})\n` +
+      `⚙️ Système : ${mill.typeLabel}${bioBadge}\n` +
+      `⚡ Capacité : ${mill.capacityQxPerDay} qx/jour (lot dès ${mill.technicalSpecs.minBatchKg} kg)\n` +
+      ratingLine +
+      `📞 Tél : ${mill.phone}\n` +
+      `🔗 Fiche complète : ${deepLink}`;
+
+    return `https://wa.me/?text=${encodeURIComponent(message)}`;
+  };
+
+  const handleCopyMillDeepLink = async (mill: OliveMill) => {
+    try {
+      const link = buildMillDeepLink(mill);
+      await navigator.clipboard.writeText(link);
       setCopiedMillLink(true);
       setTimeout(() => setCopiedMillLink(false), 2400);
     } catch {
@@ -165,7 +193,8 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
 
   useEffect(() => {
     const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === FAVORITES_STORAGE_KEY) {
+      if (event.storageArea && event.storageArea !== window.localStorage) return;
+      if (event.key === FAVORITES_STORAGE_KEY || event.key === null) {
         setFavoriteIds(loadStoredFavorites());
       }
     };
@@ -179,12 +208,23 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
     }
     setFavoriteIds((prev) => {
       const exists = prev.includes(millId);
-      return exists ? prev.filter((id) => id !== millId) : [...prev, millId];
+      const next = exists ? prev.filter((id) => id !== millId) : [...prev, millId];
+      try {
+        localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // Ignore storage quota errors
+      }
+      return next;
     });
   };
 
   const clearAllFavorites = () => {
     setFavoriteIds([]);
+    try {
+      localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify([]));
+    } catch {
+      // Ignore storage quota errors
+    }
   };
 
   const refreshReviews = () => {
@@ -314,6 +354,7 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
     selectedCommune !== 'all' ||
     selectedType !== 'all' ||
     onlyBio ||
+    onlyFavorites ||
     minRating !== 'all' ||
     sortBy !== 'default';
 
@@ -322,6 +363,7 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
     setSelectedCommune('all');
     setSelectedType('all');
     setOnlyBio(false);
+    setOnlyFavorites(false);
     setMinRating('all');
     setSortBy('default');
   };
@@ -503,9 +545,8 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
           </div>
         )}
 
-        {/* Filters Bar (Shown in 'all' tab, or in 'favorites' tab when multiple favorites exist) */}
-        {(activeDirectoryTab === 'all' || favoriteMills.length > 1) && (
-          <div className="bg-white p-4 sm:p-5 rounded-3xl border border-[#E6DEC9] shadow-xs mb-8 space-y-3.5">
+        {/* Filters Toolbar */}
+        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-[#E6DEC9] shadow-xs mb-8 space-y-3.5">
             {/* Row 1: Search, Commune, Type, Sort */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-center">
               {/* Search Input */}
@@ -517,7 +558,7 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                   onChange={(e) => setSearchTerm(e.target.value)}
                   aria-label="Rechercher une huilerie par nom, commune, marque ou spécialité"
                   placeholder={
-                    activeDirectoryTab === 'favorites'
+                    onlyFavorites
                       ? 'Rechercher parmi vos huileries favorites...'
                       : 'Rechercher par nom, commune, marque ou spécialité...'
                   }
@@ -585,9 +626,54 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
               </div>
             </div>
 
-            {/* Row 2: Secondary Interactive Filters (Bio, Min Rating) */}
+            {/* Row 2: Secondary Interactive Filters (Favorites Filter, Bio, Min Rating) */}
             <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[#E6DEC9]/60">
               <div className="flex flex-wrap items-center gap-2.5">
+                {/* Favorites Toolbar Filter Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setOnlyFavorites((prev) => !prev)}
+                  aria-pressed={onlyFavorites}
+                  aria-label={
+                    onlyFavorites
+                      ? 'Afficher toutes les huileries'
+                      : 'Filtrer pour afficher uniquement mes huileries favorites'
+                  }
+                  title={
+                    onlyFavorites
+                      ? 'Désactiver le filtre Favoris pour voir toutes les huileries'
+                      : 'Afficher uniquement les huileries marquées en Favoris'
+                  }
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer select-none ${
+                    onlyFavorites
+                      ? 'bg-[#AF4D24] border-[#AF4D24] text-white shadow-2xs'
+                      : 'bg-[#FAF7F2] border-[#E6DEC9] text-[#233416] hover:border-[#AF4D24]/50 hover:text-[#AF4D24]'
+                  }`}
+                >
+                  <Heart
+                    className={`w-3.5 h-3.5 transition-transform ${
+                      onlyFavorites
+                        ? 'fill-white text-white scale-110'
+                        : favoriteIds.length > 0
+                          ? 'fill-[#AF4D24] text-[#AF4D24]'
+                          : 'text-[#AF4D24]'
+                    }`}
+                    aria-hidden="true"
+                  />
+                  <span>Favoris uniquement</span>
+                  <span
+                    className={`px-1.5 py-0.2 rounded-md text-[11px] font-extrabold tabular-nums ${
+                      onlyFavorites
+                        ? 'bg-white/20 text-white'
+                        : favoriteIds.length > 0
+                          ? 'bg-[#AF4D24]/15 text-[#AF4D24]'
+                          : 'bg-[#E6DEC9]/70 text-[#567B34]'
+                    }`}
+                  >
+                    {favoriteIds.length}
+                  </span>
+                </button>
+
                 {/* Bio Checkbox */}
                 <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-[#233416] bg-[#FAF7F2] px-3 py-1.5 rounded-xl border border-[#E6DEC9]">
                   <input
@@ -651,8 +737,7 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                 </button>
               )}
             </div>
-          </div>
-        )}
+        </div>
 
         {/* Tab Panel: Mills Grid or Empty States */}
         <div
@@ -779,12 +864,12 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                         aria-label={
                           isFavorite
                             ? `Retirer ${mill.name} des favoris`
-                            : `Sauvegarder ${mill.name} dans mes favoris`
+                            : `Ajouter ${mill.name} aux favoris`
                         }
                         title={
                           isFavorite
                             ? 'Retirer de mes huileries favorites'
-                            : 'Sauvegarder dans mes huileries favorites (accès rapide)'
+                            : 'Ajouter à mes huileries favorites (sauvegardé dans votre navigateur)'
                         }
                         className={`px-2.5 py-1.5 -my-1 rounded-xl border transition-all cursor-pointer shrink-0 flex items-center gap-1.5 text-[11px] font-bold shadow-2xs active:scale-95 ${
                           isFavorite
@@ -800,7 +885,7 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                           }`}
                           aria-hidden="true"
                         />
-                        <span>Favori</span>
+                        <span>Favoris</span>
                       </button>
                     </div>
 
@@ -865,59 +950,82 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                   </div>
 
                   {/* Footer Actions */}
-                  <div className="mt-5 pt-3 border-t border-[#E6DEC9] flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenMill(mill, 'info');
-                        }}
-                        className="text-xs font-bold text-[#31491E] hover:underline flex items-center gap-1 cursor-pointer"
-                      >
-                        <span>Détails & Services</span>
-                        <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
-                      </button>
-                      <span className="text-gray-300" aria-hidden="true">|</span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenMill(mill, 'reviews');
-                        }}
-                        className="text-xs font-bold text-[#567B34] hover:text-[#233416] flex items-center gap-1 cursor-pointer"
-                      >
-                        <MessageSquare className="w-3.5 h-3.5 text-[#E6AB3C]" aria-hidden="true" />
-                        <span>Avis ({stats.totalReviews})</span>
-                      </button>
+                  <div className="mt-5 pt-3 border-t border-[#E6DEC9] space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenMill(mill, 'info');
+                          }}
+                          className="text-xs font-bold text-[#31491E] hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>Détails & Services</span>
+                          <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
+                        </button>
+                        <span className="text-gray-300" aria-hidden="true">|</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenMill(mill, 'reviews');
+                          }}
+                          className="text-xs font-bold text-[#567B34] hover:text-[#233416] flex items-center gap-1 cursor-pointer"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 text-[#E6AB3C]" aria-hidden="true" />
+                          <span>Avis ({stats.totalReviews})</span>
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const mapEl = document.getElementById('carte-interactive');
+                            if (mapEl) {
+                              mapEl.scrollIntoView({ behavior: 'smooth' });
+                            }
+                          }}
+                          className="p-1.5 px-2 rounded-lg bg-[#E8F4D9] hover:bg-[#D4E8BF] text-[#233416] text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                          title="Localiser sur la carte interactive"
+                        >
+                          <MapPin className="w-3 h-3 text-[#436229]" aria-hidden="true" />
+                          <span className="hidden sm:inline">Sur la carte</span>
+                        </button>
+                        <a
+                          href={`tel:${mill.phone.split('/')[0].trim()}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="p-2 rounded-lg bg-[#FAF7F2] hover:bg-[#E8F4D9] text-[#31491E] transition-colors"
+                          title="Appeler l'huilerie"
+                          aria-label={`Appeler ${mill.name}`}
+                        >
+                          <Phone className="w-3.5 h-3.5" aria-hidden="true" />
+                        </a>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const mapEl = document.getElementById('carte-interactive');
-                          if (mapEl) {
-                            mapEl.scrollIntoView({ behavior: 'smooth' });
-                          }
-                        }}
-                        className="p-1.5 px-2 rounded-lg bg-[#E8F4D9] hover:bg-[#D4E8BF] text-[#233416] text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-                        title="Localiser sur la carte interactive"
+                    {/* Direct WhatsApp Recommendation Button */}
+                    <a
+                      href={buildWhatsAppShareUrl(mill, stats)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      aria-label={`Partager ${mill.name} sur WhatsApp`}
+                      title={`Recommander ${mill.name} (${mill.commune}) à un oléiculteur sur WhatsApp`}
+                      className="w-full py-2 px-3 rounded-xl bg-[#E8F4D9]/70 hover:bg-[#25D366] text-[#1E4620] hover:text-white border border-[#8CBE5D]/50 hover:border-[#25D366] text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-2xs group/wa"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        className="w-4 h-4 text-[#1E8E3E] group-hover/wa:text-white shrink-0 transition-colors"
+                        aria-hidden="true"
                       >
-                        <MapPin className="w-3 h-3 text-[#436229]" aria-hidden="true" />
-                        <span className="hidden sm:inline">Sur la carte</span>
-                      </button>
-                      <a
-                        href={`tel:${mill.phone.split('/')[0].trim()}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="p-2 rounded-lg bg-[#FAF7F2] hover:bg-[#E8F4D9] text-[#31491E] transition-colors"
-                        title="Appeler l'huilerie"
-                        aria-label={`Appeler ${mill.name}`}
-                      >
-                        <Phone className="w-3.5 h-3.5" aria-hidden="true" />
-                      </a>
-                    </div>
+                        <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12 0 2.126.556 4.124 1.535 5.861l-1.535 5.603 5.736-1.504c1.694.922 3.631 1.448 5.694 1.448 6.627 0 12-5.373 12-12s-5.373-11.408-11.43-11.408z" />
+                      </svg>
+                      <span>Partager sur WhatsApp</span>
+                    </a>
                   </div>
                 </div>
               );
@@ -988,6 +1096,24 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                     </div>
 
                     <div className="mill-modal-no-print flex flex-wrap items-center gap-2">
+                      <a
+                        href={buildWhatsAppShareUrl(activeModalMill, activeMillStats)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-[#E8F4D9] text-[#1E4620] border border-[#8CBE5D]/60 hover:bg-[#25D366] hover:text-white hover:border-[#25D366] transition-colors"
+                        title={`Partager la fiche de ${activeModalMill.name} sur WhatsApp`}
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          className="w-3.5 h-3.5 shrink-0"
+                          aria-hidden="true"
+                        >
+                          <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12 0 2.126.556 4.124 1.535 5.861l-1.535 5.603 5.736-1.504c1.694.922 3.631 1.448 5.694 1.448 6.627 0 12-5.373 12-12s-5.373-11.408-11.43-11.408z" />
+                        </svg>
+                        <span>Partager sur WhatsApp</span>
+                      </a>
+
                       <button
                         type="button"
                         onClick={() => handleCopyMillDeepLink(activeModalMill)}
@@ -1002,7 +1128,7 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                         ) : (
                           <>
                             <Share2 className="w-3.5 h-3.5 text-[#31491E]" aria-hidden="true" />
-                            <span>Partager la fiche</span>
+                            <span>Copier le lien</span>
                           </>
                         )}
                       </button>

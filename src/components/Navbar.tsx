@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Menu, X, Droplets, MapPin, Phone, Award, Calculator, BookOpen, Building2, ListOrdered, Bell, Trophy, Recycle, Stethoscope, Moon, Sun, Sparkles, WifiOff } from 'lucide-react';
+import { Menu, X, Droplets, MapPin, Phone, Award, Calculator, BookOpen, Building2, ListOrdered, Bell, Trophy, Recycle, Stethoscope, Moon, Sun, Monitor, Sparkles, WifiOff } from 'lucide-react';
 import { AdoioLogo } from './AdoioLogo';
 import { PWAInstallButton } from './PWAInstallButton';
+
+export type ThemeMode = 'system' | 'light' | 'dark';
 
 interface NavbarProps {
   activeTab: string;
@@ -13,6 +15,8 @@ interface NavbarProps {
   offlineCachedCount?: number;
   isDarkMode?: boolean;
   isSystemTheme?: boolean;
+  themePreference?: ThemeMode;
+  onSelectTheme?: (theme: ThemeMode) => void;
   onToggleDarkMode?: () => void;
 }
 
@@ -26,9 +30,52 @@ export const Navbar: React.FC<NavbarProps> = ({
   offlineCachedCount = 5,
   isDarkMode = false,
   isSystemTheme = true,
+  themePreference,
+  onSelectTheme,
   onToggleDarkMode,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const activeTheme: ThemeMode =
+    themePreference ?? (isSystemTheme ? 'system' : isDarkMode ? 'dark' : 'light');
+
+  const themeOptions: {
+    id: ThemeMode;
+    label: string;
+    shortLabel: string;
+    icon: React.ComponentType<{ className?: string }>;
+    title: string;
+  }[] = [
+    {
+      id: 'system',
+      label: 'Système',
+      shortLabel: 'Auto',
+      icon: Monitor,
+      title: `Synchronisé avec le système (${isDarkMode ? 'Sombre' : 'Clair'})`,
+    },
+    {
+      id: 'light',
+      label: 'Clair',
+      shortLabel: 'Clair',
+      icon: Sun,
+      title: 'Thème Clair (Jour)',
+    },
+    {
+      id: 'dark',
+      label: 'Sombre',
+      shortLabel: 'Nuit',
+      icon: Moon,
+      title: 'Mode Nuit optimisé pour la lecture',
+    },
+  ];
+
+  const handleThemeChange = (mode: ThemeMode) => {
+    if (onSelectTheme) {
+      onSelectTheme(mode);
+    } else if (onToggleDarkMode) {
+      onToggleDarkMode();
+    }
+  };
 
   React.useEffect(() => {
     if (!mobileMenuOpen) return;
@@ -175,36 +222,54 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Action CTAs */}
           <div className="hidden md:flex items-center gap-1.5 shrink-0">
-            {onToggleDarkMode && (
-              <button
-                onClick={onToggleDarkMode}
-                aria-label={isDarkMode ? 'Passer au thème clair' : 'Activer le mode nuit optimisé pour la lecture'}
-                aria-pressed={isDarkMode}
-                title={
-                  isSystemTheme
-                    ? `Synchronisé en temps réel avec le système (${isDarkMode ? 'Sombre' : 'Clair'}) · Cliquer pour basculer`
-                    : isDarkMode
-                      ? 'Mode Nuit actif · Cliquer pour revenir au thème clair'
-                      : 'Mode Clair actif · Cliquer pour activer le mode nuit'
-                }
-                className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                  isDarkMode
-                    ? 'bg-[#233416] text-[#F7D694] border-[#436229] hover:bg-[#31491E]'
-                    : 'bg-white/80 hover:bg-[#E8F4D9] text-[#233416] border-[#E6DEC9]'
-                }`}
+            {(onSelectTheme || onToggleDarkMode) && (
+              <div
+                role="radiogroup"
+                aria-label="Sélecteur de thème (Système, Clair, Sombre)"
+                className="inline-flex items-center p-0.5 rounded-lg bg-white/85 border border-[#E6DEC9] shadow-2xs shrink-0"
               >
-                {isDarkMode ? (
-                  <>
-                    <Sun className="w-3.5 h-3.5 text-[#E6AB3C] shrink-0" />
-                    <span className="hidden 2xl:inline">Mode Clair</span>
-                  </>
-                ) : (
-                  <>
-                    <Moon className="w-3.5 h-3.5 text-[#567B34] shrink-0" />
-                    <span className="hidden 2xl:inline">Mode Nuit</span>
-                  </>
-                )}
-              </button>
+                {themeOptions.map((option) => {
+                  const Icon = option.icon;
+                  const isSelected = activeTheme === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      aria-label={`Thème ${option.label}`}
+                      title={option.title}
+                      onClick={() => handleThemeChange(option.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                          e.preventDefault();
+                          const idx = themeOptions.findIndex((o) => o.id === activeTheme);
+                          const next = themeOptions[(idx + 1) % themeOptions.length];
+                          handleThemeChange(next.id);
+                        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                          e.preventDefault();
+                          const idx = themeOptions.findIndex((o) => o.id === activeTheme);
+                          const prev =
+                            themeOptions[(idx - 1 + themeOptions.length) % themeOptions.length];
+                          handleThemeChange(prev.id);
+                        }
+                      }}
+                      className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-[11px] font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                        isSelected
+                          ? 'bg-[#233416] text-[#FAF7F2] shadow-2xs'
+                          : 'text-[#31491E] hover:bg-[#E8F4D9] hover:text-[#18230F]'
+                      }`}
+                    >
+                      <Icon
+                        className={`w-3.5 h-3.5 shrink-0 ${
+                          isSelected ? 'text-[#E6AB3C]' : 'text-[#567B34]'
+                        }`}
+                      />
+                      <span className="hidden 2xl:inline">{option.shortLabel}</span>
+                    </button>
+                  );
+                })}
+              </div>
             )}
             {onOpenOfflineGuides && (
               <button
@@ -275,20 +340,35 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <WifiOff className="w-5 h-5 text-[#31491E]" />
               </button>
             )}
-            {onToggleDarkMode && (
-              <button
-                onClick={onToggleDarkMode}
-                className={`p-2 rounded-lg border transition-colors ${
-                  isDarkMode
-                    ? 'bg-[#233416] text-[#E6AB3C] border-[#436229]'
-                    : 'bg-white/80 text-[#233416] border-[#E6DEC9]'
-                }`}
-                aria-label={isDarkMode ? 'Passer au thème clair' : 'Activer le mode nuit'}
-                aria-pressed={isDarkMode}
-                title={isDarkMode ? 'Passer au thème clair' : 'Activer le mode nuit'}
+            {(onSelectTheme || onToggleDarkMode) && (
+              <div
+                role="radiogroup"
+                aria-label="Sélecteur de thème mobile"
+                className="inline-flex items-center p-0.5 rounded-lg bg-white/85 border border-[#E6DEC9]"
               >
-                {isDarkMode ? <Sun className="w-5 h-5 text-[#E6AB3C]" /> : <Moon className="w-5 h-5 text-[#31491E]" />}
-              </button>
+                {themeOptions.map((option) => {
+                  const Icon = option.icon;
+                  const isSelected = activeTheme === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      aria-label={`Thème ${option.label}`}
+                      title={option.title}
+                      onClick={() => handleThemeChange(option.id)}
+                      className={`p-1.5 rounded-md transition-colors ${
+                        isSelected
+                          ? 'bg-[#233416] text-[#E6AB3C]'
+                          : 'text-[#31491E] hover:bg-[#E8F4D9]'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                    </button>
+                  );
+                })}
+              </div>
             )}
             <button
               onClick={onOpenSimulator}
@@ -365,27 +445,50 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>Mode Hors-Ligne · Guides en Cache ({offlineCachedCount})</span>
               </button>
             )}
-            {onToggleDarkMode && (
-              <button
-                onClick={onToggleDarkMode}
-                className="w-full py-2.5 px-4 rounded-lg bg-white text-[#233416] text-sm font-bold flex items-center justify-between border border-[#E6DEC9]"
-              >
-                <span className="flex items-center gap-2">
-                  {isDarkMode ? (
-                    <Sun className="w-4 h-4 text-[#E6AB3C]" />
-                  ) : (
-                    <Moon className="w-4 h-4 text-[#567B34]" />
-                  )}
-                  <span>{isDarkMode ? 'Thème Clair (Jour)' : 'Mode Nuit (Lecture confort)'}</span>
-                </span>
-                <span className="text-xs px-2 py-0.5 rounded bg-[#E8F4D9] text-[#233416]">
-                  {isSystemTheme
-                    ? `Auto Système (${isDarkMode ? 'Sombre' : 'Clair'})`
-                    : isDarkMode
-                      ? 'Actif : Sombre'
-                      : 'Actif : Clair'}
-                </span>
-              </button>
+            {(onSelectTheme || onToggleDarkMode) && (
+              <div className="w-full p-2.5 rounded-lg bg-white border border-[#E6DEC9] space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold text-[#233416] px-1">
+                  <span>Apparence & Thème</span>
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-[#E8F4D9] text-[#233416]">
+                    {activeTheme === 'system'
+                      ? `Système (${isDarkMode ? 'Sombre' : 'Clair'})`
+                      : activeTheme === 'dark'
+                        ? 'Mode Sombre'
+                        : 'Mode Clair'}
+                  </span>
+                </div>
+                <div
+                  role="radiogroup"
+                  aria-label="Choisir le mode d'affichage"
+                  className="grid grid-cols-3 gap-1.5 p-1 rounded-lg bg-[#FAF7F2] border border-[#E6DEC9]"
+                >
+                  {themeOptions.map((option) => {
+                    const Icon = option.icon;
+                    const isSelected = activeTheme === option.id;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        onClick={() => handleThemeChange(option.id)}
+                        className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#233416] text-[#FAF7F2] shadow-xs'
+                            : 'text-[#233416] hover:bg-[#E8F4D9]'
+                        }`}
+                      >
+                        <Icon
+                          className={`w-3.5 h-3.5 shrink-0 ${
+                            isSelected ? 'text-[#E6AB3C]' : 'text-[#567B34]'
+                          }`}
+                        />
+                        <span>{option.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             )}
             <PWAInstallButton variant="banner" className="mb-1" />
             <button

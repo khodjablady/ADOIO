@@ -1,22 +1,101 @@
 /**
- * Service Worker PWA - Web Push API & Vigilance Oléicole (Périodes Critiques & Météo Locale)
- * Wilaya de Béjaïa - ADOIO (Association pour le développement de l'oléiculture et des industries oléicoles)
+ * Service Worker PWA - Mode Hors-Ligne Rural (Béjaïa) & Web Push API (Vigilance Oléicole ADOIO)
+ * Pré-mise en cache des ressources critiques du manifest et résilience 2G/3G/Hors-Ligne
  */
 
-self.addEventListener('install', () => {
+const PRIORITY_GUIDES_CACHE = 'adoio-priority-guides-v1';
+const CRITICAL_MANIFEST_CACHE = 'adoio-critical-manifest-v2';
+
+const CORE_MANIFEST_ASSETS = [
+  '/',
+  '/index.html',
+  '/manifest.webmanifest',
+  '/icon.svg',
+  '/pwa-192x192.png',
+  '/pwa-512x512.png',
+  '/pwa-maskable-512x512.png',
+  '/apple-touch-icon.png',
+];
+
+async function precacheCriticalManifestAssets(extraUrls = []) {
+  if (!('caches' in self)) return [];
+  const cache = await self.caches.open(CRITICAL_MANIFEST_CACHE);
+  const urlsToCache = new Set([...CORE_MANIFEST_ASSETS, ...extraUrls]);
+
+  // Dynamically inspect /manifest.webmanifest to include all declared icons, start_url, and shortcuts
+  try {
+    const manifestRes = await fetch('/manifest.webmanifest', { cache: 'no-cache' });
+    if (manifestRes && manifestRes.ok) {
+      await cache.put('/manifest.webmanifest', manifestRes.clone());
+      const manifestData = await manifestRes.json();
+      if (manifestData.start_url) urlsToCache.add(manifestData.start_url);
+      if (Array.isArray(manifestData.icons)) {
+        for (const icon of manifestData.icons) {
+          if (icon && icon.src) urlsToCache.add(icon.src);
+        }
+      }
+      if (Array.isArray(manifestData.shortcuts)) {
+        for (const shortcut of manifestData.shortcuts) {
+          if (shortcut && Array.isArray(shortcut.icons)) {
+            for (const icon of shortcut.icons) {
+              if (icon && icon.src) urlsToCache.add(icon.src);
+            }
+          }
+        }
+      }
+    }
+  } catch {
+    // Already offline or manifest served by Workbox precache
+  }
+
+  const cachedList = [];
+  await Promise.allSettled(
+    Array.from(urlsToCache).map(async (rawUrl) => {
+      try {
+        const cleanUrl = rawUrl.split('#')[0] || '/';
+        const req = new Request(cleanUrl, { credentials: 'same-origin' });
+        const res = await fetch(req);
+        if (res && (res.ok || res.status === 200)) {
+          await cache.put(cleanUrl, res.clone());
+          cachedList.push(cleanUrl);
+        }
+      } catch {
+        // Ignore individual fetch errors when offline
+      }
+    })
+  );
+
+  return cachedList;
+}
+
+self.addEventListener('install', (event) => {
   self.skipWaiting();
+  event.waitUntil(precacheCriticalManifestAssets());
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    Promise.all([
+      self.clients.claim(),
+      precacheCriticalManifestAssets(),
+      // Clean up legacy critical manifest caches if any
+      self.caches.keys().then((keys) =>
+        Promise.all(
+          keys
+            .filter((k) => k.startsWith('adoio-critical-manifest-') && k !== CRITICAL_MANIFEST_CACHE)
+            .map((k) => self.caches.delete(k))
+        )
+      ),
+    ])
+  );
 });
 
 function buildNotificationConfig(rawPayload) {
   const defaultData = {
     title: '🌿 Vigilance Oléicole ADOIO · Béjaïa',
     body: 'Nouvelle alerte période critique (récolte ou météo locale) sur votre bassin oléicole.',
-    icon: '/icon.svg',
-    badge: '/icon.svg',
+    icon: '/pwa-192x192.png',
+    badge: '/pwa-192x192.png',
     tag: 'adoio-push-alert',
     renotify: true,
     data: {
@@ -53,8 +132,8 @@ function buildNotificationConfig(rawPayload) {
     title: merged.title,
     options: {
       body: merged.body,
-      icon: merged.icon || '/icon.svg',
-      badge: merged.badge || '/icon.svg',
+      icon: merged.icon || '/pwa-192x192.png',
+      badge: merged.badge || '/pwa-192x192.png',
       tag: merged.tag || 'adoio-push-alert',
       renotify: true,
       vibrate: [250, 100, 250, 100, 400],
@@ -141,26 +220,13 @@ self.addEventListener('notificationclose', () => {
   // Notification closed by user
 });
 
-// Communication channel with main React app to trigger Push notifications & manage Priority Guides Cache Storage
-const PRIORITY_GUIDES_CACHE = 'adoio-priority-guides-v1';
-
 async function cacheGuideEntriesInSW(guides) {
   if (!('caches' in self) || !Array.isArray(guides)) return [];
   const cache = await self.caches.open(PRIORITY_GUIDES_CACHE);
   const cachedIds = [];
 
-  // Precache core shell URLs so offline navigation always resolves
-  const shellUrls = ['/', '/index.html', '/icon.svg'];
-  for (const url of shellUrls) {
-    try {
-      const res = await fetch(url, { cache: 'no-cache' });
-      if (res && res.ok) {
-        await cache.put(url, res.clone());
-      }
-    } catch {
-      // Ignore network errors if already offline
-    }
-  }
+  // Ensure critical manifest & shell URLs are also refreshed
+  await precacheCriticalManifestAssets();
 
   for (const guide of guides) {
     if (!guide || !guide.id) continue;
@@ -186,11 +252,15 @@ async function cacheGuideEntriesInSW(guides) {
 }
 
 self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin) return;
+
+  // 1. Virtual offline technical guides endpoint (/offline-guides/*.json)
   if (url.pathname.startsWith('/offline-guides/')) {
     event.respondWith(
       self.caches.open(PRIORITY_GUIDES_CACHE).then(async (cache) => {
-        const matched = await cache.match(event.request);
+        const matched = await cache.match(event.request, { ignoreSearch: true });
         if (matched) return matched;
         return new Response(
           JSON.stringify({ error: 'Guide non présent dans le Cache Storage hors-ligne' }),
@@ -198,11 +268,67 @@ self.addEventListener('fetch', (event) => {
         );
       })
     );
+    return;
+  }
+
+  // 2. Critical Manifest Assets (manifest.webmanifest, PWA PNG icons, apple-touch-icon, icon.svg)
+  const isCriticalManifestAsset =
+    url.pathname === '/manifest.webmanifest' ||
+    url.pathname === '/icon.svg' ||
+    url.pathname === '/apple-touch-icon.png' ||
+    /^\/pwa-.*\.png$/i.test(url.pathname);
+
+  if (isCriticalManifestAsset) {
+    event.respondWith(
+      self.caches.match(event.request, { ignoreSearch: true }).then((cachedResponse) => {
+        const networkFetch = fetch(event.request)
+          .then(async (networkResponse) => {
+            if (networkResponse && networkResponse.ok) {
+              const cache = await self.caches.open(CRITICAL_MANIFEST_CACHE);
+              await cache.put(url.pathname, networkResponse.clone());
+            }
+            return networkResponse;
+          })
+          .catch(() => cachedResponse);
+
+        return cachedResponse || networkFetch;
+      })
+    );
+    return;
+  }
+
+  // 3. Offline navigation fallback for rural zones without signal (supports deep-links ?commune=..., ?mill=...)
+  if (event.request.mode === 'navigate' && !self.navigator.onLine) {
+    event.respondWith(
+      fetch(event.request).catch(async () => {
+        const cachedIndex =
+          (await self.caches.match('/index.html', { ignoreSearch: true })) ||
+          (await self.caches.match('/', { ignoreSearch: true }));
+        if (cachedIndex) return cachedIndex;
+        return new Response('Mode hors-ligne ADOIO Béjaïa actif', {
+          status: 200,
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+        });
+      })
+    );
   }
 });
 
 self.addEventListener('message', (event) => {
   if (!event.data) return;
+
+  if (event.data.type === 'PRECACHE_CRITICAL_MANIFEST_ASSETS') {
+    const extraUrls = Array.isArray(event.data.urls) ? event.data.urls : [];
+    event.waitUntil(
+      precacheCriticalManifestAssets(extraUrls).then((cachedUrls) =>
+        broadcastToClients({
+          type: 'CRITICAL_MANIFEST_PRECACHE_COMPLETE',
+          cachedUrls,
+          timestamp: Date.now(),
+        })
+      )
+    );
+  }
 
   if (
     event.data.type === 'TRIGGER_SW_NOTIFICATION' ||
@@ -265,3 +391,4 @@ self.addEventListener('message', (event) => {
     );
   }
 });
+

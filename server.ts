@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import crypto from 'crypto';
 import fs from 'fs';
+import os from 'os';
 import express from 'express';
 import { createServer as createHttpServer } from 'http';
 import path from 'path';
@@ -13,7 +14,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PORT = Number(process.env.PORT) || 3000;
-const RUNTIME_STORE_PATH = path.join(__dirname, '.adoio-runtime-store.json');
+const RUNTIME_STORE_PATH = path.join(os.tmpdir(), 'adoio-runtime-store.json');
 
 interface RuntimeStoreData {
   vapidPublicKey?: string;

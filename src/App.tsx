@@ -190,25 +190,53 @@ export default function App() {
   const [showFloatingTop, setShowFloatingTop] = useState<boolean>(false);
   const [gmpQuotaExceeded, setGmpQuotaExceeded] = useState<boolean>(false);
   const [forcedSections, setForcedSections] = useState<Record<string, boolean>>({});
-  const [themePreference, setThemePreference] = useState<'system' | 'light' | 'dark'>(() => {
-    try {
-      const saved = localStorage.getItem('adoio_theme_preference');
-      if (saved === 'dark' || saved === 'light' || saved === 'system') return saved;
-      return 'system';
-    } catch {
-      return 'system';
-    }
-  });
+  const THEME_STORAGE_KEY = 'adoio_theme_preference';
+  const THEME_BROADCAST_CHANNEL = 'adoio_theme_sync';
 
-  const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(() => {
+  const getSystemDarkPreference = (): boolean => {
     try {
       return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
     } catch {
       return false;
     }
-  });
+  };
 
-  const isDarkMode = themePreference === 'system' ? systemPrefersDark : themePreference === 'dark';
+  const readStoredThemePreference = (): 'system' | 'light' | 'dark' => {
+    try {
+      const saved = window.localStorage.getItem(THEME_STORAGE_KEY);
+      if (saved === 'dark' || saved === 'light' || saved === 'system') {
+        return saved;
+      }
+      return 'system';
+    } catch {
+      return 'system';
+    }
+  };
+
+  const applyThemeToDom = (dark: boolean) => {
+    if (typeof document === 'undefined') return;
+    const root = document.documentElement;
+    root.classList.toggle('dark', dark);
+    root.style.colorScheme = dark ? 'dark' : 'light';
+
+    const metaThemeColor =
+      document.getElementById('meta-theme-color') ||
+      document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute('content', dark ? '#11190D' : '#233416');
+    }
+  };
+
+  const [themePreference, setThemePreference] = useState<'system' | 'light' | 'dark'>(
+    readStoredThemePreference
+  );
+
+  const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(
+    getSystemDarkPreference
+  );
+
+  const isDarkMode =
+    themePreference === 'system' ? systemPrefersDark : themePreference === 'dark';
 
   // Real-time system theme detection via window.matchMedia('(prefers-color-scheme: dark)')
   useEffect(() => {
@@ -219,13 +247,11 @@ export default function App() {
     setSystemPrefersDark(mediaQuery.matches);
 
     const handleSystemThemeChange = (event: MediaQueryListEvent) => {
-      setSystemPrefersDark(event.matches);
-      // Automatically realign with the OS transition in real time without refresh
-      setThemePreference('system');
-      try {
-        localStorage.removeItem('adoio_theme_preference');
-      } catch {
-        // Ignore storage errors
+      const osDark = event.matches;
+      setSystemPrefersDark(osDark);
+      // Only override if user is tracking system preference
+      if (readStoredThemePreference() === 'system') {
+        applyThemeToDom(osDark);
       }
     };
 
@@ -239,51 +265,113 @@ export default function App() {
     }
   }, []);
 
-  // Cross-tab synchronization if theme preference is changed in another tab
+  // Instantaneous cross-tab & multi-window synchronization via global 'storage' listener + BroadcastChannel
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const applyIncomingPreference = (rawPref: string | null) => {
+      const resolvedPref: 'system' | 'light' | 'dark' =
+        rawPref === 'dark' || rawPref === 'light' || rawPref === 'system'
+          ? rawPref
+          : 'system';
+      const currentSystemDark = getSystemDarkPreference();
+      const targetDark =
+        resolvedPref === 'system' ? currentSystemDark : resolvedPref === 'dark';
+
+      // Synchronously update DOM before React schedule so background tabs/windows update in 0ms
+      applyThemeToDom(targetDark);
+      setSystemPrefersDark(currentSystemDark);
+      setThemePreference((prev) => (prev === resolvedPref ? prev : resolvedPref));
+    };
+
     const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === 'adoio_theme_preference') {
-        const next = event.newValue;
-        if (next === 'dark' || next === 'light' || next === 'system') {
-          setThemePreference(next);
-        } else {
-          setThemePreference('system');
+      // Ignore sessionStorage or non-localStorage events
+      if (event.storageArea && event.storageArea !== window.localStorage) return;
+
+      // Handle specific key update or full localStorage.clear() (event.key === null)
+      if (event.key === THEME_STORAGE_KEY || event.key === null) {
+        const nextValue =
+          event.key === null
+            ? window.localStorage.getItem(THEME_STORAGE_KEY)
+            : event.newValue;
+        applyIncomingPreference(nextValue);
+      }
+    };
+
+    const syncFromStorageOnVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        applyIncomingPreference(readStoredThemePreference());
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('focus', syncFromStorageOnVisibility);
+    document.addEventListener('visibilitychange', syncFromStorageOnVisibility);
+
+    // Supplemental BroadcastChannel for instant zero-latency sync across same-origin contexts
+    let channel: BroadcastChannel | null = null;
+    if ('BroadcastChannel' in window) {
+      try {
+        channel = new BroadcastChannel(THEME_BROADCAST_CHANNEL);
+        channel.onmessage = (msg: MessageEvent) => {
+          if (msg.data && msg.data.type === 'THEME_SYNC') {
+            applyIncomingPreference(msg.data.preference ?? null);
+          }
+        };
+      } catch {
+        channel = null;
+      }
+    }
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('focus', syncFromStorageOnVisibility);
+      document.removeEventListener('visibilitychange', syncFromStorageOnVisibility);
+      if (channel) {
+        try {
+          channel.close();
+        } catch {
+          // Ignore close errors
         }
       }
     };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   // Apply active theme to <html>, native color-scheme, and PWA status bar meta tag
   useEffect(() => {
-    const root = document.documentElement;
-    root.classList.toggle('dark', isDarkMode);
-    root.style.colorScheme = isDarkMode ? 'dark' : 'light';
-
-    const metaThemeColor =
-      document.getElementById('meta-theme-color') ||
-      document.querySelector('meta[name="theme-color"]');
-    if (metaThemeColor) {
-      metaThemeColor.setAttribute('content', isDarkMode ? '#11190D' : '#233416');
-    }
+    applyThemeToDom(isDarkMode);
   }, [isDarkMode]);
+
+  const handleSelectTheme = (nextPref: 'system' | 'light' | 'dark') => {
+    const currentSystemDark = getSystemDarkPreference();
+    const nextDark = nextPref === 'system' ? currentSystemDark : nextPref === 'dark';
+
+    // Apply immediately to DOM for zero-latency visual transition
+    applyThemeToDom(nextDark);
+    setSystemPrefersDark(currentSystemDark);
+    setThemePreference(nextPref);
+
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, nextPref);
+    } catch {
+      // Ignore storage quota or private mode errors
+    }
+
+    // Broadcast immediately to other open tabs/windows alongside native StorageEvent
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        const channel = new BroadcastChannel(THEME_BROADCAST_CHANNEL);
+        channel.postMessage({ type: 'THEME_SYNC', preference: nextPref });
+        channel.close();
+      } catch {
+        // Ignore BroadcastChannel errors
+      }
+    }
+  };
 
   const handleToggleDarkMode = () => {
     const nextDark = !isDarkMode;
-    // If the user toggles back to what the system currently prefers, resume automatic 'system' tracking
-    const nextPref: 'system' | 'light' | 'dark' =
-      nextDark === systemPrefersDark ? 'system' : nextDark ? 'dark' : 'light';
-    setThemePreference(nextPref);
-    try {
-      if (nextPref === 'system') {
-        localStorage.removeItem('adoio_theme_preference');
-      } else {
-        localStorage.setItem('adoio_theme_preference', nextPref);
-      }
-    } catch {
-      // Ignore storage errors
-    }
+    handleSelectTheme(nextDark ? 'dark' : 'light');
   };
 
   useEffect(() => {
@@ -526,6 +614,8 @@ export default function App() {
         offlineCachedCount={offlineCachedCount}
         isDarkMode={isDarkMode}
         isSystemTheme={themePreference === 'system'}
+        themePreference={themePreference}
+        onSelectTheme={handleSelectTheme}
         onToggleDarkMode={handleToggleDarkMode}
       />
 

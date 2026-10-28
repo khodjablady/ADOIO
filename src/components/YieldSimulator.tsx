@@ -35,6 +35,7 @@ import {
   ReferenceLine
 } from 'recharts';
 import { OptimalHarvestAlertSystem } from './OptimalHarvestAlertSystem';
+import { HarvestAlertManager } from './HarvestAlertManager';
 import { ArticleAudioReader } from './ArticleAudioReader';
 
 export const YieldSimulator: React.FC = () => {
@@ -1429,6 +1430,14 @@ export const YieldSimulator: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Maturity Index & Oil Content Threshold Alert Manager (localStorage) */}
+        <HarvestAlertManager
+          selectedVariety={selectedVariety}
+          currentHarvestPeriod={harvestPeriod}
+          currentYieldPerQuintal={finalYieldPerQuintal}
+          onSelectVariety={setSelectedVariety}
+        />
 
         {/* Personalized Harvest Optimal Window Alerts System (PWA Service Worker) */}
         <OptimalHarvestAlertSystem 
