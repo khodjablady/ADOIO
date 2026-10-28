@@ -132,11 +132,27 @@ function setCachedAssistantReply(key: string, reply: string): void {
 // Per-IP Sliding Window Rate Limiter for API protection
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX_CHAT = 20; // 20 requests/min per IP
+const RATE_LIMIT_MAX_PUSH = 30; // 30 requests/min per IP
+const MAX_PUSH_SUBSCRIPTIONS = 500;
+const MAX_CHAT_MESSAGE_LENGTH = 2000;
 const ipRateBuckets = new Map<string, number[]>();
 
 function checkRateLimit(ip: string, maxRequests: number): { allowed: boolean; remaining: number; retryAfterSec: number } {
   const now = Date.now();
   const windowStart = now - RATE_LIMIT_WINDOW_MS;
+
+  // Periodic cleanup to prevent unbounded memory growth
+  if (ipRateBuckets.size > 500) {
+    for (const [key, list] of ipRateBuckets.entries()) {
+      const active = list.filter((t) => t > windowStart);
+      if (active.length === 0) {
+        ipRateBuckets.delete(key);
+      } else {
+        ipRateBuckets.set(key, active);
+      }
+    }
+  }
+
   const timestamps = (ipRateBuckets.get(ip) || []).filter((t) => t > windowStart);
 
   if (timestamps.length >= maxRequests) {
@@ -149,6 +165,18 @@ function checkRateLimit(ip: string, maxRequests: number): { allowed: boolean; re
   timestamps.push(now);
   ipRateBuckets.set(ip, timestamps);
   return { allowed: true, remaining: Math.max(0, maxRequests - timestamps.length), retryAfterSec: 0 };
+}
+
+function getClientIp(req: express.Request): string {
+  return String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'local')
+    .split(',')[0]
+    .trim();
+}
+
+function sanitizeText(value: unknown, fallback: string, maxLen = 240): string {
+  if (typeof value !== 'string') return fallback;
+  const trimmed = value.trim();
+  return trimmed ? trimmed.slice(0, maxLen) : fallback;
 }
 
 function getGenAIClient(): GoogleGenAI {
@@ -204,8 +232,62 @@ interface ChatTurn {
 
 async function startServer() {
   const app = express();
+  app.disable('x-powered-by');
   const httpServer = createHttpServer(app);
+
+  // Security headers, caching & lightweight Gzip/Brotli compression registered BEFORE all routes
+  app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'geolocation=(self), microphone=()');
+
+    if (req.url.startsWith('/images/') || req.url.startsWith('/assets/')) {
+      res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
+    }
+
+    // Compress JSON API and text responses when client supports gzip/br
+    const acceptEncoding = String(req.headers['accept-encoding'] || '');
+    const origSend = res.send.bind(res);
+    res.send = function (body: unknown): express.Response {
+      if (
+        !res.headersSent &&
+        (typeof body === 'string' || Buffer.isBuffer(body)) &&
+        !res.getHeader('Content-Encoding')
+      ) {
+        const rawBuf = Buffer.isBuffer(body) ? body : Buffer.from(body);
+        if (rawBuf.byteLength > 1024) {
+          res.setHeader('Vary', 'Accept-Encoding');
+          if (acceptEncoding.includes('br')) {
+            res.setHeader('Content-Encoding', 'br');
+            const compressed = zlib.brotliCompressSync(rawBuf, {
+              params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 4 },
+            });
+            res.setHeader('Content-Length', compressed.byteLength);
+            return origSend(compressed);
+          } else if (acceptEncoding.includes('gzip')) {
+            res.setHeader('Content-Encoding', 'gzip');
+            const compressed = zlib.gzipSync(rawBuf, { level: 6 });
+            res.setHeader('Content-Length', compressed.byteLength);
+            return origSend(compressed);
+          }
+        }
+      }
+      return origSend(body);
+    };
+
+    next();
+  });
+
   app.use(express.json({ limit: '1mb' }));
+
+  // Handle malformed JSON payloads gracefully without leaking stack traces
+  app.use((err: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (err instanceof SyntaxError && 'body' in err) {
+      res.status(400).json({ error: 'Format JSON invalide dans la requête.' });
+      return;
+    }
+    next(err);
+  });
 
   // Web Push API - VAPID Public Key endpoint
   app.get('/api/push/vapid-public-key', (_req, res) => {
@@ -225,25 +307,50 @@ async function startServer() {
 
   // Web Push API - Subscribe endpoint
   app.post('/api/push/subscribe', (req, res) => {
-    const { subscription, bassin, channels } = req.body as {
+    const rateStatus = checkRateLimit(getClientIp(req), RATE_LIMIT_MAX_PUSH);
+    if (!rateStatus.allowed) {
+      res.setHeader('Retry-After', String(rateStatus.retryAfterSec));
+      res.status(429).json({ error: 'Trop de requêtes d’abonnement. Veuillez réessayer dans une minute.' });
+      return;
+    }
+
+    const { subscription, bassin, channels } = (req.body || {}) as {
       subscription?: { endpoint?: string; keys?: Record<string, string> };
       bassin?: string;
       channels?: string[];
     };
 
-    const endpoint =
-      subscription?.endpoint || `local-pwa-sw://${bassin || 'bejaia'}-${Date.now()}`;
-    const id = crypto.createHash('sha256').update(endpoint).digest('hex').slice(0, 12);
+    const safeBassin = sanitizeText(bassin, 'Seddouk & Haute Soummam', 120);
+    const rawEndpoint =
+      typeof subscription?.endpoint === 'string' && subscription.endpoint.trim()
+        ? subscription.endpoint.trim().slice(0, 500)
+        : `local-pwa-sw://${safeBassin}-${Date.now()}`;
+    const id = crypto.createHash('sha256').update(rawEndpoint).digest('hex').slice(0, 12);
+
+    const allowedChannels = new Set([
+      'harvest-start',
+      'agronomic-period',
+      'frost',
+      'high-wind',
+      'heavy-rain',
+      'heat-sirocco',
+    ]);
+    const validChannels = Array.isArray(channels)
+      ? channels.filter((c): c is string => typeof c === 'string' && allowedChannels.has(c))
+      : Array.from(allowedChannels);
 
     const record: StoredPushSubscription = {
       id,
-      endpoint,
-      bassin: bassin || 'Seddouk & Haute Soummam',
-      channels: Array.isArray(channels)
-        ? channels
-        : ['harvest-start', 'agronomic-period', 'frost', 'high-wind', 'heavy-rain', 'heat-sirocco'],
+      endpoint: rawEndpoint,
+      bassin: safeBassin,
+      channels: validChannels.length > 0 ? validChannels : Array.from(allowedChannels),
       createdAt: Date.now(),
     };
+
+    if (!pushSubscriptions.has(id) && pushSubscriptions.size >= MAX_PUSH_SUBSCRIPTIONS) {
+      const oldestKey = pushSubscriptions.keys().next().value;
+      if (oldestKey) pushSubscriptions.delete(oldestKey);
+    }
 
     pushSubscriptions.set(id, record);
     persistPushSubscriptions();
@@ -260,15 +367,15 @@ async function startServer() {
 
   // Web Push API - Unsubscribe endpoint
   app.post('/api/push/unsubscribe', (req, res) => {
-    const { subscriptionId, endpoint } = req.body as {
+    const { subscriptionId, endpoint } = (req.body || {}) as {
       subscriptionId?: string;
       endpoint?: string;
     };
 
-    if (subscriptionId && pushSubscriptions.has(subscriptionId)) {
+    if (typeof subscriptionId === 'string' && pushSubscriptions.has(subscriptionId)) {
       pushSubscriptions.delete(subscriptionId);
-    } else if (endpoint) {
-      const id = crypto.createHash('sha256').update(endpoint).digest('hex').slice(0, 12);
+    } else if (typeof endpoint === 'string' && endpoint.trim()) {
+      const id = crypto.createHash('sha256').update(endpoint.trim().slice(0, 500)).digest('hex').slice(0, 12);
       pushSubscriptions.delete(id);
     }
     persistPushSubscriptions();
@@ -281,7 +388,14 @@ async function startServer() {
 
   // Web Push API - Dispatch critical period or local weather alert payload
   app.post('/api/push/dispatch-alert', (req, res) => {
-    const { title, body, type, zone, metric, severity } = req.body as {
+    const rateStatus = checkRateLimit(getClientIp(req), RATE_LIMIT_MAX_PUSH);
+    if (!rateStatus.allowed) {
+      res.setHeader('Retry-After', String(rateStatus.retryAfterSec));
+      res.status(429).json({ error: 'Trop de requêtes de notification. Veuillez patienter.' });
+      return;
+    }
+
+    const { title, body, type, zone, metric, severity } = (req.body || {}) as {
       title?: string;
       body?: string;
       type?: string;
@@ -290,18 +404,19 @@ async function startServer() {
       severity?: string;
     };
 
+    const safeType = sanitizeText(type, 'harvest-start', 40);
     const payload = {
-      title: title || '🌿 Alerte Période Critique ADOIO · Béjaïa',
-      body: body || 'Vigilance oléicole en cours sur votre bassin.',
+      title: sanitizeText(title, '🌿 Alerte Période Critique ADOIO · Béjaïa', 140),
+      body: sanitizeText(body, 'Vigilance oléicole en cours sur votre bassin.', 360),
       icon: '/pwa-192x192.png',
       badge: '/icon.svg',
-      tag: `adoio-push-${type || 'general'}-${Date.now()}`,
+      tag: `adoio-push-${safeType}-${Date.now()}`,
       data: {
-        url: type === 'harvest-start' ? '/#simulateur' : '/#alertes-meteo',
-        type: type || 'harvest-start',
-        zone: zone || 'Wilaya de Béjaïa',
-        metric: metric || 'Vigilance Active',
-        severity: severity || 'info',
+        url: safeType === 'harvest-start' ? '/#simulateur' : '/#alertes-meteo',
+        type: safeType,
+        zone: sanitizeText(zone, 'Wilaya de Béjaïa', 100),
+        metric: sanitizeText(metric, 'Vigilance Active', 100),
+        severity: sanitizeText(severity, 'info', 24),
         dispatchedAt: new Date().toISOString(),
       },
     };
@@ -315,8 +430,7 @@ async function startServer() {
 
   app.post('/api/assistant/chat', async (req, res) => {
     try {
-      const clientIp =
-        String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'local').split(',')[0].trim();
+      const clientIp = getClientIp(req);
       const rateStatus = checkRateLimit(clientIp, RATE_LIMIT_MAX_CHAT);
       res.setHeader('X-RateLimit-Limit', String(RATE_LIMIT_MAX_CHAT));
       res.setHeader('X-RateLimit-Remaining', String(rateStatus.remaining));
@@ -329,7 +443,7 @@ async function startServer() {
         return;
       }
 
-      const { message, history, stream } = req.body as {
+      const { message, history, stream } = (req.body || {}) as {
         message?: string;
         history?: ChatTurn[];
         stream?: boolean;
@@ -341,6 +455,13 @@ async function startServer() {
       }
 
       const trimmedMessage = message.trim();
+      if (trimmedMessage.length > MAX_CHAT_MESSAGE_LENGTH) {
+        res.status(400).json({
+          error: `Votre question dépasse la limite autorisée (${MAX_CHAT_MESSAGE_LENGTH} caractères maximum).`,
+        });
+        return;
+      }
+
       const validHistory: ChatTurn[] = [];
 
       if (Array.isArray(history)) {
@@ -353,7 +474,7 @@ async function startServer() {
           ) {
             validHistory.push({
               role: turn.role,
-              text: turn.text.trim(),
+              text: turn.text.trim().slice(0, MAX_CHAT_MESSAGE_LENGTH),
             });
           }
         }
@@ -460,44 +581,11 @@ async function startServer() {
     }
   });
 
-  // Security, caching & lightweight Gzip/Brotli compression for mobile/3G performance
-  app.use((req, res, next) => {
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    if (req.url.startsWith('/images/') || req.url.startsWith('/assets/')) {
-      res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
-    }
-
-    // Compress JSON API and text responses when client supports gzip/br
-    const acceptEncoding = String(req.headers['accept-encoding'] || '');
-    const origSend = res.send.bind(res);
-    res.send = function (body: unknown): express.Response {
-      if (
-        !res.headersSent &&
-        (typeof body === 'string' || Buffer.isBuffer(body)) &&
-        !res.getHeader('Content-Encoding')
-      ) {
-        const rawBuf = Buffer.isBuffer(body) ? body : Buffer.from(body);
-        if (rawBuf.byteLength > 1024) {
-          res.setHeader('Vary', 'Accept-Encoding');
-          if (acceptEncoding.includes('br')) {
-            res.setHeader('Content-Encoding', 'br');
-            const compressed = zlib.brotliCompressSync(rawBuf, {
-              params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 4 },
-            });
-            res.setHeader('Content-Length', compressed.byteLength);
-            return origSend(compressed);
-          } else if (acceptEncoding.includes('gzip')) {
-            res.setHeader('Content-Encoding', 'gzip');
-            const compressed = zlib.gzipSync(rawBuf, { level: 6 });
-            res.setHeader('Content-Length', compressed.byteLength);
-            return origSend(compressed);
-          }
-        }
-      }
-      return origSend(body);
-    };
-
-    next();
+  // Catch-all for unknown /api/* endpoints to return clean 404 JSON instead of SPA HTML
+  app.use('/api', (_req, res) => {
+    res.status(404).json({
+      error: 'Point de terminaison API introuvable.',
+    });
   });
 
   if (process.env.NODE_ENV !== 'production') {

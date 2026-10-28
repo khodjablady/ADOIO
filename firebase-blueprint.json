@@ -1,0 +1,528 @@
+{
+  "entities": {
+    "MillReview": {
+      "title": "MillReview",
+      "description": "Publicly shared producer review and multi-criteria rating for an olive mill in Béjaïa (no PII).",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the review document.",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "millId": {
+          "type": "string",
+          "description": "Identifier of the reviewed olive mill (e.g. mill-01).",
+          "minLength": 3,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "authorName": {
+          "type": "string",
+          "description": "Public display name or farm name of the producer.",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "authorRole": {
+          "type": "string",
+          "description": "Producer role or status.",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "communeOrigin": {
+          "type": "string",
+          "description": "Commune of the olive grove in Béjaïa.",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "date": {
+          "type": "string",
+          "description": "Formatted French display date of the review.",
+          "minLength": 4,
+          "maxLength": 60
+        },
+        "rating": {
+          "type": "number",
+          "description": "Overall rating from 1 to 5."
+        },
+        "extractionYield": {
+          "type": "number",
+          "description": "Extraction yield score from 1 to 5."
+        },
+        "turnaroundTime": {
+          "type": "number",
+          "description": "Turnaround time score from 1 to 5."
+        },
+        "hygiene": {
+          "type": "number",
+          "description": "Hygiene and stainless steel cleanliness score from 1 to 5."
+        },
+        "reception": {
+          "type": "number",
+          "description": "Reception and weighing transparency score from 1 to 5."
+        },
+        "volumeBroughtQuintals": {
+          "type": "number",
+          "description": "Volume of olives brought in quintals (1 to 1000)."
+        },
+        "varietyBrought": {
+          "type": "string",
+          "description": "Primary olive cultivar brought for pressing.",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "comment": {
+          "type": "string",
+          "description": "Detailed producer feedback on pressing quality.",
+          "minLength": 15,
+          "maxLength": 1200
+        },
+        "recommended": {
+          "type": "boolean",
+          "description": "Whether the producer recommends this olive mill."
+        },
+        "likesCount": {
+          "type": "number",
+          "description": "Helpful votes counter."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of creation."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last update."
+        }
+      },
+      "required": [
+        "id",
+        "millId",
+        "authorName",
+        "authorRole",
+        "communeOrigin",
+        "date",
+        "rating",
+        "extractionYield",
+        "turnaroundTime",
+        "hygiene",
+        "reception",
+        "volumeBroughtQuintals",
+        "varietyBrought",
+        "comment",
+        "recommended",
+        "likesCount",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ContestPublicEntry": {
+      "title": "ContestPublicEntry",
+      "description": "Publicly shared registration entry for the Annual Béjaïa Olive Oil Competition (isolated from private PII).",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Document ID matching the private PII counterpart.",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "registrationNumber": {
+          "type": "string",
+          "description": "Official contest dossier reference (e.g. ADOIO-2026-HO-001).",
+          "minLength": 6,
+          "maxLength": 40
+        },
+        "fullName": {
+          "type": "string",
+          "description": "Producer or mill representative public name.",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "companyName": {
+          "type": "string",
+          "description": "Exploitation, domain or mill name.",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "communeOrigin": {
+          "type": "string",
+          "description": "Commune or locality in Béjaïa.",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "submissionDate": {
+          "type": "string",
+          "description": "Planned sample deposit date (YYYY-MM-DD).",
+          "minLength": 8,
+          "maxLength": 20
+        },
+        "category": {
+          "type": "string",
+          "description": "Official competition category.",
+          "enum": ["Fruité Vert", "Fruité Mûr", "Fruité Goût à l'ancienne"],
+          "minLength": 5,
+          "maxLength": 40
+        },
+        "sampleCount": {
+          "type": "string",
+          "description": "Number of 75cl bottles submitted.",
+          "enum": ["Trois", "Quatre", "Cinq"],
+          "minLength": 4,
+          "maxLength": 12
+        },
+        "varietyName": {
+          "type": "string",
+          "description": "Olive variety of the homogeneous lot.",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "lotVolumeLitres": {
+          "type": "number",
+          "description": "Homogeneous lot volume in liters."
+        },
+        "feeDza": {
+          "type": "number",
+          "description": "Registration fee in DZD (1000 DA)."
+        },
+        "submittedAt": {
+          "type": "string",
+          "description": "Formatted French submission date and time.",
+          "minLength": 4,
+          "maxLength": 80
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of creation."
+        }
+      },
+      "required": [
+        "id",
+        "registrationNumber",
+        "fullName",
+        "companyName",
+        "communeOrigin",
+        "submissionDate",
+        "category",
+        "sampleCount",
+        "varietyName",
+        "lotVolumeLitres",
+        "feeDza",
+        "submittedAt",
+        "createdAt"
+      ]
+    },
+    "ContestPrivatePii": {
+      "title": "ContestPrivatePii",
+      "description": "Isolated private PII contact details for a contest registration (readable only by ADOIO admins).",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "registrationNumber": {
+          "type": "string",
+          "minLength": 6,
+          "maxLength": 40
+        },
+        "fullName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 5,
+          "maxLength": 120
+        },
+        "dialCode": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 20
+        },
+        "phoneNumber": {
+          "type": "string",
+          "minLength": 6,
+          "maxLength": 30
+        },
+        "address": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 200
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "registrationNumber",
+        "fullName",
+        "email",
+        "dialCode",
+        "phoneNumber",
+        "address",
+        "createdAt"
+      ]
+    },
+    "AdhesionPublicMember": {
+      "title": "AdhesionPublicMember",
+      "description": "Publicly shared ADOIO affiliation summary (isolated from private PII phone/email/message).",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "referenceId": {
+          "type": "string",
+          "minLength": 6,
+          "maxLength": 40
+        },
+        "profileType": {
+          "type": "string",
+          "enum": ["oleiculteur", "moulinier", "cooperative", "conditionneur", "chercheur", "amateur"],
+          "minLength": 4,
+          "maxLength": 30
+        },
+        "fullName": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 100
+        },
+        "farmName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "commune": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "detailsCount": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "submittedAt": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 80
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "referenceId",
+        "profileType",
+        "fullName",
+        "farmName",
+        "commune",
+        "detailsCount",
+        "submittedAt",
+        "createdAt"
+      ]
+    },
+    "AdhesionPrivatePii": {
+      "title": "AdhesionPrivatePii",
+      "description": "Isolated private PII contact details for an ADOIO membership request (readable only by ADOIO admins).",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "referenceId": {
+          "type": "string",
+          "minLength": 6,
+          "maxLength": 40
+        },
+        "fullName": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 100
+        },
+        "phone": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 30
+        },
+        "email": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 120
+        },
+        "message": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 1000
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "referenceId",
+        "fullName",
+        "phone",
+        "email",
+        "message",
+        "createdAt"
+      ]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user account profile associating saved favorite mills, ADOIO adhesion status, and Olive Quiz progression.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the account owner.",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name from Google Auth.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "User avatar URL from Google Auth.",
+          "minLength": 0,
+          "maxLength": 500
+        },
+        "favoriteMillIds": {
+          "type": "array",
+          "description": "List of saved favorite olive mill IDs (up to 50)."
+        },
+        "adhesionReferenceId": {
+          "type": "string",
+          "description": "Reference ID of the user's ADOIO membership application if submitted.",
+          "minLength": 0,
+          "maxLength": 40
+        },
+        "adhesionProfileType": {
+          "type": "string",
+          "description": "ADOIO member profile category.",
+          "minLength": 0,
+          "maxLength": 30
+        },
+        "adhesionCommune": {
+          "type": "string",
+          "description": "Commune associated with the user's ADOIO membership.",
+          "minLength": 0,
+          "maxLength": 80
+        },
+        "adhesionFarmName": {
+          "type": "string",
+          "description": "Farm or mill name associated with the user's ADOIO membership.",
+          "minLength": 0,
+          "maxLength": 120
+        },
+        "adhesionSubmittedAt": {
+          "type": "string",
+          "description": "Formatted submission date of the user's ADOIO membership.",
+          "minLength": 0,
+          "maxLength": 80
+        },
+        "quizCompletedLevels": {
+          "type": "array",
+          "description": "Completed levels of the Olive Quiz (1, 2, 3)."
+        },
+        "quizBestScore1": {
+          "type": "number",
+          "description": "Best score on Quiz Level 1 (0 to 5)."
+        },
+        "quizBestScore2": {
+          "type": "number",
+          "description": "Best score on Quiz Level 2 (0 to 5)."
+        },
+        "quizBestScore3": {
+          "type": "number",
+          "description": "Best score on Quiz Level 3 (0 to 5)."
+        },
+        "quizLastPlayedLevel": {
+          "type": "number",
+          "description": "Last played quiz level (1 to 3)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of account creation."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last profile synchronization."
+        }
+      },
+      "required": [
+        "uid",
+        "displayName",
+        "photoURL",
+        "favoriteMillIds",
+        "adhesionReferenceId",
+        "adhesionProfileType",
+        "adhesionCommune",
+        "adhesionFarmName",
+        "adhesionSubmittedAt",
+        "quizCompletedLevels",
+        "quizBestScore1",
+        "quizBestScore2",
+        "quizBestScore3",
+        "quizLastPlayedLevel",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/millReviews/{reviewId}": {
+      "schema": { "$ref": "#/entities/MillReview" },
+      "description": "Shared producer reviews and ratings on Béjaïa olive mills."
+    },
+    "/contestEntries/{entryId}": {
+      "schema": { "$ref": "#/entities/ContestPublicEntry" },
+      "description": "Shared public entries for the Annual Béjaïa Olive Oil Competition."
+    },
+    "/contestRegistrationsPrivate/{entryId}": {
+      "schema": { "$ref": "#/entities/ContestPrivatePii" },
+      "description": "Private PII contact records for contest registrations (admin read only)."
+    },
+    "/adhesionMembers/{memberId}": {
+      "schema": { "$ref": "#/entities/AdhesionPublicMember" },
+      "description": "Shared public directory of ADOIO membership affiliations."
+    },
+    "/adhesionRequestsPrivate/{memberId}": {
+      "schema": { "$ref": "#/entities/AdhesionPrivatePii" },
+      "description": "Private PII contact dossiers for ADOIO membership requests (admin read only)."
+    },
+    "/userProfiles/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Owner-isolated persistent user profile storing favorite mills, ADOIO adhesion status, and quiz history."
+    }
+  }
+}

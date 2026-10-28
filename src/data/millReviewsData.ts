@@ -279,36 +279,62 @@ export const INITIAL_MILL_REVIEWS: MillReview[] = [
   }
 ];
 
-const LOCAL_STORAGE_KEY = 'adoio_bejaia_mill_reviews_v1';
+// In-memory state synchronized with Firebase Firestore (via subscribeToMillReviews)
+let liveFirestoreReviews: MillReview[] = [];
+let sessionPendingReviews: MillReview[] = [];
+const likedReviewIds = new Set<string>();
+const seedReviewLikesDelta = new Map<string, number>();
 
 /**
- * Récupère tous les avis (initial + stockés localement)
+ * Met à jour le cache temps réel provenant de Firestore
  */
-export function getStoredReviews(): MillReview[] {
-  try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (!raw) return INITIAL_MILL_REVIEWS;
-    const userReviews: MillReview[] = JSON.parse(raw);
-    
-    // Merge user reviews with initial reviews (user reviews take priority by id)
-    const combined = [...userReviews];
-    for (const initRev of INITIAL_MILL_REVIEWS) {
-      if (!combined.some(r => r.id === initRev.id)) {
-        combined.push(initRev);
-      }
+export function setLiveFirestoreReviews(remoteReviews: MillReview[]): MillReview[] {
+  liveFirestoreReviews = remoteReviews;
+  const remoteIds = new Set(remoteReviews.map((r) => r.id));
+  sessionPendingReviews = sessionPendingReviews.filter((r) => !remoteIds.has(r.id));
+  return getStoredReviews();
+}
+
+function mergeReviewsList(primary: MillReview[], secondary: MillReview[]): MillReview[] {
+  const seen = new Set<string>();
+  const combined: MillReview[] = [];
+
+  for (const rev of primary) {
+    if (rev && typeof rev.id === 'string' && !seen.has(rev.id)) {
+      seen.add(rev.id);
+      combined.push(rev);
     }
-    return combined;
-  } catch {
-    return INITIAL_MILL_REVIEWS;
   }
+  for (const rev of secondary) {
+    if (rev && typeof rev.id === 'string' && !seen.has(rev.id)) {
+      seen.add(rev.id);
+      combined.push(rev);
+    }
+  }
+  for (const initRev of INITIAL_MILL_REVIEWS) {
+    if (!seen.has(initRev.id)) {
+      seen.add(initRev.id);
+      const extraLikes = seedReviewLikesDelta.get(initRev.id) || 0;
+      combined.push({
+        ...initRev,
+        likesCount: Math.max(0, initRev.likesCount + extraLikes),
+      });
+    }
+  }
+  return combined;
 }
 
 /**
- * Ajoute un nouvel avis déposé par un producteur
+ * Récupère tous les avis (Firestore temps réel + avis initiaux de référence)
+ */
+export function getStoredReviews(): MillReview[] {
+  return mergeReviewsList(liveFirestoreReviews, sessionPendingReviews);
+}
+
+/**
+ * Crée un nouvel objet avis producteur destiné à être enregistré dans Firestore
  */
 export function addProducerReview(newReview: Omit<MillReview, 'id' | 'date' | 'likesCount'>): MillReview {
-  const reviews = getStoredReviews();
-  
   const created: MillReview = {
     ...newReview,
     id: `user-rev-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -320,47 +346,32 @@ export function addProducerReview(newReview: Omit<MillReview, 'id' | 'date' | 'l
     likesCount: 0,
   };
 
-  const updated = [created, ...reviews];
-  
-  try {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
-  } catch (err) {
-    console.error('Failed to save mill review to localStorage', err);
-  }
-
+  sessionPendingReviews = [created, ...sessionPendingReviews];
   return created;
 }
 
 /**
- * Vote utile (like) pour un avis
+ * Vote utile (like) pour un avis et retourne le delta appliqué (+1 ou -1) pour Firestore
  */
-export function toggleReviewHelpful(reviewId: string): boolean {
-  try {
-    const helpfulKey = `adoio_review_liked_${reviewId}`;
-    const alreadyLiked = localStorage.getItem(helpfulKey) === 'true';
-    const reviews = getStoredReviews();
-    
-    const updated = reviews.map(r => {
-      if (r.id === reviewId) {
-        return {
-          ...r,
-          likesCount: alreadyLiked ? Math.max(0, r.likesCount - 1) : r.likesCount + 1
-        };
-      }
-      return r;
-    });
+export function toggleReviewHelpful(reviewId: string): 1 | -1 {
+  const alreadyLiked = likedReviewIds.has(reviewId);
+  const delta: 1 | -1 = alreadyLiked ? -1 : 1;
 
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
-    if (alreadyLiked) {
-      localStorage.removeItem(helpfulKey);
-      return false;
-    } else {
-      localStorage.setItem(helpfulKey, 'true');
-      return true;
-    }
-  } catch {
-    return false;
+  if (alreadyLiked) {
+    likedReviewIds.delete(reviewId);
+  } else {
+    likedReviewIds.add(reviewId);
   }
+
+  liveFirestoreReviews = liveFirestoreReviews.map((r) =>
+    r.id === reviewId ? { ...r, likesCount: Math.max(0, r.likesCount + delta) } : r
+  );
+  sessionPendingReviews = sessionPendingReviews.map((r) =>
+    r.id === reviewId ? { ...r, likesCount: Math.max(0, r.likesCount + delta) } : r
+  );
+  seedReviewLikesDelta.set(reviewId, (seedReviewLikesDelta.get(reviewId) || 0) + delta);
+
+  return delta;
 }
 
 /**

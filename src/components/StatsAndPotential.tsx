@@ -289,7 +289,7 @@ export const StatsAndPotential: React.FC = () => {
             </div>
             <div className="font-serif text-3xl font-extrabold text-[#18230F] mt-1">
               <AnimatedCounter
-                end={BEJAIA_GLOBAL_STATS.oliveSurfaceHectares}
+                end={BEJAIA_GLOBAL_STATS.totalHectares}
                 decimals={0}
                 thousandsSeparator=" "
                 duration={1600}
@@ -315,7 +315,7 @@ export const StatsAndPotential: React.FC = () => {
             </div>
             <div className="font-serif text-3xl font-extrabold text-[#18230F] mt-1">
               <AnimatedCounter
-                end={BEJAIA_GLOBAL_STATS.productiveTrees / 1000000}
+                end={BEJAIA_GLOBAL_STATS.producingTrees / 1000000}
                 decimals={2}
                 decimalSeparator=","
                 thousandsSeparator=""
@@ -368,7 +368,7 @@ export const StatsAndPotential: React.FC = () => {
             </div>
             <div className="font-serif text-3xl font-extrabold text-[#18230F] mt-1">
               <AnimatedCounter
-                end={BEJAIA_GLOBAL_STATS.shareOfNationalProductionPercent}
+                end={BEJAIA_GLOBAL_STATS.nationalProductionShare}
                 decimals={1}
                 decimalSeparator=","
                 thousandsSeparator=""

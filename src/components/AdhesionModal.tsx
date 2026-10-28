@@ -12,6 +12,14 @@ import {
   Trees
 } from 'lucide-react';
 import { ADOIO_INFO } from '../data/bejaiaOliveData';
+import {
+  subscribeToAdhesionMembers,
+  createAdhesionRequestInFirestore,
+  subscribeToUserAccount,
+  syncUserAdhesionInFirestore,
+  PublicAdhesionMember,
+  UserProfileData,
+} from '../firebase';
 
 interface AdhesionModalProps {
   isOpen: boolean;
@@ -29,6 +37,35 @@ export const AdhesionModal: React.FC<AdhesionModalProps> = ({ isOpen, onClose })
   const [message, setMessage] = useState<string>('');
   const [submitted, setSubmitted] = useState<boolean>(false);
   const [referenceId, setReferenceId] = useState<string>('');
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [recentMembers, setRecentMembers] = useState<PublicAdhesionMember[]>([]);
+  const [accountProfile, setAccountProfile] = useState<UserProfileData | null>(null);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const unsubscribeMembers = subscribeToAdhesionMembers((members) => {
+      setRecentMembers(members);
+    });
+    const unsubscribeAccount = subscribeToUserAccount(({ user, profile }) => {
+      setAccountProfile(profile);
+      if (user) {
+        setFullName((prev) => prev || user.displayName || '');
+        setEmail((prev) => prev || user.email || '');
+      }
+      if (profile && profile.adhesionCommune) {
+        setCommune(profile.adhesionCommune);
+      }
+      if (profile && profile.adhesionFarmName) {
+        setFarmName((prev) => prev || profile.adhesionFarmName);
+      }
+    });
+    return () => {
+      unsubscribeMembers();
+      unsubscribeAccount();
+    };
+  }, [isOpen]);
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -41,15 +78,74 @@ export const AdhesionModal: React.FC<AdhesionModalProps> = ({ isOpen, onClose })
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+
+    const cleanName = fullName.trim();
+    const cleanPhone = phone.trim();
+    const phoneDigits = cleanPhone.replace(/\D/g, '');
+
+    if (cleanName.length < 3) {
+      setFormError('Veuillez renseigner votre nom et prénom complets (au moins 3 caractères).');
+      return;
+    }
+
+    if (phoneDigits.length < 8 || phoneDigits.length > 15) {
+      setFormError('Veuillez saisir un numéro de téléphone valide (8 à 15 chiffres).');
+      return;
+    }
+
+    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setFormError('Veuillez saisir une adresse e-mail valide ou laisser ce champ vide.');
+      return;
+    }
+
+    setIsSubmitting(true);
     const generatedRef = `ADOIO-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const memberId = `adh-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const submittedAtFormatted = new Intl.DateTimeFormat('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(new Date());
+
+    setFullName(cleanName);
+    setPhone(cleanPhone);
     setReferenceId(generatedRef);
+
+    try {
+      await createAdhesionRequestInFirestore({
+        id: memberId,
+        referenceId: generatedRef,
+        profileType: profileType as PublicAdhesionMember['profileType'],
+        fullName: cleanName,
+        farmName: farmName.trim() || 'Exploitation Familiale',
+        commune,
+        detailsCount: detailsCount.trim() || 'Non précisé',
+        submittedAt: submittedAtFormatted,
+        phone: cleanPhone,
+        email: email.trim(),
+        message: message.trim(),
+      });
+      await syncUserAdhesionInFirestore({
+        referenceId: generatedRef,
+        profileType,
+        commune,
+        farmName: farmName.trim() || 'Exploitation Familiale',
+        submittedAt: submittedAtFormatted,
+      });
+    } catch (err) {
+      console.error('Failed to persist adhesion request to Firestore:', err);
+    }
+
+    setIsSubmitting(false);
     setSubmitted(true);
   };
 
   const resetForm = () => {
     setSubmitted(false);
+    setFormError(null);
     setFullName('');
     setFarmName('');
     setPhone('');
@@ -129,9 +225,31 @@ export const AdhesionModal: React.FC<AdhesionModalProps> = ({ isOpen, onClose })
               <p className="text-xs text-[#436229] mt-1">
                 Participez activement au développement de l'oléiculture de la wilaya de Béjaïa et bénéficiez de nos formations, analyses et kits d'aide.
               </p>
+              {accountProfile?.adhesionReferenceId && (
+                <div className="mt-3 p-3 rounded-xl bg-[#E8F4D9] border border-[#8CBE5D]/60 flex items-center justify-between text-xs text-[#18230F]">
+                  <span className="flex items-center gap-1.5 font-semibold">
+                    <CheckCircle2 className="w-4 h-4 text-[#31491E] shrink-0" />
+                    <span>
+                      Affiliation associée à votre compte ({accountProfile.adhesionFarmName || accountProfile.adhesionCommune})
+                    </span>
+                  </span>
+                  <span className="font-mono font-bold text-[#31491E]">
+                    {accountProfile.adhesionReferenceId}
+                  </span>
+                </div>
+              )}
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {formError && (
+                <div
+                  role="alert"
+                  className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-900 text-xs font-medium"
+                >
+                  {formError}
+                </div>
+              )}
+
               {/* Profile Type */}
               <div className="space-y-1" role="group" aria-labelledby="adhesion-profile-label">
                 <span id="adhesion-profile-label" className="text-xs font-bold text-[#18230F] block">
@@ -282,12 +400,38 @@ export const AdhesionModal: React.FC<AdhesionModalProps> = ({ isOpen, onClose })
               <div className="pt-2">
                 <button
                   type="submit"
-                  className="w-full py-3 px-4 rounded-xl bg-[#31491E] hover:bg-[#233416] text-[#FAF7F2] font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md hover:shadow-lg"
+                  disabled={isSubmitting}
+                  className="w-full py-3 px-4 rounded-xl bg-[#31491E] hover:bg-[#233416] text-[#FAF7F2] font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md hover:shadow-lg disabled:opacity-60"
                 >
                   <Send className="w-4 h-4 text-[#E6AB3C]" />
-                  <span>Envoyer ma demande à l'ADOIO</span>
+                  <span>{isSubmitting ? 'Enregistrement en cours...' : "Envoyer ma demande à l'ADOIO"}</span>
                 </button>
               </div>
+
+              {recentMembers.length > 0 && (
+                <div className="pt-3 border-t border-[#E6DEC9] space-y-2">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-[#31491E]">
+                    <span>Dernières affiliations enregistrées ({recentMembers.length})</span>
+                    <span className="text-[10px] text-[#567B34] font-normal">Partagé en direct</span>
+                  </div>
+                  <div className="max-h-28 overflow-y-auto space-y-1.5 pr-1">
+                    {recentMembers.slice(0, 5).map((m) => (
+                      <div
+                        key={m.id}
+                        className="px-3 py-1.5 rounded-xl bg-white border border-[#E6DEC9] flex items-center justify-between text-[11px]"
+                      >
+                        <div className="truncate pr-2">
+                          <strong className="text-[#18230F]">{m.fullName}</strong>{' '}
+                          <span className="text-[#567B34]">· {m.farmName} ({m.commune})</span>
+                        </div>
+                        <span className="font-mono text-[10px] text-[#31491E] shrink-0">
+                          {m.referenceId}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="text-[11px] text-center text-[#567B34] flex items-center justify-center gap-1.5 pt-1">
                 <MapPin className="w-3.5 h-3.5 text-[#E6AB3C]" />

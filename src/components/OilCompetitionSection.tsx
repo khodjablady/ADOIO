@@ -25,6 +25,11 @@ import {
 } from 'lucide-react';
 import { CompetitionMedalsChartSection } from './CompetitionMedalsChartSection';
 import { ArticleAudioReader } from './ArticleAudioReader';
+import {
+  subscribeToContestEntries,
+  createContestRegistrationInFirestore,
+  PublicContestEntry,
+} from '../firebase';
 
 export interface ContestRegistration {
   id: string;
@@ -66,36 +71,29 @@ export const OilCompetitionSection: React.FC = () => {
   const [varietyName, setVarietyName] = useState('Chemlal');
   const [lotVolume, setLotVolume] = useState<number>(500);
 
-  // Submission state
+  // Submission state (persisted in Firebase Firestore)
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionSuccess, setSubmissionSuccess] = useState<ContestRegistration | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const [myRegistrations, setMyRegistrations] = useState<ContestRegistration[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [myRegistrations, setMyRegistrations] = useState<ContestRegistration[]>([]);
 
+  const [sharedEntries, setSharedEntries] = useState<PublicContestEntry[]>([]);
   const [activeTab, setActiveTab] = useState<'presentation' | 'form' | 'reglement' | 'criteres'>('presentation');
 
-  // Save registrations to localStorage
+  // Subscribe to shared public contest entries in Firestore across all visitors
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(myRegistrations));
-    } catch (e) {
-      console.warn('Could not save contest registrations to localStorage', e);
-    }
-  }, [myRegistrations]);
+    const unsubscribe = subscribeToContestEntries((entries) => {
+      setSharedEntries(entries);
+    });
+    return () => unsubscribe();
+  }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
 
     // Validation
-    if (!fullName.trim()) {
+    if (!fullName.trim() || fullName.trim().length < 2) {
       setFormError('Veuillez renseigner votre nom et prénom.');
       return;
     }
@@ -103,7 +101,7 @@ export const OilCompetitionSection: React.FC = () => {
       setFormError('Veuillez renseigner une adresse e-mail valide.');
       return;
     }
-    if (!phoneNumber.trim()) {
+    if (!phoneNumber.trim() || phoneNumber.trim().length < 6) {
       setFormError('Veuillez renseigner votre numéro de téléphone.');
       return;
     }
@@ -114,36 +112,70 @@ export const OilCompetitionSection: React.FC = () => {
 
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      const regNumber = `ADOIO-2026-HO-${String(myRegistrations.length + 1).padStart(3, '0')}`;
-      const newRegistration: ContestRegistration = {
-        id: `reg-${Date.now()}`,
-        fullName: fullName.trim(),
-        companyName: companyName.trim() || 'Producteur Particulier',
-        address: address.trim() || 'Wilaya de Béjaïa',
-        email: email.trim(),
-        dialCode,
-        phoneNumber: phoneNumber.trim(),
-        submissionDate,
-        category,
-        sampleCount,
-        varietyName,
-        lotVolumeLitres: lotVolume,
+    const totalCount = Math.max(myRegistrations.length, sharedEntries.length) + 1;
+    const regNumber = `ADOIO-2026-HO-${String(totalCount).padStart(3, '0')}`;
+    const entryId = `reg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const submittedAtFormatted = new Date().toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const newRegistration: ContestRegistration = {
+      id: entryId,
+      fullName: fullName.trim(),
+      companyName: companyName.trim() || 'Producteur Particulier',
+      address: address.trim() || 'Wilaya de Béjaïa',
+      email: email.trim(),
+      dialCode,
+      phoneNumber: phoneNumber.trim(),
+      submissionDate,
+      category,
+      sampleCount,
+      varietyName,
+      lotVolumeLitres: lotVolume,
+      communeOrigin: address.trim() || 'Wilaya de Béjaïa',
+      feeDza: 1000,
+      submittedAt: submittedAtFormatted,
+      registrationNumber: regNumber,
+    };
+
+    try {
+      await createContestRegistrationInFirestore({
+        id: newRegistration.id,
+        registrationNumber: newRegistration.registrationNumber,
+        fullName: newRegistration.fullName,
+        companyName: newRegistration.companyName,
+        communeOrigin: newRegistration.communeOrigin || 'Wilaya de Béjaïa',
+        submissionDate: newRegistration.submissionDate,
+        category: newRegistration.category,
+        sampleCount: newRegistration.sampleCount,
+        varietyName: newRegistration.varietyName || 'Chemlal',
+        lotVolumeLitres: newRegistration.lotVolumeLitres || 300,
         feeDza: 1000,
-        submittedAt: new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-        registrationNumber: regNumber
-      };
+        submittedAt: newRegistration.submittedAt,
+        email: newRegistration.email,
+        dialCode: newRegistration.dialCode,
+        phoneNumber: newRegistration.phoneNumber,
+        address: newRegistration.address,
+      });
+    } catch (err) {
+      console.warn('Firestore contest registration warning (saved locally):', err);
+    }
 
-      setMyRegistrations(prev => [newRegistration, ...prev]);
-      setSubmissionSuccess(newRegistration);
-      setIsSubmitting(false);
+    setMyRegistrations((prev) => [newRegistration, ...prev]);
+    setSubmissionSuccess(newRegistration);
+    setIsSubmitting(false);
 
-      // Scroll to confirmation card
+    // Scroll to confirmation card
+    setTimeout(() => {
       const el = document.getElementById('confirmation-recu');
       if (el) {
         el.scrollIntoView({ behavior: 'smooth' });
       }
-    }, 600);
+    }, 100);
   };
 
   const handleResetForm = () => {
@@ -748,46 +780,73 @@ export const OilCompetitionSection: React.FC = () => {
           </div>
         )}
 
-        {/* Existing Registrations List if any */}
-        {myRegistrations.length > 0 && !submissionSuccess && (
-          <div className="bg-white rounded-3xl border border-[#E6DEC9] p-6 shadow-sm mb-12">
-            <div className="flex items-center justify-between pb-4 border-b border-[#E6DEC9] mb-4">
-              <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-[#567B34]" />
-                <h4 className="font-serif text-lg font-bold text-[#18230F]">
-                  Vos Inscriptions en Cours pour le Concours 2026 ({myRegistrations.length})
-                </h4>
-              </div>
-              <span className="text-xs text-[#567B34]">Historique local</span>
-            </div>
+        {/* Shared Community Contest Registrations (Firestore + Local) */}
+        {(() => {
+          const combinedList: PublicContestEntry[] = [...sharedEntries];
+          for (const localReg of myRegistrations) {
+            if (!combinedList.some((e) => e.id === localReg.id || e.registrationNumber === localReg.registrationNumber)) {
+              combinedList.push({
+                id: localReg.id,
+                registrationNumber: localReg.registrationNumber,
+                fullName: localReg.fullName,
+                companyName: localReg.companyName,
+                communeOrigin: localReg.communeOrigin || localReg.address || 'Wilaya de Béjaïa',
+                submissionDate: localReg.submissionDate,
+                category: localReg.category,
+                sampleCount: localReg.sampleCount,
+                varietyName: localReg.varietyName || 'Chemlal',
+                lotVolumeLitres: localReg.lotVolumeLitres || 300,
+                feeDza: localReg.feeDza,
+                submittedAt: localReg.submittedAt,
+              });
+            }
+          }
 
-            <div className="space-y-3">
-              {myRegistrations.map((reg) => (
-                <div key={reg.id} className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E6DEC9] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-mono font-bold text-[#18230F] bg-white px-2 py-0.5 rounded border border-[#E6DEC9]">
-                        {reg.registrationNumber}
-                      </span>
-                      <span className="font-bold text-[#31491E]">{reg.category}</span>
-                      <span className="text-[#6F9D44]">· Cépage {reg.varietyName}</span>
-                    </div>
-                    <span className="text-[#436229]">
-                      Candidat : <strong>{reg.fullName}</strong> ({reg.companyName}) · {reg.phoneNumber}
-                    </span>
-                  </div>
+          if (combinedList.length === 0) return null;
 
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="font-bold text-[#AF4D24]">{reg.feeDza} DA</span>
-                    <span className="px-2.5 py-1 rounded-lg bg-[#E8F4D9] text-[#233416] font-semibold text-[11px]">
-                      {reg.sampleCount} flacons
-                    </span>
-                  </div>
+          return (
+            <div className="bg-white rounded-3xl border border-[#E6DEC9] p-6 shadow-sm mb-12">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-[#E6DEC9] mb-4">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-[#567B34]" />
+                  <h4 className="font-serif text-lg font-bold text-[#18230F]">
+                    Lots Inscrits au Concours 2026 ({combinedList.length})
+                  </h4>
                 </div>
-              ))}
+                <span className="text-xs font-semibold text-[#31491E] bg-[#E8F4D9] px-3 py-1 rounded-full">
+                  Synchronisé en temps réel (Base Firestore ADOIO)
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {combinedList.map((reg) => (
+                  <div key={reg.id} className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E6DEC9] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <span className="font-mono font-bold text-[#18230F] bg-white px-2 py-0.5 rounded border border-[#E6DEC9]">
+                          {reg.registrationNumber}
+                        </span>
+                        <span className="font-bold text-[#31491E]">{reg.category}</span>
+                        <span className="text-[#6F9D44]">· Cépage {reg.varietyName}</span>
+                        <span className="text-[#567B34]">· Lot de {reg.lotVolumeLitres} L</span>
+                      </div>
+                      <span className="text-[#436229]">
+                        Candidat : <strong>{reg.fullName}</strong> ({reg.companyName}) · {reg.communeOrigin}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="font-bold text-[#AF4D24]">{reg.feeDza} DA</span>
+                      <span className="px-2.5 py-1 rounded-lg bg-[#E8F4D9] text-[#233416] font-semibold text-[11px]">
+                        {reg.sampleCount} flacons
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Recharts Historical 5-Year Medals Evolution & Official 3 Medals Showcase */}
         <CompetitionMedalsChartSection />

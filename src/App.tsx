@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { ArrowUp, ListOrdered, ArrowRight } from 'lucide-react';
+import './firebase';
 import { Navbar } from './components/Navbar';
 import { SiloNavigation } from './components/SiloNavigation';
 import { HeroSection } from './components/HeroSection';
@@ -411,6 +412,8 @@ export default function App() {
       'convertisseur-huile': 'simulateur',
       'alertes-recolte': 'alertes-recolte-optimale',
       'alertes-recolte-optimale': 'alertes-recolte-optimale',
+      'harvest-alert-manager': 'harvest-alert-manager',
+      'seuils-maturite': 'harvest-alert-manager',
       'calculateur-fertilisation': 'fertilisation',
       'fertilisation': 'fertilisation',
       'guide-irrigation': 'irrigation',
@@ -435,7 +438,7 @@ export default function App() {
     const parentDeferredId =
       targetId === 'alertes-meteo'
         ? 'pratiques'
-        : targetId === 'alertes-recolte-optimale'
+        : targetId === 'alertes-recolte-optimale' || targetId === 'harvest-alert-manager'
           ? 'simulateur'
           : targetId;
 
@@ -446,11 +449,16 @@ export default function App() {
       [targetId]: true,
     }));
 
-    if (targetId !== 'hero' && targetId !== 'alertes-meteo' && targetId !== 'alertes-recolte-optimale') {
+    if (
+      targetId !== 'hero' &&
+      targetId !== 'alertes-meteo' &&
+      targetId !== 'alertes-recolte-optimale' &&
+      targetId !== 'harvest-alert-manager'
+    ) {
       setActiveTab(targetId);
     } else if (targetId === 'alertes-meteo') {
       setActiveTab('pratiques');
-    } else if (targetId === 'alertes-recolte-optimale') {
+    } else if (targetId === 'alertes-recolte-optimale' || targetId === 'harvest-alert-manager') {
       setActiveTab('simulateur');
     }
 

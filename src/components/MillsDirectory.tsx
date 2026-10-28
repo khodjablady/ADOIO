@@ -30,10 +30,16 @@ import {
 } from 'lucide-react';
 import { 
   getStoredReviews, 
+  setLiveFirestoreReviews,
   calculateMillStats, 
   MillReview,
   MillStats
 } from '../data/millReviewsData';
+import { 
+  subscribeToMillReviews,
+  subscribeToUserAccount,
+  syncUserFavoritesInFirestore
+} from '../firebase';
 import { MillReviewsSection } from './MillReviewsSection';
 
 const FAVORITES_STORAGE_KEY = 'adoio_favorite_mills_v1';
@@ -71,10 +77,11 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
     });
   };
 
-  // Favorites state persisted in LocalStorage
+  // Favorites state: persisted in Firestore when logged in, or LocalStorage when guest
   const [favoriteIds, setFavoriteIds] = useState<string[]>(() => loadStoredFavorites());
+  const [isUserLoggedIn, setIsUserLoggedIn] = useState<boolean>(false);
 
-  // Reviews state (persisted via localStorage)
+  // Reviews state (persisted via Firestore)
   const [reviews, setReviews] = useState<MillReview[]>(() => getStoredReviews());
   const [activeModalMill, setActiveModalMill] = useState<OliveMill | null>(null);
   const [modalTab, setModalTab] = useState<'info' | 'reviews'>('info');
@@ -183,15 +190,18 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeModalMill]);
 
+  // Only persist to localStorage when the user is NOT logged in
   useEffect(() => {
+    if (isUserLoggedIn) return;
     try {
       localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favoriteIds));
     } catch {
       // Ignore storage quota errors
     }
-  }, [favoriteIds]);
+  }, [favoriteIds, isUserLoggedIn]);
 
   useEffect(() => {
+    if (isUserLoggedIn) return;
     const handleStorageChange = (event: StorageEvent) => {
       if (event.storageArea && event.storageArea !== window.localStorage) return;
       if (event.key === FAVORITES_STORAGE_KEY || event.key === null) {
@@ -200,6 +210,25 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
     };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
+  }, [isUserLoggedIn]);
+
+  // Synchronize favorite mills with the authenticated user's Firestore account
+  useEffect(() => {
+    const unsubscribe = subscribeToUserAccount(({ user, profile }) => {
+      const loggedIn = Boolean(user);
+      setIsUserLoggedIn(loggedIn);
+      if (user && profile) {
+        setFavoriteIds((prev) => {
+          const sameLength = prev.length === profile.favoriteMillIds.length;
+          const isSame =
+            sameLength && prev.every((id, index) => id === profile.favoriteMillIds[index]);
+          return isSame ? prev : profile.favoriteMillIds;
+        });
+      } else if (!user) {
+        setFavoriteIds(loadStoredFavorites());
+      }
+    });
+    return () => unsubscribe();
   }, []);
 
   const toggleFavorite = (millId: string, e?: React.MouseEvent) => {
@@ -209,10 +238,14 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
     setFavoriteIds((prev) => {
       const exists = prev.includes(millId);
       const next = exists ? prev.filter((id) => id !== millId) : [...prev, millId];
-      try {
-        localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        // Ignore storage quota errors
+      if (isUserLoggedIn) {
+        void syncUserFavoritesInFirestore(next);
+      } else {
+        try {
+          localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(next));
+        } catch {
+          // Ignore storage quota errors
+        }
       }
       return next;
     });
@@ -220,16 +253,29 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
 
   const clearAllFavorites = () => {
     setFavoriteIds([]);
-    try {
-      localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify([]));
-    } catch {
-      // Ignore storage quota errors
+    if (isUserLoggedIn) {
+      void syncUserFavoritesInFirestore([]);
+    } else {
+      try {
+        localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify([]));
+      } catch {
+        // Ignore storage quota errors
+      }
     }
   };
 
   const refreshReviews = () => {
     setReviews(getStoredReviews());
   };
+
+  // Subscribe to shared Firestore mill reviews in real time across all visitors
+  useEffect(() => {
+    const unsubscribe = subscribeToMillReviews((remoteReviews) => {
+      const merged = setLiveFirestoreReviews(remoteReviews);
+      setReviews(merged);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Sync when search initiated from Hero
   useEffect(() => {
@@ -527,7 +573,9 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                   </h3>
                 </div>
                 <p className="text-xs text-[#567B34] mt-0.5">
-                  Conservation automatique dans le stockage local de votre navigateur (disponible hors-ligne).
+                  {isUserLoggedIn
+                    ? 'Synchronisé en temps réel sur votre compte utilisateur Firebase Firestore.'
+                    : 'Conservation automatique dans le stockage local de votre navigateur (disponible hors-ligne).'}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2 text-xs">

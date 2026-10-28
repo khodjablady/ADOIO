@@ -16,6 +16,10 @@ import {
   HelpCircle,
   Check,
 } from 'lucide-react';
+import {
+  subscribeToUserAccount,
+  syncUserQuizInFirestore,
+} from '../firebase';
 
 export interface QuizQuestion {
   id: string;
@@ -452,6 +456,38 @@ export const OliveQuiz: React.FC<OliveQuizProps> = ({
     }
   }, [progress]);
 
+  // Hydrate and synchronize quiz progression from the authenticated user's Firestore account
+  useEffect(() => {
+    const unsubscribe = subscribeToUserAccount(({ user, profile }) => {
+      if (user && profile) {
+        setProgress((prev) => {
+          const mergedCompleted = Array.from(
+            new Set([...prev.completedLevels, ...profile.quizCompletedLevels])
+          );
+          const mergedBest = {
+            1: Math.max(prev.bestScores[1] || 0, profile.quizBestScore1 || 0),
+            2: Math.max(prev.bestScores[2] || 0, profile.quizBestScore2 || 0),
+            3: Math.max(prev.bestScores[3] || 0, profile.quizBestScore3 || 0),
+          };
+          const sameCompleted =
+            mergedCompleted.length === prev.completedLevels.length &&
+            mergedCompleted.every((lvl) => prev.completedLevels.includes(lvl));
+          const sameBest =
+            mergedBest[1] === (prev.bestScores[1] || 0) &&
+            mergedBest[2] === (prev.bestScores[2] || 0) &&
+            mergedBest[3] === (prev.bestScores[3] || 0);
+          if (sameCompleted && sameBest) return prev;
+          return {
+            completedLevels: mergedCompleted,
+            bestScores: mergedBest,
+            lastPlayedLevel: profile.quizLastPlayedLevel || prev.lastPlayedLevel,
+          };
+        });
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   const levelQuestions = useMemo(
     () => OLIVE_QUIZ_QUESTIONS.filter((q) => q.level === activeLevel),
     [activeLevel]
@@ -486,7 +522,11 @@ export const OliveQuiz: React.FC<OliveQuizProps> = ({
     setIsSubmitted(false);
     setLevelAnswers({});
     setShowLevelSummary(false);
-    setProgress((prev) => ({ ...prev, lastPlayedLevel: lvl }));
+    setProgress((prev) => {
+      const next = { ...prev, lastPlayedLevel: lvl };
+      void syncUserQuizInFirestore(next);
+      return next;
+    });
   };
 
   const handleChooseOption = (optionIdx: number) => {
@@ -512,11 +552,13 @@ export const OliveQuiz: React.FC<OliveQuizProps> = ({
           passed && !prev.completedLevels.includes(activeLevel)
             ? [...prev.completedLevels, activeLevel]
             : prev.completedLevels;
-        return {
+        const next: StoredQuizProgress = {
           ...prev,
           bestScores: { ...prev.bestScores, [activeLevel]: newBest },
           completedLevels: newCompleted,
         };
+        void syncUserQuizInFirestore(next);
+        return next;
       });
     }
   };
@@ -546,6 +588,7 @@ export const OliveQuiz: React.FC<OliveQuizProps> = ({
       lastPlayedLevel: 1,
     };
     setProgress(fresh);
+    void syncUserQuizInFirestore(fresh);
     setActiveLevel(1);
     setCurrentIndex(0);
     setSelectedOption(null);

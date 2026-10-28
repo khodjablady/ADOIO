@@ -1,0 +1,325 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net (Default-Deny Catch-All)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    // PRIMITIVE HELPERS
+    // =========================================================================
+    function isValidId(id) {
+      return id is string && id.size() >= 3 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        request.auth.token.email_verified == true &&
+        (
+          request.auth.token.email == 'khodja.co@gmail.com' ||
+          exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        );
+    }
+
+    // =========================================================================
+    // ENTITY VALIDATION BLUEPRINTS (Strict Keys, Types, Boundaries & Regexes)
+    // =========================================================================
+    function isValidMillReview(data) {
+      return data.keys().hasAll([
+          'id', 'millId', 'authorName', 'authorRole', 'communeOrigin',
+          'date', 'rating', 'extractionYield', 'turnaroundTime', 'hygiene',
+          'reception', 'volumeBroughtQuintals', 'varietyBrought', 'comment',
+          'recommended', 'likesCount', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'millId', 'authorName', 'authorRole', 'communeOrigin',
+          'date', 'rating', 'extractionYield', 'turnaroundTime', 'hygiene',
+          'reception', 'volumeBroughtQuintals', 'varietyBrought', 'comment',
+          'recommended', 'likesCount', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.id) &&
+        data.millId is string && data.millId.size() >= 3 && data.millId.size() <= 64 && data.millId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.authorName is string && data.authorName.size() >= 2 && data.authorName.size() <= 100 &&
+        data.authorRole is string && data.authorRole.size() >= 2 && data.authorRole.size() <= 80 &&
+        data.communeOrigin is string && data.communeOrigin.size() >= 2 && data.communeOrigin.size() <= 80 &&
+        data.date is string && data.date.size() >= 4 && data.date.size() <= 60 &&
+        data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+        data.extractionYield is number && data.extractionYield >= 1 && data.extractionYield <= 5 &&
+        data.turnaroundTime is number && data.turnaroundTime >= 1 && data.turnaroundTime <= 5 &&
+        data.hygiene is number && data.hygiene >= 1 && data.hygiene <= 5 &&
+        data.reception is number && data.reception >= 1 && data.reception <= 5 &&
+        data.volumeBroughtQuintals is number && data.volumeBroughtQuintals >= 0 && data.volumeBroughtQuintals <= 1000 &&
+        data.varietyBrought is string && data.varietyBrought.size() >= 2 && data.varietyBrought.size() <= 80 &&
+        data.comment is string && data.comment.size() >= 15 && data.comment.size() <= 1200 &&
+        data.recommended is bool &&
+        data.likesCount is number && data.likesCount >= 0 && data.likesCount <= 100000 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidContestPublicEntry(data) {
+      return data.keys().hasAll([
+          'id', 'registrationNumber', 'fullName', 'companyName', 'communeOrigin',
+          'submissionDate', 'category', 'sampleCount', 'varietyName',
+          'lotVolumeLitres', 'feeDza', 'submittedAt', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'registrationNumber', 'fullName', 'companyName', 'communeOrigin',
+          'submissionDate', 'category', 'sampleCount', 'varietyName',
+          'lotVolumeLitres', 'feeDza', 'submittedAt', 'createdAt'
+        ]) &&
+        isValidId(data.id) &&
+        data.registrationNumber is string && data.registrationNumber.size() >= 6 && data.registrationNumber.size() <= 40 &&
+        data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 100 &&
+        data.companyName is string && data.companyName.size() >= 2 && data.companyName.size() <= 120 &&
+        data.communeOrigin is string && data.communeOrigin.size() >= 2 && data.communeOrigin.size() <= 120 &&
+        data.submissionDate is string && data.submissionDate.size() >= 8 && data.submissionDate.size() <= 20 &&
+        data.category is string && data.category.size() >= 5 && data.category.size() <= 40 &&
+        (data.category == 'Fruité Vert' || data.category == 'Fruité Mûr' || data.category == "Fruité Goût à l'ancienne") &&
+        data.sampleCount is string && data.sampleCount.size() >= 4 && data.sampleCount.size() <= 12 &&
+        (data.sampleCount == 'Trois' || data.sampleCount == 'Quatre' || data.sampleCount == 'Cinq') &&
+        data.varietyName is string && data.varietyName.size() >= 2 && data.varietyName.size() <= 80 &&
+        data.lotVolumeLitres is number && data.lotVolumeLitres >= 50 && data.lotVolumeLitres <= 500000 &&
+        data.feeDza is number && data.feeDza == 1000 &&
+        data.submittedAt is string && data.submittedAt.size() >= 4 && data.submittedAt.size() <= 80 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidContestPrivatePii(data) {
+      return data.keys().hasAll([
+          'id', 'registrationNumber', 'fullName', 'email',
+          'dialCode', 'phoneNumber', 'address', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'registrationNumber', 'fullName', 'email',
+          'dialCode', 'phoneNumber', 'address', 'createdAt'
+        ]) &&
+        isValidId(data.id) &&
+        data.registrationNumber is string && data.registrationNumber.size() >= 6 && data.registrationNumber.size() <= 40 &&
+        data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 100 &&
+        data.email is string && data.email.size() >= 5 && data.email.size() <= 120 &&
+        data.dialCode is string && data.dialCode.size() >= 2 && data.dialCode.size() <= 20 &&
+        data.phoneNumber is string && data.phoneNumber.size() >= 6 && data.phoneNumber.size() <= 30 &&
+        data.address is string && data.address.size() >= 2 && data.address.size() <= 200 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidAdhesionPublicMember(data) {
+      return data.keys().hasAll([
+          'id', 'referenceId', 'profileType', 'fullName',
+          'farmName', 'commune', 'detailsCount', 'submittedAt', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'referenceId', 'profileType', 'fullName',
+          'farmName', 'commune', 'detailsCount', 'submittedAt', 'createdAt'
+        ]) &&
+        isValidId(data.id) &&
+        data.referenceId is string && data.referenceId.size() >= 6 && data.referenceId.size() <= 40 && data.referenceId >= 'ADOIO-' &&
+        data.profileType is string && data.profileType.size() >= 4 && data.profileType.size() <= 30 &&
+        (
+          data.profileType == 'oleiculteur' ||
+          data.profileType == 'moulinier' ||
+          data.profileType == 'cooperative' ||
+          data.profileType == 'conditionneur' ||
+          data.profileType == 'chercheur' ||
+          data.profileType == 'amateur'
+        ) &&
+        data.fullName is string && data.fullName.size() >= 3 && data.fullName.size() <= 100 &&
+        data.farmName is string && data.farmName.size() >= 1 && data.farmName.size() <= 120 &&
+        data.commune is string && data.commune.size() >= 2 && data.commune.size() <= 80 &&
+        data.detailsCount is string && data.detailsCount.size() >= 1 && data.detailsCount.size() <= 80 &&
+        data.submittedAt is string && data.submittedAt.size() >= 4 && data.submittedAt.size() <= 80 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidAdhesionPrivatePii(data) {
+      return data.keys().hasAll([
+          'id', 'referenceId', 'fullName', 'phone',
+          'email', 'message', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'referenceId', 'fullName', 'phone',
+          'email', 'message', 'createdAt'
+        ]) &&
+        isValidId(data.id) &&
+        data.referenceId is string && data.referenceId.size() >= 6 && data.referenceId.size() <= 40 &&
+        data.fullName is string && data.fullName.size() >= 3 && data.fullName.size() <= 100 &&
+        data.phone is string && data.phone.size() >= 8 && data.phone.size() <= 30 &&
+        data.email is string && data.email.size() <= 120 &&
+        data.message is string && data.message.size() <= 1000 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll([
+          'uid', 'displayName', 'photoURL', 'favoriteMillIds',
+          'adhesionReferenceId', 'adhesionProfileType', 'adhesionCommune',
+          'adhesionFarmName', 'adhesionSubmittedAt', 'quizCompletedLevels',
+          'quizBestScore1', 'quizBestScore2', 'quizBestScore3',
+          'quizLastPlayedLevel', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'uid', 'displayName', 'photoURL', 'favoriteMillIds',
+          'adhesionReferenceId', 'adhesionProfileType', 'adhesionCommune',
+          'adhesionFarmName', 'adhesionSubmittedAt', 'quizCompletedLevels',
+          'quizBestScore1', 'quizBestScore2', 'quizBestScore3',
+          'quizLastPlayedLevel', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.uid) &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120 &&
+        data.photoURL is string && data.photoURL.size() <= 500 &&
+        data.favoriteMillIds is list && data.favoriteMillIds.size() <= 50 &&
+        data.adhesionReferenceId is string && data.adhesionReferenceId.size() <= 40 &&
+        data.adhesionProfileType is string && data.adhesionProfileType.size() <= 30 &&
+        data.adhesionCommune is string && data.adhesionCommune.size() <= 80 &&
+        data.adhesionFarmName is string && data.adhesionFarmName.size() <= 120 &&
+        data.adhesionSubmittedAt is string && data.adhesionSubmittedAt.size() <= 80 &&
+        data.quizCompletedLevels is list && data.quizCompletedLevels.size() <= 3 &&
+        data.quizBestScore1 is number && data.quizBestScore1 >= 0 && data.quizBestScore1 <= 5 &&
+        data.quizBestScore2 is number && data.quizBestScore2 >= 0 && data.quizBestScore2 <= 5 &&
+        data.quizBestScore3 is number && data.quizBestScore3 >= 0 && data.quizBestScore3 <= 5 &&
+        data.quizLastPlayedLevel is number && data.quizLastPlayedLevel >= 1 && data.quizLastPlayedLevel <= 3 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    // =========================================================================
+    // 1. AVIS SUR LES HUILERIES (Public non-PII collection shared across visitors)
+    // =========================================================================
+    match /millReviews/{reviewId} {
+      allow get: if isValidId(reviewId) && existing().rating >= 1 && existing().rating <= 5;
+      allow list: if existing().rating >= 1 && existing().rating <= 5;
+
+      allow create: if isValidId(reviewId) &&
+        isValidMillReview(incoming()) &&
+        incoming().id == reviewId &&
+        incoming().likesCount == 0 &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+
+      // Action-Based Update Pattern: Only helpful vote (+1 / -1) or Admin override
+      allow update: if isValidId(reviewId) &&
+        isValidMillReview(incoming()) && (
+          isAdmin() ||
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'updatedAt']) &&
+            incoming().id == existing().id &&
+            incoming().millId == existing().millId &&
+            incoming().createdAt == existing().createdAt &&
+            incoming().updatedAt == request.time &&
+            (
+              incoming().likesCount == existing().likesCount + 1 ||
+              incoming().likesCount == existing().likesCount - 1
+            )
+          )
+        );
+
+      allow delete: if isValidId(reviewId) && isAdmin();
+    }
+
+    // =========================================================================
+    // 2. INSCRIPTIONS AU CONCOURS D'HUILE (Split Public + Isolated Private PII)
+    // =========================================================================
+    match /contestEntries/{entryId} {
+      allow get: if isValidId(entryId) && existing().feeDza == 1000;
+      allow list: if existing().feeDza == 1000;
+
+      allow create: if isValidId(entryId) &&
+        isValidContestPublicEntry(incoming()) &&
+        incoming().id == entryId &&
+        incoming().createdAt == request.time &&
+        existsAfter(/databases/$(database)/documents/contestRegistrationsPrivate/$(entryId));
+
+      allow update, delete: if isValidId(entryId) && isAdmin();
+    }
+
+    match /contestRegistrationsPrivate/{entryId} {
+      allow get: if isValidId(entryId) && isAdmin();
+      allow list: if isAdmin() && existing().registrationNumber >= 'ADOIO-';
+
+      allow create: if isValidId(entryId) &&
+        isValidContestPrivatePii(incoming()) &&
+        incoming().id == entryId &&
+        incoming().createdAt == request.time &&
+        existsAfter(/databases/$(database)/documents/contestEntries/$(entryId));
+
+      allow update, delete: if isValidId(entryId) && isAdmin();
+    }
+
+    // =========================================================================
+    // 3. DEMANDES D'ADHÉSION ADOIO (Split Public + Isolated Private PII)
+    // =========================================================================
+    match /adhesionMembers/{memberId} {
+      allow get: if isValidId(memberId) && existing().referenceId >= 'ADOIO-';
+      allow list: if existing().referenceId >= 'ADOIO-';
+
+      allow create: if isValidId(memberId) &&
+        isValidAdhesionPublicMember(incoming()) &&
+        incoming().id == memberId &&
+        incoming().createdAt == request.time &&
+        existsAfter(/databases/$(database)/documents/adhesionRequestsPrivate/$(memberId));
+
+      allow update, delete: if isValidId(memberId) && isAdmin();
+    }
+
+    match /adhesionRequestsPrivate/{memberId} {
+      allow get: if isValidId(memberId) && isAdmin();
+      allow list: if isAdmin() && existing().referenceId >= 'ADOIO-';
+
+      allow create: if isValidId(memberId) &&
+        isValidAdhesionPrivatePii(incoming()) &&
+        incoming().id == memberId &&
+        incoming().createdAt == request.time &&
+        existsAfter(/databases/$(database)/documents/adhesionMembers/$(memberId));
+
+      allow update, delete: if isValidId(memberId) && isAdmin();
+    }
+
+    // =========================================================================
+    // 4. PROFILS UTILISATEURS AUTHENTIFIÉS (Favoris, Statut Adhésion & Quiz)
+    // =========================================================================
+    match /userProfiles/{userId} {
+      allow get: if isValidId(userId) && isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin() && existing().uid == request.auth.uid;
+
+      allow create: if isValidId(userId) &&
+        isSignedIn() &&
+        request.auth.uid == userId &&
+        isValidUserProfile(incoming()) &&
+        incoming().uid == userId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+
+      allow update: if isValidId(userId) &&
+        isSignedIn() &&
+        request.auth.uid == userId &&
+        isValidUserProfile(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'displayName', 'photoURL', 'favoriteMillIds',
+          'adhesionReferenceId', 'adhesionProfileType', 'adhesionCommune',
+          'adhesionFarmName', 'adhesionSubmittedAt', 'quizCompletedLevels',
+          'quizBestScore1', 'quizBestScore2', 'quizBestScore3',
+          'quizLastPlayedLevel', 'updatedAt'
+        ]);
+
+      allow delete: if isValidId(userId) && isAdmin();
+    }
+  }
+}

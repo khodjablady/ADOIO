@@ -20,6 +20,10 @@ import {
   addProducerReview, 
   toggleReviewHelpful 
 } from '../data/millReviewsData';
+import { 
+  createMillReviewInFirestore, 
+  updateMillReviewHelpfulInFirestore 
+} from '../firebase';
 import { OliveMill } from '../data/bejaiaOliveData';
 
 interface MillReviewsSectionProps {
@@ -55,11 +59,12 @@ export const MillReviewsSection: React.FC<MillReviewsSectionProps> = ({
   const [recommended, setRecommended] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
-  const handleSubmitReview = (e: React.FormEvent) => {
+  const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!authorName.trim()) {
-      setFormError('Veuillez renseigner votre nom ou nom d’exploitation.');
+    if (!authorName.trim() || authorName.trim().length < 2) {
+      setFormError('Veuillez renseigner votre nom ou nom d’exploitation (au moins 2 caractères).');
       return;
     }
     if (!comment.trim() || comment.trim().length < 15) {
@@ -67,7 +72,10 @@ export const MillReviewsSection: React.FC<MillReviewsSectionProps> = ({
       return;
     }
 
-    addProducerReview({
+    setIsSubmittingReview(true);
+    setFormError(null);
+
+    const created = addProducerReview({
       millId: mill.id,
       authorName: authorName.trim(),
       authorRole,
@@ -85,8 +93,17 @@ export const MillReviewsSection: React.FC<MillReviewsSectionProps> = ({
       recommended,
     });
 
+    onReviewAdded();
+
+    try {
+      await createMillReviewInFirestore(created);
+    } catch (err) {
+      console.warn('Firestore mill review sync warning (saved locally):', err);
+    } finally {
+      setIsSubmittingReview(false);
+    }
+
     setIsSuccess(true);
-    setFormError(null);
     onReviewAdded();
 
     // Reset form after short delay
@@ -99,9 +116,14 @@ export const MillReviewsSection: React.FC<MillReviewsSectionProps> = ({
     }, 2000);
   };
 
-  const handleHelpfulClick = (reviewId: string) => {
-    toggleReviewHelpful(reviewId);
+  const handleHelpfulClick = async (reviewId: string) => {
+    const delta = toggleReviewHelpful(reviewId);
     onReviewAdded();
+    try {
+      await updateMillReviewHelpfulInFirestore(reviewId, delta);
+    } catch {
+      // Local helpful vote still preserved
+    }
   };
 
   // Filter & Sort reviews
