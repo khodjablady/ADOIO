@@ -239,7 +239,7 @@ async function startServer() {
   app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    res.setHeader('Permissions-Policy', 'geolocation=(self), microphone=()');
+    res.setHeader('Permissions-Policy', 'geolocation=(self), microphone=(self)');
 
     if (req.url.startsWith('/images/') || req.url.startsWith('/assets/')) {
       res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');

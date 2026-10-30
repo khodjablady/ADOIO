@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Bot,
   Send,
@@ -16,7 +16,58 @@ import {
   Check,
   Sprout,
   ChevronRight,
+  Mic,
+  MicOff,
 } from 'lucide-react';
+
+interface SpeechRecognitionAlternativeLike {
+  transcript: string;
+  confidence: number;
+}
+
+interface SpeechRecognitionResultLike {
+  readonly isFinal: boolean;
+  readonly length: number;
+  [index: number]: SpeechRecognitionAlternativeLike;
+}
+
+interface SpeechRecognitionResultListLike {
+  readonly length: number;
+  [index: number]: SpeechRecognitionResultLike;
+}
+
+interface SpeechRecognitionEventLike extends Event {
+  readonly resultIndex: number;
+  readonly results: SpeechRecognitionResultListLike;
+}
+
+interface SpeechRecognitionErrorEventLike extends Event {
+  readonly error: string;
+  readonly message?: string;
+}
+
+interface SpeechRecognitionInstance extends EventTarget {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  maxAlternatives: number;
+  onstart: ((this: SpeechRecognitionInstance, ev: Event) => void) | null;
+  onresult: ((this: SpeechRecognitionInstance, ev: SpeechRecognitionEventLike) => void) | null;
+  onerror: ((this: SpeechRecognitionInstance, ev: SpeechRecognitionErrorEventLike) => void) | null;
+  onend: ((this: SpeechRecognitionInstance, ev: Event) => void) | null;
+  start(): void;
+  stop(): void;
+  abort(): void;
+}
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionInstance;
+
+declare global {
+  interface Window {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  }
+}
 
 interface ChatMessage {
   id: string;
@@ -170,8 +221,168 @@ export const AdoioAssistantChatbot: React.FC = () => {
   const [isFloatingOpen, setIsFloatingOpen] = useState<boolean>(false);
   const [isFloatingExpanded, setIsFloatingExpanded] = useState<boolean>(false);
 
+  // Web Speech API (Voice Input for Field Operators)
+  const [isSpeechSupported, setIsSpeechSupported] = useState<boolean>(false);
+  const [isListening, setIsListening] = useState<boolean>(false);
+  const [interimTranscript, setInterimTranscript] = useState<string>('');
+  const [speechLang, setSpeechLang] = useState<'fr-FR' | 'ar-DZ'>('fr-FR');
+  const [autoSendVoice, setAutoSendVoice] = useState<boolean>(false);
+  const [speechNotice, setSpeechNotice] = useState<string | null>(null);
+
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const baseInputBeforeSpeechRef = useRef<string>('');
+  const latestVoiceDraftRef = useRef<string>('');
+  const autoSendVoiceRef = useRef<boolean>(autoSendVoice);
+  const sendMessageRef = useRef<(questionText: string) => Promise<void>>(async () => {});
+
   const sectionChatContainerRef = useRef<HTMLDivElement>(null);
   const floatingChatContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    autoSendVoiceRef.current = autoSendVoice;
+  }, [autoSendVoice]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      setIsSpeechSupported(Boolean(SpeechRec));
+    }
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch {
+          // Ignore abort errors on unmount
+        }
+        recognitionRef.current = null;
+      }
+    };
+  }, []);
+
+  const stopVoiceRecognition = useCallback(() => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // Ignore stop errors if already stopped
+      }
+    }
+    setIsListening(false);
+    setInterimTranscript('');
+  }, []);
+
+  const toggleVoiceRecognition = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRec) {
+      setErrorMsg(
+        "La reconnaissance vocale (Web Speech API) n'est pas prise en charge par ce navigateur. Utilisez Chrome, Edge ou Safari."
+      );
+      return;
+    }
+
+    if (isListening) {
+      stopVoiceRecognition();
+      return;
+    }
+
+    setErrorMsg(null);
+    setSpeechNotice(null);
+
+    try {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch {
+          // Ignore
+        }
+      }
+
+      const recognition = new SpeechRec();
+      recognition.lang = speechLang;
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+
+      baseInputBeforeSpeechRef.current = input.trim();
+      latestVoiceDraftRef.current = input.trim();
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        setInterimTranscript('');
+        setSpeechNotice('Microphone actif : parlez clairement près de votre appareil au verger…');
+      };
+
+      recognition.onresult = (event: SpeechRecognitionEventLike) => {
+        let finalChunk = '';
+        let interimChunk = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const result = event.results[i];
+          const transcriptPiece = result?.[0]?.transcript || '';
+          if (result.isFinal) {
+            finalChunk += transcriptPiece;
+          } else {
+            interimChunk += transcriptPiece;
+          }
+        }
+
+        if (finalChunk.trim()) {
+          const prefix = baseInputBeforeSpeechRef.current;
+          const combined = prefix ? `${prefix} ${finalChunk.trim()}` : finalChunk.trim();
+          baseInputBeforeSpeechRef.current = combined;
+          latestVoiceDraftRef.current = combined;
+          setInput(combined);
+          setInterimTranscript('');
+        } else {
+          setInterimTranscript(interimChunk.trim());
+          const prefix = baseInputBeforeSpeechRef.current;
+          latestVoiceDraftRef.current = prefix
+            ? `${prefix} ${interimChunk.trim()}`.trim()
+            : interimChunk.trim();
+        }
+      };
+
+      recognition.onerror = (event: SpeechRecognitionErrorEventLike) => {
+        setIsListening(false);
+        setInterimTranscript('');
+        setSpeechNotice(null);
+
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          setErrorMsg(
+            "Accès au microphone refusé. Veuillez autoriser le microphone dans votre navigateur pour utiliser la commande vocale au verger."
+          );
+        } else if (event.error === 'no-speech') {
+          setSpeechNotice("Aucune voix détectée. Appuyez sur le micro et posez votre question.");
+        } else if (event.error === 'audio-capture') {
+          setErrorMsg("Aucun microphone détecté sur votre appareil.");
+        } else if (event.error !== 'aborted') {
+          setErrorMsg(`Erreur de reconnaissance vocale (${event.error}). Veuillez réessayer.`);
+        }
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+        setInterimTranscript('');
+        setSpeechNotice(null);
+
+        const finalDraft = latestVoiceDraftRef.current.trim();
+        if (finalDraft) {
+          setInput(finalDraft);
+          if (autoSendVoiceRef.current) {
+            latestVoiceDraftRef.current = '';
+            void sendMessageRef.current(finalDraft);
+          }
+        }
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch {
+      setIsListening(false);
+      setErrorMsg("Impossible de démarrer le microphone. Vérifiez les permissions de votre navigateur.");
+    }
+  }, [input, isListening, speechLang, stopVoiceRecognition]);
 
   const scrollChatToBottom = () => {
     if (sectionChatContainerRef.current) {
@@ -196,6 +407,9 @@ export const AdoioAssistantChatbot: React.FC = () => {
   }, [isFloatingOpen]);
 
   const sendMessage = async (questionText: string) => {
+    if (isListening) {
+      stopVoiceRecognition();
+    }
     const trimmed = questionText.trim();
     if (!trimmed || isLoading) return;
 
@@ -334,14 +548,20 @@ export const AdoioAssistantChatbot: React.FC = () => {
     }
   };
 
+  sendMessageRef.current = sendMessage;
+
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     sendMessage(input);
   };
 
   const handleResetChat = () => {
+    if (isListening) {
+      stopVoiceRecognition();
+    }
     setMessages([INITIAL_WELCOME_MESSAGE]);
     setErrorMsg(null);
+    setSpeechNotice(null);
     setInput('');
   };
 
@@ -598,27 +818,146 @@ export const AdoioAssistantChatbot: React.FC = () => {
                 )}
               </div>
 
+              {/* Live Voice Status & Field Accessibility Bar */}
+              {(isListening || interimTranscript || speechNotice) && (
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className="px-4 py-2.5 bg-[#E8F4D9] border-t border-[#8CBE5D]/50 flex items-center justify-between gap-3 text-xs text-[#18230F]"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="relative flex h-2.5 w-2.5 shrink-0">
+                      {isListening && (
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+                      )}
+                      <span
+                        className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+                          isListening ? 'bg-red-600' : 'bg-[#567B34]'
+                        }`}
+                      />
+                    </span>
+                    <span className="truncate font-medium">
+                      {interimTranscript ? (
+                        <>
+                          <strong className="text-[#31491E]">Dictée en direct :</strong> «{' '}
+                          <em className="italic">{interimTranscript}</em> »
+                        </>
+                      ) : (
+                        speechNotice || 'Microphone en écoute...'
+                      )}
+                    </span>
+                  </div>
+                  {isListening && (
+                    <button
+                      type="button"
+                      onClick={stopVoiceRecognition}
+                      className="px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold shrink-0 cursor-pointer transition-colors"
+                    >
+                      Arrêter
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* Input Form */}
               <form
                 onSubmit={handleFormSubmit}
-                className="p-4 bg-white border-t border-[#E6DEC9] flex items-center gap-2.5"
+                className="p-4 bg-white border-t border-[#E6DEC9] space-y-2.5"
               >
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Posez votre question (ex: Quand tailler la variété Chemlal à Seddouk ? Comment traiter l'œil de paon ?)"
-                  disabled={isLoading}
-                  className="flex-1 px-4 py-3 rounded-xl bg-[#FAF7F2] border border-[#E6DEC9] text-xs sm:text-sm text-[#18230F] placeholder:text-[#4A5543]/70 focus:outline-none focus:border-[#567B34]"
-                />
-                <button
-                  type="submit"
-                  disabled={isLoading || !input.trim()}
-                  className="px-4 py-3 rounded-xl bg-[#31491E] hover:bg-[#233416] disabled:opacity-50 text-[#FAF7F2] text-xs sm:text-sm font-bold flex items-center gap-2 transition-colors cursor-pointer shrink-0 shadow-xs"
-                >
-                  <Send className="w-4 h-4 text-[#E6AB3C]" />
-                  <span className="hidden sm:inline">Envoyer</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={
+                      isListening && interimTranscript
+                        ? `${input}${input ? ' ' : ''}${interimTranscript}`
+                        : input
+                    }
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder={
+                      isListening
+                        ? 'Parlez maintenant au microphone (ex: Comment traiter la mouche de l’olive en bio ?)...'
+                        : "Posez votre question ou utilisez le micro (ex: Quand tailler la variété Chemlal à Seddouk ?)"
+                    }
+                    disabled={isLoading}
+                    aria-label="Votre question agronomique"
+                    className={`flex-1 px-4 py-3 rounded-xl bg-[#FAF7F2] border text-xs sm:text-sm text-[#18230F] placeholder:text-[#4A5543]/70 focus:outline-none transition-colors ${
+                      isListening
+                        ? 'border-red-500 ring-2 ring-red-500/20'
+                        : 'border-[#E6DEC9] focus:border-[#567B34]'
+                    }`}
+                  />
+                  <button
+                    id="assistant-voice-mic-btn"
+                    type="button"
+                    onClick={toggleVoiceRecognition}
+                    disabled={isLoading}
+                    aria-pressed={isListening}
+                    aria-label={
+                      isListening
+                        ? 'Arrêter la dictée vocale'
+                        : 'Poser une question vocale avec le microphone'
+                    }
+                    title={
+                      !isSpeechSupported
+                        ? 'Reconnaissance vocale non disponible sur ce navigateur'
+                        : isListening
+                        ? 'Arrêter l’écoute vocale'
+                        : 'Activer la commande vocale (Mains-libres au verger)'
+                    }
+                    className={`px-3.5 py-3 rounded-xl border text-xs sm:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
+                      isListening
+                        ? 'bg-red-600 hover:bg-red-700 text-white border-red-600 shadow-sm animate-pulse'
+                        : 'bg-[#F4EEE1] hover:bg-[#E8F4D9] text-[#233416] border-[#E6DEC9] hover:border-[#8CBE5D]'
+                    } disabled:opacity-50`}
+                  >
+                    {isListening ? (
+                      <MicOff className="w-4 h-4 text-white" />
+                    ) : (
+                      <Mic className="w-4 h-4 text-[#31491E]" />
+                    )}
+                    <span className="hidden md:inline">
+                      {isListening ? 'Écoute...' : 'Micro'}
+                    </span>
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isLoading || (!input.trim() && !interimTranscript.trim())}
+                    className="px-4 py-3 rounded-xl bg-[#31491E] hover:bg-[#233416] disabled:opacity-50 text-[#FAF7F2] text-xs sm:text-sm font-bold flex items-center gap-2 transition-colors cursor-pointer shrink-0 shadow-xs"
+                  >
+                    <Send className="w-4 h-4 text-[#E6AB3C]" />
+                    <span className="hidden sm:inline">Envoyer</span>
+                  </button>
+                </div>
+
+                {/* Hands-free field operator options bar */}
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#4A5543] pt-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-[#233416] flex items-center gap-1">
+                      <Mic className="w-3 h-3 text-[#567B34]" />
+                      Mode Terrain (Web Speech) :
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSpeechLang((prev) => (prev === 'fr-FR' ? 'ar-DZ' : 'fr-FR'))
+                      }
+                      className="px-2 py-0.5 rounded bg-[#FAF7F2] hover:bg-[#E8F4D9] border border-[#E6DEC9] font-semibold text-[#233416] cursor-pointer transition-colors"
+                      title="Changer la langue de reconnaissance vocale"
+                    >
+                      Langue : {speechLang === 'fr-FR' ? 'Français (FR)' : 'Algérie (AR-DZ)'}
+                    </button>
+                  </div>
+
+                  <label className="inline-flex items-center gap-1.5 cursor-pointer select-none font-medium text-[#31491E]">
+                    <input
+                      type="checkbox"
+                      checked={autoSendVoice}
+                      onChange={(e) => setAutoSendVoice(e.target.checked)}
+                      className="rounded border-[#8CBE5D] text-[#31491E] focus:ring-[#567B34]"
+                    />
+                    <span>Envoi automatique après dictée (mains-libres au verger)</span>
+                  </label>
+                </div>
               </form>
             </div>
           </div>
@@ -752,22 +1091,74 @@ export const AdoioAssistantChatbot: React.FC = () => {
               )}
             </div>
 
+            {/* Floating Voice Status Banner */}
+            {(isListening || interimTranscript) && (
+              <div className="px-3 py-1.5 bg-[#E8F4D9] border-t border-[#8CBE5D]/50 flex items-center justify-between gap-2 text-[11px] text-[#18230F]">
+                <span className="truncate">
+                  🎤 {interimTranscript ? `« ${interimTranscript} »` : 'Parlez maintenant...'}
+                </span>
+                <button
+                  type="button"
+                  onClick={stopVoiceRecognition}
+                  className="text-red-700 font-bold hover:underline shrink-0 cursor-pointer"
+                >
+                  Stop
+                </button>
+              </div>
+            )}
+
             {/* Floating Input */}
             <form
               onSubmit={handleFormSubmit}
-              className="p-2.5 bg-white border-t border-[#E6DEC9] flex items-center gap-2"
+              className="p-2.5 bg-white border-t border-[#E6DEC9] flex items-center gap-1.5"
             >
               <input
                 type="text"
-                value={input}
+                value={
+                  isListening && interimTranscript
+                    ? `${input}${input ? ' ' : ''}${interimTranscript}`
+                    : input
+                }
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Votre question (taille, maladies, calendrier)..."
+                placeholder={
+                  isListening
+                    ? 'Écoute vocale en cours...'
+                    : 'Votre question (taille, maladies, calendrier)...'
+                }
                 disabled={isLoading}
-                className="flex-1 px-3 py-2 rounded-xl bg-[#FAF7F2] border border-[#E6DEC9] text-xs text-[#18230F] focus:outline-none focus:border-[#567B34]"
+                className={`flex-1 px-3 py-2 rounded-xl bg-[#FAF7F2] border text-xs text-[#18230F] focus:outline-none ${
+                  isListening
+                    ? 'border-red-500'
+                    : 'border-[#E6DEC9] focus:border-[#567B34]'
+                }`}
               />
               <button
+                id="floating-assistant-voice-mic-btn"
+                type="button"
+                onClick={toggleVoiceRecognition}
+                disabled={isLoading}
+                aria-pressed={isListening}
+                aria-label={
+                  isListening
+                    ? 'Arrêter la dictée vocale'
+                    : 'Poser une question vocale avec le microphone'
+                }
+                title={isListening ? 'Arrêter la dictée vocale' : 'Poser une question par la voix'}
+                className={`p-2 rounded-xl border transition-colors cursor-pointer ${
+                  isListening
+                    ? 'bg-red-600 text-white border-red-600 animate-pulse'
+                    : 'bg-[#F4EEE1] hover:bg-[#E8F4D9] text-[#233416] border-[#E6DEC9]'
+                } disabled:opacity-50`}
+              >
+                {isListening ? (
+                  <MicOff className="w-4 h-4 text-white" />
+                ) : (
+                  <Mic className="w-4 h-4 text-[#31491E]" />
+                )}
+              </button>
+              <button
                 type="submit"
-                disabled={isLoading || !input.trim()}
+                disabled={isLoading || (!input.trim() && !interimTranscript.trim())}
                 className="p-2 rounded-xl bg-[#31491E] hover:bg-[#233416] disabled:opacity-50 text-[#FAF7F2] cursor-pointer"
                 aria-label="Envoyer"
               >

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AGRICULTURAL_CALENDAR } from '../data/bejaiaOliveData';
 import { 
   Calendar, 
@@ -10,15 +10,203 @@ import {
   Leaf, 
   Clock, 
   Download,
-  ArrowRight 
+  ArrowRight,
+  Bell,
+  BellRing,
+  BellOff,
+  Sliders
 } from 'lucide-react';
 import { BejaiaHarvestWeatherWidget } from './BejaiaHarvestWeatherWidget';
 import { WeatherAlertCenter } from './WeatherAlertCenter';
 import { ArticleAudioReader } from './ArticleAudioReader';
+import { VARIETY_HARVEST_PROFILES } from './OptimalHarvestAlertSystem';
+
+interface SimulatorHarvestSnapshot {
+  varietyId: string;
+  varietyName: string;
+  harvestPeriod: 'early' | 'mid' | 'late';
+  optimalWindowLabel: string;
+  optimalMonths: string;
+  ripenessWindow: string;
+  maturityIndex: number;
+  yieldPerQuintal: number;
+  estimatedOilLiters: number;
+  estimatedAcidity: number;
+  qualityGrade: string;
+  isApproachingOrOptimal: boolean;
+  updatedAt: string;
+}
+
+const SIMULATOR_SNAPSHOT_KEY = 'adoio_simulator_harvest_snapshot';
+const LOCAL_NOTIF_TOGGLE_KEY = 'adoio_calendar_harvest_notif_enabled';
+
+const DEFAULT_SNAPSHOT: SimulatorHarvestSnapshot = {
+  varietyId: 'chemlal',
+  varietyName: 'Chemlal de Kabylie',
+  harvestPeriod: 'mid',
+  optimalWindowLabel: VARIETY_HARVEST_PROFILES.chemlal.optimalPeriodLabel,
+  optimalMonths: VARIETY_HARVEST_PROFILES.chemlal.optimalMonths,
+  ripenessWindow: VARIETY_HARVEST_PROFILES.chemlal.ripenessWindow,
+  maturityIndex: 3.1,
+  yieldPerQuintal: 18.4,
+  estimatedOilLiters: 92,
+  estimatedAcidity: 0.3,
+  qualityGrade: "Huile d'Olive Vierge Extra (HOVE)",
+  isApproachingOrOptimal: true,
+  updatedAt: new Date().toISOString(),
+};
+
+function loadSimulatorSnapshot(): SimulatorHarvestSnapshot {
+  try {
+    const raw = localStorage.getItem(SIMULATOR_SNAPSHOT_KEY);
+    if (!raw) return DEFAULT_SNAPSHOT;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return DEFAULT_SNAPSHOT;
+    return { ...DEFAULT_SNAPSHOT, ...parsed };
+  } catch {
+    return DEFAULT_SNAPSHOT;
+  }
+}
 
 export const CalendarAndPractices: React.FC = () => {
   const [selectedSeasonIdx, setSelectedSeasonIdx] = useState<number>(0);
   const currentSeason = AGRICULTURAL_CALENDAR[selectedSeasonIdx];
+
+  const [simulatorData, setSimulatorData] = useState<SimulatorHarvestSnapshot>(() =>
+    loadSimulatorSnapshot()
+  );
+
+  const [isHarvestNotifEnabled, setIsHarvestNotifEnabled] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(LOCAL_NOTIF_TOGGLE_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const [notificationPermission, setNotificationPermission] = useState<
+    NotificationPermission | 'unsupported'
+  >(() => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      return 'unsupported';
+    }
+    return Notification.permission;
+  });
+
+  const [localAlertBanner, setLocalAlertBanner] = useState<{
+    title: string;
+    body: string;
+    timestamp: string;
+    viaBrowserApi: boolean;
+  } | null>(null);
+
+  const dispatchHarvestWindowNotification = useCallback(
+    async (snapshot: SimulatorHarvestSnapshot) => {
+      const periodStatus =
+        snapshot.harvestPeriod === 'early'
+          ? 'Fenêtre de récolte optimale en approche (pré-véraison)'
+          : snapshot.harvestPeriod === 'mid'
+          ? 'Fenêtre de récolte optimale ouverte (véraison idéale)'
+          : 'Attention : maturité avancée dépassant la fenêtre optimale';
+
+      const title = `🫒 Alerte Récolte ADOIO : ${snapshot.varietyName}`;
+      const body = `${periodStatus} — Période cible : ${snapshot.optimalWindowLabel} (${snapshot.ripenessWindow}, IM ${snapshot.maturityIndex.toFixed(
+        1
+      )}). Rendement simulé : ${snapshot.yieldPerQuintal.toFixed(1)} L/qx (${snapshot.estimatedOilLiters} L).`;
+
+      let deliveredViaBrowser = false;
+
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        try {
+          let perm = Notification.permission;
+          if (perm === 'default') {
+            perm = await Notification.requestPermission();
+          }
+          setNotificationPermission(perm);
+
+          if (perm === 'granted') {
+            try {
+              new Notification(title, {
+                body,
+                icon: '/pwa-192x192.png',
+                tag: 'adoio-calendar-optimal-harvest-window',
+              });
+              deliveredViaBrowser = true;
+            } catch {
+              if ('serviceWorker' in navigator) {
+                const reg = await navigator.serviceWorker.getRegistration();
+                if (reg && 'showNotification' in reg) {
+                  await reg.showNotification(title, {
+                    body,
+                    icon: '/pwa-192x192.png',
+                    tag: 'adoio-calendar-optimal-harvest-window',
+                  });
+                  deliveredViaBrowser = true;
+                }
+              }
+            }
+          }
+        } catch {
+          // Fallback to inline banner below
+        }
+      }
+
+      setLocalAlertBanner({
+        title,
+        body,
+        timestamp: new Date().toLocaleTimeString('fr-FR', {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        viaBrowserApi: deliveredViaBrowser,
+      });
+    },
+    []
+  );
+
+  // Listen for simulator updates (same tab custom event + cross-tab storage event)
+  useEffect(() => {
+    const handleSimulatorUpdate = (event: Event) => {
+      const customEvt = event as CustomEvent<SimulatorHarvestSnapshot>;
+      const nextData = customEvt.detail || loadSimulatorSnapshot();
+      setSimulatorData(nextData);
+      if (isHarvestNotifEnabled && nextData.isApproachingOrOptimal) {
+        dispatchHarvestWindowNotification(nextData);
+      }
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === SIMULATOR_SNAPSHOT_KEY) {
+        const nextData = loadSimulatorSnapshot();
+        setSimulatorData(nextData);
+      } else if (event.key === LOCAL_NOTIF_TOGGLE_KEY) {
+        setIsHarvestNotifEnabled(event.newValue === 'true');
+      }
+    };
+
+    window.addEventListener('adoio-simulator-updated', handleSimulatorUpdate);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('adoio-simulator-updated', handleSimulatorUpdate);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [isHarvestNotifEnabled, dispatchHarvestWindowNotification]);
+
+  const handleToggleHarvestNotification = async () => {
+    const nextEnabled = !isHarvestNotifEnabled;
+    setIsHarvestNotifEnabled(nextEnabled);
+    try {
+      localStorage.setItem(LOCAL_NOTIF_TOGGLE_KEY, String(nextEnabled));
+    } catch {
+      // Ignore storage errors
+    }
+
+    if (nextEnabled) {
+      await dispatchHarvestWindowNotification(simulatorData);
+    } else {
+      setLocalAlertBanner(null);
+    }
+  };
 
   const handlePrintSummary = () => {
     window.print();
@@ -28,7 +216,7 @@ export const CalendarAndPractices: React.FC = () => {
     <section id="pratiques" className="py-16 sm:py-24 bg-[#F4EEE1] border-b border-[#E6DEC9]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-12">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-10">
           <div>
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#567B34] mb-2">
               <BookOpen className="w-4 h-4 text-[#E6AB3C]" />
@@ -62,6 +250,135 @@ export const CalendarAndPractices: React.FC = () => {
               <span>Imprimer le Guide Synthétique</span>
             </button>
           </div>
+        </div>
+
+        {/* Simple Local Notification Toggle (Synced with YieldSimulator Data) */}
+        <div
+          id="calendar-harvest-notification-toggle"
+          className="mb-8 bg-white rounded-3xl border-2 border-[#D5C7A3] p-5 sm:p-6 shadow-xs transition-all"
+        >
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div
+                className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${
+                  isHarvestNotifEnabled
+                    ? 'bg-[#233416] text-[#E6AB3C]'
+                    : 'bg-[#FAF7F2] text-[#567B34] border border-[#E6DEC9]'
+                }`}
+              >
+                {isHarvestNotifEnabled ? (
+                  <BellRing className="w-5 h-5" />
+                ) : (
+                  <Bell className="w-5 h-5" />
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#567B34]">
+                    Alerte Locale Navigateur (Notification API)
+                  </span>
+                  <span
+                    className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+                      simulatorData.isApproachingOrOptimal
+                        ? 'bg-[#E8F4D9] text-[#233416] border-[#8CBE5D]'
+                        : 'bg-[#FEF5DB] text-[#8C5E0A] border-[#E6AB3C]'
+                    }`}
+                  >
+                    {simulatorData.harvestPeriod === 'early'
+                      ? 'Fenêtre en approche (Novembre)'
+                      : simulatorData.harvestPeriod === 'mid'
+                      ? 'Fenêtre optimale active (Décembre)'
+                      : 'Fin de fenêtre optimale (Tardif)'}
+                  </span>
+                </div>
+
+                <h3 className="font-serif text-lg sm:text-xl font-bold text-[#18230F]">
+                  Rappel d'Approche de la Fenêtre Optimale de Récolte
+                </h3>
+
+                <p className="text-xs text-[#436229] leading-relaxed">
+                  Synchronisé avec vos paramètres du{' '}
+                  <a href="#simulateur" className="font-bold text-[#233416] underline hover:text-[#567B34]">
+                    Simulateur de Rendement
+                  </a>{' '}
+                  : variété <strong>{simulatorData.varietyName}</strong> · période idéale{' '}
+                  <strong>{simulatorData.optimalWindowLabel}</strong> ({simulatorData.ripenessWindow}, IM{' '}
+                  <strong>{simulatorData.maturityIndex.toFixed(1)}</strong> ·{' '}
+                  <strong>{simulatorData.yieldPerQuintal.toFixed(1)} L/qx</strong>).
+                </p>
+              </div>
+            </div>
+
+            {/* Toggle Switch + Test Action */}
+            <div className="flex flex-wrap items-center gap-3 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-[#E6DEC9]">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isHarvestNotifEnabled}
+                aria-label="Activer l'alerte locale de fenêtre optimale de récolte"
+                onClick={handleToggleHarvestNotification}
+                className={`group inline-flex items-center gap-3 px-4 py-2.5 rounded-2xl border text-xs font-bold transition-all cursor-pointer ${
+                  isHarvestNotifEnabled
+                    ? 'bg-[#233416] text-[#FAF7F2] border-[#233416] shadow-xs'
+                    : 'bg-[#FAF7F2] text-[#18230F] border-[#D5C7A3] hover:border-[#31491E]'
+                }`}
+              >
+                <span
+                  className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${
+                    isHarvestNotifEnabled ? 'bg-[#8CBE5D]' : 'bg-[#D5C7A3]'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                      isHarvestNotifEnabled ? 'translate-x-4' : 'translate-x-1'
+                    }`}
+                  />
+                </span>
+                <span>
+                  {isHarvestNotifEnabled
+                    ? 'Alerte Récolte Activée'
+                    : 'Activer l’Alerte Récolte'}
+                </span>
+              </button>
+
+              {isHarvestNotifEnabled && (
+                <button
+                  type="button"
+                  onClick={() => dispatchHarvestWindowNotification(simulatorData)}
+                  className="px-3.5 py-2.5 rounded-2xl bg-[#E8F4D9] hover:bg-[#31491E] text-[#233416] hover:text-white border border-[#8CBE5D] text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Tester la notification
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Permission / Live Alert Feedback Banner */}
+          {localAlertBanner && isHarvestNotifEnabled && (
+            <div
+              role="status"
+              aria-live="polite"
+              className="mt-4 p-3.5 rounded-2xl bg-[#F4F9EC] border border-[#8CBE5D] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[#18230F]"
+            >
+              <div className="flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-[#567B34] shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold block">
+                    {localAlertBanner.title} ({localAlertBanner.timestamp})
+                  </span>
+                  <span className="text-[#31491E]">{localAlertBanner.body}</span>
+                </div>
+              </div>
+              <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg bg-white border border-[#8CBE5D]/50 text-[#233416] shrink-0 self-start sm:self-center">
+                {localAlertBanner.viaBrowserApi
+                  ? 'Notification navigateur envoyée'
+                  : notificationPermission === 'denied'
+                  ? 'Relais local actif (notifications navigateur bloquées)'
+                  : 'Alerte locale active'}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Real-time Agricultural Weather Widget for Harvest Planning */}

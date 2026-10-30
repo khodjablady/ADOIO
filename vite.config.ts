@@ -306,11 +306,15 @@ export default defineConfig(() => {
     },
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': path.resolve(import.meta.dirname, '.'),
       },
     },
     server: {
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
+    },
+    test: {
+      include: ['src/tests/**/*.test.ts'],
+      exclude: ['tests/**', 'node_modules/**', 'dist/**', 'firestore.rules.test.ts'],
     },
   };
 });

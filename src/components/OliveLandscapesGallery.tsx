@@ -29,6 +29,13 @@ import {
   Eye,
   Move
 } from 'lucide-react';
+import {
+  buildResponsiveImageAttrs,
+  compressImageToResponsiveSet,
+  resolveGalleryImagePath,
+  type ResponsiveCustomImageBundle,
+} from '../utils/responsiveImage';
+import { shareFinding } from '../utils/webShare';
 
 export interface LandscapeItem {
   id: string;
@@ -418,22 +425,11 @@ function detectInitialLowBandwidth(): boolean {
   }
 }
 
-function getWebpSources(jpgPath: string): { smWebp: string; lgWebp: string } | null {
-  if (!jpgPath || jpgPath.startsWith('data:') || !/\.jpe?g$/i.test(jpgPath)) {
-    return null;
-  }
-  const base = jpgPath.replace(/\.jpe?g$/i, '');
-  return {
-    smWebp: `${base}-sm.webp`,
-    lgWebp: `${base}.webp`,
-  };
-}
-
 interface LandscapePhotoProps {
   item: LandscapeItem;
   className?: string;
   isLarge?: boolean;
-  customSrc?: string;
+  customSrc?: string | ResponsiveCustomImageBundle;
   lowBandwidthMode?: boolean;
 }
 
@@ -450,15 +446,11 @@ const LandscapePhoto: React.FC<LandscapePhotoProps> = ({
   const [manualLoadRequested, setManualLoadRequested] = useState(false);
   const cardMediaRef = useRef<HTMLDivElement | null>(null);
 
-  const resolveImagePath = (fileName: string, custom?: string) => {
-    if (custom) return custom;
-    return fileName.startsWith('/') ? fileName : `/images/paysages/${fileName}`;
-  };
-  const primaryPath = resolveImagePath(item.imageFileName, customSrc);
+  const primaryPath = resolveGalleryImagePath(item.imageFileName, customSrc);
   const [currentPath, setCurrentPath] = useState(primaryPath);
 
   useEffect(() => {
-    setCurrentPath(resolveImagePath(item.imageFileName, customSrc));
+    setCurrentPath(resolveGalleryImagePath(item.imageFileName, customSrc));
     setHasError(false);
     setIsLoaded(false);
   }, [item.imageFileName, customSrc]);
@@ -499,7 +491,11 @@ const LandscapePhoto: React.FC<LandscapePhotoProps> = ({
 
   const shouldDeferForEcoMode = lowBandwidthMode && !manualLoadRequested && !customSrc;
   const shouldMountImage = isInView && !shouldDeferForEcoMode;
-  const webpSources = !customSrc ? getWebpSources(currentPath) : null;
+  const responsiveAttrs = buildResponsiveImageAttrs(currentPath, {
+    variant: isLarge ? 'featured' : 'card',
+    lowBandwidthMode,
+    customImage: customSrc,
+  });
 
   if (hasError && !customSrc) {
     return (
@@ -531,7 +527,7 @@ const LandscapePhoto: React.FC<LandscapePhotoProps> = ({
                 title="Charger la photographie compressée WebP"
               >
                 <Download className="w-3.5 h-3.5 text-[#31491E]" />
-                <span>Charger la photo WebP (~25 Ko)</span>
+                <span>Charger la photo WebP (~{responsiveAttrs.estimatedMobileKb} Ko)</span>
               </button>
             </div>
           ) : (
@@ -545,28 +541,20 @@ const LandscapePhoto: React.FC<LandscapePhotoProps> = ({
 
       {shouldMountImage && (
         <picture>
-          {webpSources && (
+          {responsiveAttrs.webpSrcSet && (
             <source
               type="image/webp"
-              srcSet={
-                lowBandwidthMode
-                  ? `${webpSources.smWebp} 480w`
-                  : `${webpSources.smWebp} 480w, ${webpSources.lgWebp} 960w`
-              }
-              sizes={
-                lowBandwidthMode
-                  ? '480px'
-                  : isLarge
-                    ? '(max-width: 1024px) 100vw, 66vw'
-                    : '(max-width: 640px) 480px, (max-width: 1024px) 50vw, 33vw'
-              }
+              srcSet={responsiveAttrs.webpSrcSet}
+              sizes={responsiveAttrs.sizes}
             />
           )}
           <img
-            src={currentPath}
+            src={responsiveAttrs.src}
+            srcSet={responsiveAttrs.imgSrcSet}
+            sizes={responsiveAttrs.sizes}
             alt={item.imageAlt}
-            width={960}
-            height={604}
+            width={responsiveAttrs.width}
+            height={responsiveAttrs.height}
             decoding="async"
             fetchPriority="low"
             className={`w-full h-full object-cover transition-transform duration-700 ${
@@ -586,8 +574,8 @@ const LandscapePhoto: React.FC<LandscapePhotoProps> = ({
 interface LandscapeLightboxViewerProps {
   item: LandscapeItem;
   landscapes: LandscapeItem[];
-  customSrc?: string;
-  customImages: Record<string, string>;
+  customSrc?: string | ResponsiveCustomImageBundle;
+  customImages: Record<string, string | ResponsiveCustomImageBundle>;
   onClose: () => void;
   onNext: () => void;
   onPrev: () => void;
@@ -619,18 +607,14 @@ const LandscapeLightboxViewer: React.FC<LandscapeLightboxViewerProps> = ({
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
   const [hasError, setHasError] = useState<boolean>(false);
 
-  const resolveImagePath = (fileName: string, custom?: string) => {
-    if (custom) return custom;
-    return fileName.startsWith('/') ? fileName : `/images/paysages/${fileName}`;
-  };
-  const primaryPath = resolveImagePath(item.imageFileName, customSrc);
+  const primaryPath = resolveGalleryImagePath(item.imageFileName, customSrc);
   const [currentPath, setCurrentPath] = useState<string>(primaryPath);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const touchStartRef = useRef<{ x: number; y: number; dist?: number }>({ x: 0, y: 0 });
 
   useEffect(() => {
-    setCurrentPath(resolveImagePath(item.imageFileName, customSrc));
+    setCurrentPath(resolveGalleryImagePath(item.imageFileName, customSrc));
     setHasError(false);
     setIsLoaded(false);
     setZoom(1);
@@ -645,6 +629,11 @@ const LandscapeLightboxViewer: React.FC<LandscapeLightboxViewerProps> = ({
       setHasError(true);
     }
   };
+
+  const lightboxResponsiveAttrs = buildResponsiveImageAttrs(currentPath, {
+    variant: 'lightbox',
+    customImage: customSrc,
+  });
 
   const resetZoom = () => {
     setZoom(1);
@@ -932,21 +921,34 @@ const LandscapeLightboxViewer: React.FC<LandscapeLightboxViewerProps> = ({
             <LandscapeArtwork type={item.svgType} title={item.title} />
           </div>
         ) : (
-          <img
-            src={currentPath}
-            alt={item.imageAlt}
-            draggable={false}
-            style={{
-              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-              transformOrigin: 'center center',
-              transition: isDragging ? 'none' : 'transform 0.15s ease-out',
-            }}
-            className={`max-w-full max-h-[72vh] md:max-h-[78vh] w-auto h-auto object-contain select-none transition-opacity duration-300 drop-shadow-2xl ${
-              isLoaded ? 'opacity-100' : 'opacity-0'
-            }`}
-            onLoad={() => setIsLoaded(true)}
-            onError={handleImageError}
-          />
+          <picture className="contents">
+            {lightboxResponsiveAttrs.webpSrcSet && (
+              <source
+                type="image/webp"
+                srcSet={lightboxResponsiveAttrs.webpSrcSet}
+                sizes={lightboxResponsiveAttrs.sizes}
+              />
+            )}
+            <img
+              src={lightboxResponsiveAttrs.src}
+              srcSet={lightboxResponsiveAttrs.imgSrcSet}
+              sizes={lightboxResponsiveAttrs.sizes}
+              width={lightboxResponsiveAttrs.width}
+              height={lightboxResponsiveAttrs.height}
+              alt={item.imageAlt}
+              draggable={false}
+              style={{
+                transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                transformOrigin: 'center center',
+                transition: isDragging ? 'none' : 'transform 0.15s ease-out',
+              }}
+              className={`max-w-full max-h-[72vh] md:max-h-[78vh] w-auto h-auto object-contain select-none transition-opacity duration-300 drop-shadow-2xl ${
+                isLoaded ? 'opacity-100' : 'opacity-0'
+              }`}
+              onLoad={() => setIsLoaded(true)}
+              onError={handleImageError}
+            />
+          </picture>
         )}
 
         {/* Left / Right Navigation Chevrons */}
@@ -998,7 +1000,10 @@ const LandscapeLightboxViewer: React.FC<LandscapeLightboxViewerProps> = ({
           <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto py-1 scrollbar-none flex-1 justify-center sm:justify-start">
             {landscapes.map((l, idx) => {
               const isActive = l.id === item.id;
-              const thumbSrc = customImages[l.id] || (l.imageFileName.startsWith('/') ? l.imageFileName : `/images/paysages/${l.imageFileName}`);
+              const thumbAttrs = buildResponsiveImageAttrs(l.imageFileName, {
+                variant: 'thumbnail',
+                customImage: customImages[l.id],
+              });
               return (
                 <button
                   key={l.id}
@@ -1012,10 +1017,12 @@ const LandscapeLightboxViewer: React.FC<LandscapeLightboxViewerProps> = ({
                 >
                   <div className="w-10 h-7 rounded-md overflow-hidden bg-black/40 shrink-0">
                     <img
-                      src={thumbSrc}
+                      src={thumbAttrs.src}
+                      srcSet={thumbAttrs.imgSrcSet}
+                      sizes={thumbAttrs.sizes}
                       alt={l.imageAlt}
-                      width={80}
-                      height={56}
+                      width={thumbAttrs.width}
+                      height={thumbAttrs.height}
                       loading="lazy"
                       decoding="async"
                       className="w-full h-full object-cover"
@@ -1159,7 +1166,7 @@ export const OliveLandscapesGallery: React.FC = () => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [lowBandwidthMode, setLowBandwidthMode] = useState<boolean>(() => detectInitialLowBandwidth());
 
-  const [customImages, setCustomImages] = useState<Record<string, string>>(() => {
+  const [customImages, setCustomImages] = useState<Record<string, string | ResponsiveCustomImageBundle>>(() => {
     try {
       const saved = localStorage.getItem('adoio_custom_landscape_photos');
       return saved ? JSON.parse(saved) : {};
@@ -1168,23 +1175,27 @@ export const OliveLandscapesGallery: React.FC = () => {
     }
   });
 
-  const handleCustomImageUpload = (landscapeId: string, file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      if (dataUrl) {
-        setCustomImages(prev => {
-          const next = { ...prev, [landscapeId]: dataUrl };
+  const handleCustomImageUpload = async (landscapeId: string, file: File) => {
+    try {
+      const compressedBundle = await compressImageToResponsiveSet(file);
+      setCustomImages((prev) => {
+        const next = { ...prev, [landscapeId]: compressedBundle };
+        try {
+          localStorage.setItem('adoio_custom_landscape_photos', JSON.stringify(next));
+        } catch {
+          // storage quota fallback: store mobile-only compressed variant if quota is tight
           try {
-            localStorage.setItem('adoio_custom_landscape_photos', JSON.stringify(next));
+            const compactNext = { ...prev, [landscapeId]: compressedBundle.sm || compressedBundle.src };
+            localStorage.setItem('adoio_custom_landscape_photos', JSON.stringify(compactNext));
           } catch {
-            // storage quota fallback
+            // ignore storage errors
           }
-          return next;
-        });
-      }
-    };
-    reader.readAsDataURL(file);
+        }
+        return next;
+      });
+    } catch {
+      // ignore invalid file upload
+    }
   };
 
   const filteredLandscapes = LANDSCAPES_DATA.filter(
@@ -1205,11 +1216,35 @@ export const OliveLandscapesGallery: React.FC = () => {
     setActiveLandscape(filteredLandscapes[prevIndex]);
   };
 
-  const handleShare = (landscape: LandscapeItem) => {
+  const handleShare = async (landscape: LandscapeItem) => {
     const url = `${window.location.origin}${window.location.pathname}#galerie-${landscape.id}`;
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(url);
+    const outcome = await shareFinding({
+      title: `${landscape.title} — Paysages Oléicoles de Béjaïa`,
+      text: `${landscape.location} (${landscape.altitude} · Cépage ${landscape.dominantVariety}) — ${landscape.description}`,
+      url,
+    });
+    if (outcome === 'shared' || outcome === 'copied') {
       setCopiedId(landscape.id);
+      setTimeout(() => setCopiedId(null), 2500);
+    }
+  };
+
+  const handleShareGallery = async () => {
+    const categoryLabelMap: Record<typeof selectedCategory, string> = {
+      all: 'Tous les terroirs oléicoles de Béjaïa (57 400 ha)',
+      soummam: 'Vallée de la Soummam',
+      terrasses: 'Terrasses de Montagne',
+      centenaires: 'Arbres Centenaires',
+      recolte: 'Récolte & Traditions',
+    };
+    const url = `${window.location.origin}${window.location.pathname}#galerie-paysages`;
+    const outcome = await shareFinding({
+      title: `Galerie des Paysages Oléicoles de Béjaïa — ADOIO`,
+      text: `Découvrez ${filteredLandscapes.length} paysages oléicoles de Kabylie (${categoryLabelMap[selectedCategory]}) sur le portail ADOIO Béjaïa.`,
+      url,
+    });
+    if (outcome === 'shared' || outcome === 'copied') {
+      setCopiedId('gallery-section');
       setTimeout(() => setCopiedId(null), 2500);
     }
   };
@@ -1235,13 +1270,35 @@ export const OliveLandscapesGallery: React.FC = () => {
             </p>
           </div>
 
-          {/* Quick Counter */}
-          <div className="bg-white px-4 py-2.5 rounded-2xl border border-[#E6DEC9] shadow-xs flex items-center gap-3 shrink-0">
-            <Mountain className="w-5 h-5 text-[#E6AB3C]" />
-            <div className="text-xs">
-              <span className="font-bold text-[#18230F] block">57 400 Hectares</span>
-              <span className="text-[#567B34]">Verger oléicole préservé</span>
+          {/* Quick Counter & Gallery Share Button */}
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <div className="bg-white px-4 py-2.5 rounded-2xl border border-[#E6DEC9] shadow-xs flex items-center gap-3">
+              <Mountain className="w-5 h-5 text-[#E6AB3C]" />
+              <div className="text-xs">
+                <span className="font-bold text-[#18230F] block">57 400 Hectares</span>
+                <span className="text-[#567B34]">Verger oléicole préservé</span>
+              </div>
             </div>
+
+            <button
+              type="button"
+              onClick={handleShareGallery}
+              aria-label="Partager la galerie des paysages oléicoles"
+              title="Partager cette sélection de paysages oléicoles via le menu de partage ou copier le lien"
+              className="px-4 py-2.5 rounded-2xl bg-white hover:bg-[#E8F4D9] text-[#233416] border border-[#E6DEC9] hover:border-[#8CBE5D] shadow-xs text-xs font-bold flex items-center gap-2 transition-all cursor-pointer active:scale-95"
+            >
+              {copiedId === 'gallery-section' ? (
+                <>
+                  <Check className="w-4 h-4 text-[#567B34]" aria-hidden="true" />
+                  <span>Galerie partagée !</span>
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-4 h-4 text-[#31491E]" aria-hidden="true" />
+                  <span>Partager la galerie</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
 
@@ -1429,14 +1486,22 @@ export const OliveLandscapesGallery: React.FC = () => {
                     </button>
 
                     <button
+                      type="button"
                       onClick={() => handleShare(landscape)}
-                      className="p-2 rounded-lg bg-[#FAF7F2] hover:bg-[#E8F4D9] text-[#31491E] border border-[#E6DEC9] transition-colors cursor-pointer"
-                      title="Copier le lien direct vers ce paysage"
+                      aria-label={`Partager ${landscape.title}`}
+                      className="px-3 py-1.5 rounded-xl bg-[#FAF7F2] hover:bg-[#E8F4D9] text-[#31491E] border border-[#E6DEC9] hover:border-[#8CBE5D] text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95"
+                      title="Partager ce paysage oléicole (Web Share ou copie du lien)"
                     >
                       {isCopied ? (
-                        <Check className="w-3.5 h-3.5 text-[#567B34]" />
+                        <>
+                          <Check className="w-3.5 h-3.5 text-[#567B34]" aria-hidden="true" />
+                          <span>Partagé !</span>
+                        </>
                       ) : (
-                        <Share2 className="w-3.5 h-3.5 text-[#567B34]" />
+                        <>
+                          <Share2 className="w-3.5 h-3.5 text-[#567B34]" aria-hidden="true" />
+                          <span>Partager</span>
+                        </>
                       )}
                     </button>
                   </div>

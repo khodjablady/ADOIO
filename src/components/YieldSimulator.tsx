@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Calculator, 
   Droplet, 
@@ -34,9 +34,264 @@ import {
   Legend,
   ReferenceLine
 } from 'recharts';
-import { OptimalHarvestAlertSystem } from './OptimalHarvestAlertSystem';
+import { OptimalHarvestAlertSystem, VARIETY_HARVEST_PROFILES } from './OptimalHarvestAlertSystem';
 import { HarvestAlertManager } from './HarvestAlertManager';
 import { ArticleAudioReader } from './ArticleAudioReader';
+
+export type HarvestPeriod = 'early' | 'mid' | 'late';
+export type ExtractionType = 'modern' | 'traditional';
+export type DelayHours = 'fast' | 'medium' | 'slow';
+export type SoilPractice = 'enherbe' | 'raisonne' | 'intensif';
+export type FertPractice = 'organique' | 'raisonnee' | 'chimique';
+export type PhytoPractice = 'bio' | 'conventionnelle';
+export type WaterPractice = 'pluvial' | 'solaire' | 'diesel';
+export type ByproductPractice = 'circulaire' | 'standard';
+
+export const VARIETY_BASE_YIELDS: Record<string, number> = {
+  chemlal: 18.0,
+  bouchouk: 22.5,
+  aberkane: 19.5,
+  limli: 22.5,
+  azeradj: 22.5,
+  autres: 20.0,
+  assemblage: 19.8,
+};
+
+export interface SimulatorCalculationInput {
+  inputMode: 'weight' | 'trees';
+  weightKg: number;
+  treeCount: number;
+  kgPerTree: number;
+  selectedVariety: string;
+  comparedVariety?: string;
+  harvestPeriod: HarvestPeriod;
+  extractionType: ExtractionType;
+  delayHours: DelayHours;
+}
+
+export interface SimulatorCalculationResult {
+  totalWeight: number;
+  totalQuintals: number;
+  periodYieldFactor: number;
+  techYieldFactor: number;
+  finalYieldPerQuintal: number;
+  estimatedOilLiters: number;
+  comparedYieldPerQuintal: number;
+  comparedEstimatedOilLiters: number;
+  estimatedAcidity: number;
+  qualityGrade: string;
+  pricePerLiter: number;
+  estimatedValueDZD: number;
+  comparedEstimatedValueDZD: number;
+  yieldDiffPerQuintal: number;
+  litersDiff: number;
+  valueDiffDZD: number;
+  yieldDiffPercent: number;
+}
+
+export function calculateSimulatorMetrics(input: SimulatorCalculationInput): SimulatorCalculationResult {
+  const safeWeightKg = Math.max(0, Number.isFinite(input.weightKg) ? input.weightKg : 0);
+  const safeTreeCount = Math.max(0, Number.isFinite(input.treeCount) ? input.treeCount : 0);
+  const safeKgPerTree = Math.max(0, Number.isFinite(input.kgPerTree) ? input.kgPerTree : 0);
+
+  const totalWeight = input.inputMode === 'weight' ? safeWeightKg : safeTreeCount * safeKgPerTree;
+  const totalQuintals = totalWeight / 100;
+
+  const periodYieldFactor = {
+    early: 0.85,
+    mid: 1.0,
+    late: 1.12,
+  }[input.harvestPeriod] ?? 1.0;
+
+  const techYieldFactor = input.extractionType === 'modern' ? 1.02 : 0.96;
+
+  const baseYieldA = VARIETY_BASE_YIELDS[input.selectedVariety] ?? 20;
+  const baseYieldB = VARIETY_BASE_YIELDS[input.comparedVariety || 'bouchouk'] ?? 20;
+
+  const finalYieldPerQuintal = baseYieldA * periodYieldFactor * techYieldFactor;
+  const estimatedOilLiters = Math.round(totalQuintals * finalYieldPerQuintal);
+
+  const comparedYieldPerQuintal = baseYieldB * periodYieldFactor * techYieldFactor;
+  const comparedEstimatedOilLiters = Math.round(totalQuintals * comparedYieldPerQuintal);
+
+  let baseAcidity = 0.25;
+  if (input.harvestPeriod === 'late') baseAcidity += 0.25;
+  if (input.extractionType === 'traditional') baseAcidity += 0.2;
+
+  if (input.delayHours === 'fast') {
+    baseAcidity += 0.05;
+  } else if (input.delayHours === 'medium') {
+    baseAcidity += 0.35;
+  } else {
+    baseAcidity += 1.3;
+  }
+
+  const estimatedAcidity = parseFloat(baseAcidity.toFixed(2));
+
+  let qualityGrade = "Huile d'Olive Vierge Extra (HOVE)";
+  let pricePerLiter = 1150;
+
+  if (estimatedAcidity > 0.8 && estimatedAcidity <= 2.0) {
+    qualityGrade = "Huile d'Olive Vierge";
+    pricePerLiter = 850;
+  } else if (estimatedAcidity > 2.0) {
+    qualityGrade = "Huile d'Olive Courante / Lampante";
+    pricePerLiter = 550;
+  }
+
+  const estimatedValueDZD = estimatedOilLiters * pricePerLiter;
+  const comparedEstimatedValueDZD = comparedEstimatedOilLiters * pricePerLiter;
+
+  const yieldDiffPerQuintal = parseFloat((comparedYieldPerQuintal - finalYieldPerQuintal).toFixed(1));
+  const litersDiff = comparedEstimatedOilLiters - estimatedOilLiters;
+  const valueDiffDZD = comparedEstimatedValueDZD - estimatedValueDZD;
+  const yieldDiffPercent =
+    finalYieldPerQuintal > 0
+      ? parseFloat((((comparedYieldPerQuintal - finalYieldPerQuintal) / finalYieldPerQuintal) * 100).toFixed(1))
+      : 0;
+
+  return {
+    totalWeight,
+    totalQuintals,
+    periodYieldFactor,
+    techYieldFactor,
+    finalYieldPerQuintal,
+    estimatedOilLiters,
+    comparedYieldPerQuintal,
+    comparedEstimatedOilLiters,
+    estimatedAcidity,
+    qualityGrade,
+    pricePerLiter,
+    estimatedValueDZD,
+    comparedEstimatedValueDZD,
+    yieldDiffPerQuintal,
+    litersDiff,
+    valueDiffDZD,
+    yieldDiffPercent,
+  };
+}
+
+export interface CarbonCalculationInput {
+  inputMode: 'weight' | 'trees';
+  totalWeight: number;
+  treeCount: number;
+  estimatedOilLiters: number;
+  soilPractice: SoilPractice;
+  fertPractice: FertPractice;
+  phytoPractice: PhytoPractice;
+  waterPractice: WaterPractice;
+  byproductPractice: ByproductPractice;
+}
+
+export interface CarbonCalculationResult {
+  effectiveTrees: number;
+  baselineTreeSequestration: number;
+  totalEmissionsKg: number;
+  totalSequestrationKg: number;
+  netCarbonSavedKg: number;
+  isCarbonSink: boolean;
+  carbonFootprintPerLiter: number;
+  kmCarEquivalent: number;
+  roundtripsAlgerBejaia: number;
+}
+
+export function calculateCarbonMetrics(input: CarbonCalculationInput): CarbonCalculationResult {
+  const safeTotalWeight = Math.max(0, Number.isFinite(input.totalWeight) ? input.totalWeight : 0);
+  const safeTrees = Math.max(1, Number.isFinite(input.treeCount) ? input.treeCount : 1);
+  const effectiveTrees =
+    input.inputMode === 'trees' ? safeTrees : Math.max(1, Math.round(safeTotalWeight / 25));
+
+  const baselineTreeSequestration = effectiveTrees * 18.5;
+
+  const soilFactors = {
+    enherbe: { emissions: 1.2, sequestrationBonus: 3.5 },
+    raisonne: { emissions: 4.8, sequestrationBonus: 1.0 },
+    intensif: { emissions: 11.5, sequestrationBonus: 0 },
+  }[input.soilPractice];
+
+  const fertFactors = {
+    organique: { emissions: 1.0, sequestrationBonus: 2.8 },
+    raisonnee: { emissions: 6.2, sequestrationBonus: 0.5 },
+    chimique: { emissions: 15.0, sequestrationBonus: 0 },
+  }[input.fertPractice];
+
+  const phytoFactors = {
+    bio: { emissions: 0.6 },
+    conventionnelle: { emissions: 4.2 },
+  }[input.phytoPractice];
+
+  const waterFactors = {
+    pluvial: { emissions: 0 },
+    solaire: { emissions: 1.2 },
+    diesel: { emissions: 8.5 },
+  }[input.waterPractice];
+
+  const byproductEmissionsAvoided =
+    input.byproductPractice === 'circulaire' ? 160 * (safeTotalWeight / 1000) : 0;
+
+  const byproductEmissionsGross =
+    input.byproductPractice === 'standard'
+      ? 45 * (safeTotalWeight / 1000)
+      : 10 * (safeTotalWeight / 1000);
+
+  const totalEmissionsKg = Math.round(
+    effectiveTrees *
+      (soilFactors.emissions +
+        fertFactors.emissions +
+        phytoFactors.emissions +
+        waterFactors.emissions) +
+      byproductEmissionsGross
+  );
+
+  const totalSequestrationKg = Math.round(
+    baselineTreeSequestration +
+      effectiveTrees * (soilFactors.sequestrationBonus + fertFactors.sequestrationBonus) +
+      byproductEmissionsAvoided
+  );
+
+  const netCarbonSavedKg = totalSequestrationKg - totalEmissionsKg;
+  const isCarbonSink = netCarbonSavedKg > 0;
+
+  const carbonFootprintPerLiter =
+    input.estimatedOilLiters > 0
+      ? parseFloat(((totalEmissionsKg - totalSequestrationKg) / input.estimatedOilLiters).toFixed(2))
+      : 0;
+
+  const kmCarEquivalent = Math.abs(Math.round(netCarbonSavedKg / 0.12));
+  const roundtripsAlgerBejaia = Math.max(1, Math.round(kmCarEquivalent / 520));
+
+  return {
+    effectiveTrees,
+    baselineTreeSequestration,
+    totalEmissionsKg,
+    totalSequestrationKg,
+    netCarbonSavedKg,
+    isCarbonSink,
+    carbonFootprintPerLiter,
+    kmCarEquivalent,
+    roundtripsAlgerBejaia,
+  };
+}
+
+export function calculateQuickConversion(weightKg: number, yieldPercent: number) {
+  const safeQuickWeightKg = Math.max(0, Number.isFinite(weightKg) ? weightKg : 0);
+  const clampedYieldPercent = Math.min(25, Math.max(15, Number.isFinite(yieldPercent) ? yieldPercent : 20));
+  const quickQuintals = safeQuickWeightKg / 100;
+  const quickEstimatedLiters = Number((quickQuintals * clampedYieldPercent).toFixed(1));
+  const quickBidons5L = Number((quickEstimatedLiters / 5).toFixed(1));
+  const quickBottles75cl = Math.floor(quickEstimatedLiters / 0.75);
+  const netOilWeightKg = Number((quickEstimatedLiters * 0.916).toFixed(1));
+
+  return {
+    safeQuickWeightKg,
+    clampedYieldPercent,
+    quickQuintals,
+    quickEstimatedLiters,
+    quickBidons5L,
+    quickBottles75cl,
+    netOilWeightKg,
+  };
+}
 
 export const YieldSimulator: React.FC = () => {
   // Quick Converter state (top of section: 15% to 25% configurable yield)
@@ -69,15 +324,7 @@ export const YieldSimulator: React.FC = () => {
   const totalQuintals = totalWeight / 100;
 
   // Base yields by variety (liters per quintal)
-  const varietyBaseYields: Record<string, number> = {
-    chemlal: 18.0,
-    bouchouk: 22.5,
-    aberkane: 19.5,
-    limli: 22.5,
-    azeradj: 22.5,
-    autres: 20.0,
-    assemblage: 19.8,
-  };
+  const varietyBaseYields: Record<string, number> = VARIETY_BASE_YIELDS;
 
   // Detailed agronomic & sensory profiles for side-by-side comparison
   const varietyProfiles: Record<
@@ -240,6 +487,41 @@ export const YieldSimulator: React.FC = () => {
     autres: 'Autres / Exotique',
     assemblage: 'Assemblage Kabyle',
   };
+
+  // Sync simulator data with CalendarAndPractices local harvest window notification
+  useEffect(() => {
+    const profile = VARIETY_HARVEST_PROFILES[selectedVariety] || VARIETY_HARVEST_PROFILES.chemlal;
+    const maturityIndex = harvestPeriod === 'early' ? 2.3 : harvestPeriod === 'mid' ? 3.1 : 4.2;
+    const snapshot = {
+      varietyId: selectedVariety,
+      varietyName: varietyNames[selectedVariety] || profile.name,
+      harvestPeriod,
+      optimalWindowLabel: profile.optimalPeriodLabel,
+      optimalMonths: profile.optimalMonths,
+      ripenessWindow: profile.ripenessWindow,
+      maturityIndex,
+      yieldPerQuintal: Number(finalYieldPerQuintal.toFixed(1)),
+      estimatedOilLiters,
+      estimatedAcidity,
+      qualityGrade,
+      isApproachingOrOptimal: harvestPeriod === 'early' || harvestPeriod === 'mid',
+      updatedAt: new Date().toISOString(),
+    };
+
+    try {
+      localStorage.setItem('adoio_simulator_harvest_snapshot', JSON.stringify(snapshot));
+      window.dispatchEvent(new CustomEvent('adoio-simulator-updated', { detail: snapshot }));
+    } catch {
+      // Ignore storage quota errors
+    }
+  }, [
+    selectedVariety,
+    harvestPeriod,
+    finalYieldPerQuintal,
+    estimatedOilLiters,
+    estimatedAcidity,
+    qualityGrade,
+  ]);
 
   // Chart configuration state
   const [chartMetric, setChartMetric] = useState<'yield' | 'volume' | 'combined'>('yield');

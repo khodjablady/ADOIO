@@ -41,6 +41,7 @@ import {
   syncUserFavoritesInFirestore
 } from '../firebase';
 import { MillReviewsSection } from './MillReviewsSection';
+import { shareFinding } from '../utils/webShare';
 
 const FAVORITES_STORAGE_KEY = 'adoio_favorite_mills_v1';
 
@@ -86,6 +87,8 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
   const [activeModalMill, setActiveModalMill] = useState<OliveMill | null>(null);
   const [modalTab, setModalTab] = useState<'info' | 'reviews'>('info');
   const [copiedMillLink, setCopiedMillLink] = useState<boolean>(false);
+  const [sharedMillId, setSharedMillId] = useState<string | null>(null);
+  const [sharedDirectory, setSharedDirectory] = useState<boolean>(false);
 
   // Hydrate initial state from URL search params (?mill=..., ?commune=..., ?tab=favorites)
   useEffect(() => {
@@ -166,15 +169,64 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
     return `https://wa.me/?text=${encodeURIComponent(message)}`;
   };
 
-  const handleCopyMillDeepLink = async (mill: OliveMill) => {
+  const handleShareMill = async (mill: OliveMill, stats?: MillStats | null, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    const link = buildMillDeepLink(mill);
+    const ratingPart =
+      stats && stats.totalReviews > 0
+        ? ` · Note ${stats.averageRating.toFixed(1)}/5 (${stats.totalReviews} avis)`
+        : '';
+    const outcome = await shareFinding({
+      title: `${mill.name} — Huilerie à ${mill.commune} (Béjaïa)`,
+      text: `${mill.typeLabel} à ${mill.commune} (Daïra de ${mill.daira}) · Capacité ${mill.capacityQxPerDay} qx/j (lot dès ${mill.technicalSpecs.minBatchKg} kg)${ratingPart} · Tél : ${mill.phone}`,
+      url: link,
+    });
+    if (outcome === 'shared' || outcome === 'copied') {
+      setSharedMillId(mill.id);
+      setCopiedMillLink(true);
+      setTimeout(() => {
+        setSharedMillId((prev) => (prev === mill.id ? null : prev));
+        setCopiedMillLink(false);
+      }, 2400);
+    }
+  };
+
+  const handleShareDirectoryFindings = async () => {
+    let url = 'https://adoio-bejaia.dz/#annuaire';
     try {
-      const link = buildMillDeepLink(mill);
-      await navigator.clipboard.writeText(link);
-      setCopiedMillLink(true);
-      setTimeout(() => setCopiedMillLink(false), 2400);
+      const parsed = new URL(window.location.href);
+      parsed.searchParams.delete('mill');
+      parsed.searchParams.delete('view');
+      if (selectedCommune !== 'all') {
+        parsed.searchParams.set('commune', selectedCommune);
+      } else {
+        parsed.searchParams.delete('commune');
+      }
+      if (onlyFavorites) {
+        parsed.searchParams.set('tab', 'favorites');
+      } else {
+        parsed.searchParams.delete('tab');
+      }
+      parsed.hash = 'annuaire';
+      url = parsed.toString();
     } catch {
-      setCopiedMillLink(true);
-      setTimeout(() => setCopiedMillLink(false), 2000);
+      // Fallback URL already set
+    }
+
+    const title = onlyFavorites
+      ? `Mes Huileries Favorites (${favoriteMills.length}) — ADOIO Béjaïa`
+      : `Annuaire des Huileries de Béjaïa (${filteredMills.length} unités) — ADOIO`;
+    const text =
+      onlyFavorites && favoriteMills.length > 0
+        ? `Sélection de ${favoriteMills.length} huilerie(s) en Kabylie (${favoriteSummary.totalCapacityQx} qx/j cumulés) : ${favoriteMills.map(({ mill }) => mill.name).join(', ')}.`
+        : `Découvrez ${filteredMills.length} huilerie(s) et moulins en activité dans la Wilaya de Béjaïa${selectedCommune !== 'all' ? ` (Commune de ${selectedCommune})` : ''}.`;
+
+    const outcome = await shareFinding({ title, text, url });
+    if (outcome === 'shared' || outcome === 'copied') {
+      setSharedDirectory(true);
+      setTimeout(() => setSharedDirectory(false), 2400);
     }
   };
 
@@ -432,7 +484,7 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
               Consultez les huileries modernes à chaîne continue et moulins traditionnels en activité. Marquez vos huileries préférées en favoris pour les retrouver à tout moment dans votre onglet dédié.
             </p>
           </div>
-          <div className="flex items-center gap-3 text-xs text-[#31491E] font-semibold tabular-nums">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-[#31491E] font-semibold tabular-nums">
             <span>
               {filteredMills.length} unité{filteredMills.length > 1 ? 's' : ''} affichée{filteredMills.length > 1 ? 's' : ''}
             </span>
@@ -446,6 +498,25 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
               <span>
                 {favoriteIds.length} favori{favoriteIds.length > 1 ? 's' : ''} sauvegardé{favoriteIds.length > 1 ? 's' : ''}
               </span>
+            </button>
+            <button
+              type="button"
+              onClick={handleShareDirectoryFindings}
+              aria-label="Partager les résultats de l'annuaire des huileries"
+              title="Partager la sélection actuelle d'huileries via Web Share ou copier le lien"
+              className="px-3.5 py-2 rounded-xl bg-white hover:bg-[#E8F4D9] text-[#233416] border border-[#E6DEC9] hover:border-[#8CBE5D] shadow-2xs text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+            >
+              {sharedDirectory ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-[#567B34]" aria-hidden="true" />
+                  <span>Sélection partagée !</span>
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-3.5 h-3.5 text-[#31491E]" aria-hidden="true" />
+                  <span>Partager</span>
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -1029,6 +1100,25 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
+                          onClick={(e) => handleShareMill(mill, stats, e)}
+                          aria-label={`Partager ${mill.name}`}
+                          title={`Partager la fiche de ${mill.name} (Web Share ou copie du lien)`}
+                          className="p-1.5 px-2.5 rounded-lg bg-[#FAF7F2] hover:bg-[#E8F4D9] text-[#233416] border border-[#E6DEC9] hover:border-[#8CBE5D] text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer active:scale-95"
+                        >
+                          {sharedMillId === mill.id ? (
+                            <>
+                              <Check className="w-3 h-3 text-[#567B34]" aria-hidden="true" />
+                              <span>Partagé !</span>
+                            </>
+                          ) : (
+                            <>
+                              <Share2 className="w-3 h-3 text-[#31491E]" aria-hidden="true" />
+                              <span>Partager</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             const mapEl = document.getElementById('carte-interactive');
@@ -1040,7 +1130,7 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                           title="Localiser sur la carte interactive"
                         >
                           <MapPin className="w-3 h-3 text-[#436229]" aria-hidden="true" />
-                          <span className="hidden sm:inline">Sur la carte</span>
+                          <span className="hidden sm:inline">Carte</span>
                         </button>
                         <a
                           href={`tel:${mill.phone.split('/')[0].trim()}`}
@@ -1164,19 +1254,19 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
 
                       <button
                         type="button"
-                        onClick={() => handleCopyMillDeepLink(activeModalMill)}
+                        onClick={(e) => handleShareMill(activeModalMill, activeMillStats, e)}
                         className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-white text-[#18230F] border border-[#E6DEC9] hover:border-[#31491E] hover:bg-[#E8F4D9]/50 transition-colors cursor-pointer"
-                        title="Copier le lien direct vers la fiche de cette huilerie"
+                        title="Partager la fiche de cette huilerie via Web Share ou copier le lien direct"
                       >
                         {copiedMillLink ? (
                           <>
                             <Check className="w-3.5 h-3.5 text-[#31491E]" aria-hidden="true" />
-                            <span>Lien copié !</span>
+                            <span>Fiche partagée !</span>
                           </>
                         ) : (
                           <>
                             <Share2 className="w-3.5 h-3.5 text-[#31491E]" aria-hidden="true" />
-                            <span>Copier le lien</span>
+                            <span>Partager</span>
                           </>
                         )}
                       </button>
