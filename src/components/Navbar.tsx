@@ -3,6 +3,7 @@ import { Menu, X, Droplets, MapPin, Phone, Award, Calculator, BookOpen, Building
 import type { User } from 'firebase/auth';
 import { AdoioLogo } from './AdoioLogo';
 import { PWAInstallButton } from './PWAInstallButton';
+import { LanguageSelector } from '../utils/i18n';
 import { REPRESENTATIVE_MILLS } from '../data/bejaiaOliveData';
 import {
   subscribeToUserAccount,
@@ -235,9 +236,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             <a
               href="tel:+213661630658"
               className="flex items-center gap-1 text-[11px] hover:text-[#FAF7F2] transition-colors tabular-nums"
+              dir="ltr"
             >
               <Phone className="w-3.5 h-3.5 text-[#E6AB3C]" /> +213 661630658
             </a>
+            <LanguageSelector variant="topbar" />
           </div>
         </div>
       </div>
@@ -295,6 +298,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Action CTAs */}
           <div className="hidden md:flex items-center gap-1.5 shrink-0">
+            <LanguageSelector variant="navbar" />
             {(onSelectTheme || onToggleDarkMode) && (
               <div
                 role="radiogroup"
@@ -554,6 +558,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Mobile menu toggle button */}
           <div className="flex md:hidden items-center gap-1.5">
+            <LanguageSelector variant="navbar" />
             {onOpenOfflineGuides && (
               <button
                 type="button"
@@ -670,6 +675,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>Mode Hors-Ligne · Guides en Cache ({offlineCachedCount})</span>
               </button>
             )}
+            <LanguageSelector variant="mobile" />
             {(onSelectTheme || onToggleDarkMode) && (
               <div className="w-full p-2.5 rounded-lg bg-white border border-[#E6DEC9] space-y-2">
                 <div className="flex items-center justify-between text-xs font-bold text-[#233416] px-1">

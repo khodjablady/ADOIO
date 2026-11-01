@@ -12,6 +12,7 @@ import { HeroSection } from './components/HeroSection';
 import { AdoioSection } from './components/AdoioSection';
 import { Footer } from './components/Footer';
 import { OfflineIndicator } from './components/OfflineIndicator';
+import { LanguageProvider } from './utils/i18n';
 
 // Lazy-loaded below-the-fold sections & modals for fast initial paint on mobile/3G
 const OfflineGuidesModal = lazy(() =>
@@ -585,6 +586,7 @@ export default function App() {
   };
 
   return (
+    <LanguageProvider>
     <div className="min-h-screen flex flex-col bg-[#FAF7F2] text-[#242A20]">
       {gmpQuotaExceeded && (
         <div className="bg-amber-50 border-b border-amber-200 text-amber-900 px-4 py-2.5 text-xs md:text-sm text-center sticky top-0 z-50 shadow-sm">
@@ -995,5 +997,6 @@ export default function App() {
       {/* Offline Status & Cached Information Indicator for Isolated Rural Zones */}
       <OfflineIndicator />
     </div>
+    </LanguageProvider>
   );
 }

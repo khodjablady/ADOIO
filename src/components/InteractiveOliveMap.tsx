@@ -57,6 +57,7 @@ function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: num
 interface MapCameraControllerProps {
   targetCenter: { lat: number; lng: number } | null;
   targetZoom: number | null;
+  focusTrigger: number;
   resetTrigger: number;
   initialCenter: { lat: number; lng: number };
   initialZoom: number;
@@ -65,6 +66,7 @@ interface MapCameraControllerProps {
 const MapCameraController: React.FC<MapCameraControllerProps> = ({
   targetCenter,
   targetZoom,
+  focusTrigger,
   resetTrigger,
   initialCenter,
   initialZoom,
@@ -74,10 +76,13 @@ const MapCameraController: React.FC<MapCameraControllerProps> = ({
   useEffect(() => {
     if (!map || !targetCenter) return;
     map.panTo(targetCenter);
-    if (targetZoom) {
-      map.setZoom(targetZoom);
+    if (typeof targetZoom === 'number') {
+      const currentZoom = map.getZoom();
+      if (currentZoom !== targetZoom) {
+        map.setZoom(targetZoom);
+      }
     }
-  }, [map, targetCenter, targetZoom]);
+  }, [map, targetCenter, targetZoom, focusTrigger]);
 
   useEffect(() => {
     if (!map || resetTrigger === 0) return;
@@ -232,16 +237,29 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
   const [infoWindowOpen, setInfoWindowOpen] = useState<boolean>(true);
   const [cameraTarget, setCameraTarget] = useState<{ lat: number; lng: number } | null>(null);
   const [cameraZoom, setCameraZoom] = useState<number | null>(null);
+  const [focusCounter, setFocusCounter] = useState<number>(0);
   const [resetCounter, setResetCounter] = useState<number>(0);
 
   const [selectedItem, setSelectedItem] = useState<{
     type: 'commune' | 'mill' | 'collection_point';
     data: CommuneStat | OliveMill | CollectionPoint;
   } | null>(null);
+  const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
 
   // Initial center on Béjaïa Soummam Valley
   const INITIAL_CENTER = { lat: 36.58, lng: 4.68 };
   const INITIAL_ZOOM = 10;
+  const MILL_FOCUS_ZOOM = 15;
+
+  // Center and zoom the map onto a specific mill marker
+  const focusOnMill = (mill: OliveMill, zoomLevel = MILL_FOCUS_ZOOM) => {
+    setSelectedItem({ type: 'mill', data: mill });
+    setInfoWindowOpen(true);
+    setCameraTarget({ lat: mill.lat, lng: mill.lng });
+    setCameraZoom(zoomLevel);
+    setFocusCounter((c) => c + 1);
+    if (onSelectMill) onSelectMill(mill);
+  };
 
   // Filtered datasets
   const filteredCommunes =
@@ -301,7 +319,8 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
           setRouteTargetMill(targetMill);
         } else {
           setCameraTarget(originObj);
-          setCameraZoom(12);
+          setCameraZoom(13);
+          setFocusCounter((c) => c + 1);
         }
       },
       () => {
@@ -325,6 +344,7 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
       setInfoWindowOpen(true);
       setCameraTarget({ lat: commune.lat, lng: commune.lng });
       setCameraZoom(12);
+      setFocusCounter((c) => c + 1);
     }
   };
 
@@ -616,6 +636,7 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
                   <MapCameraController
                     targetCenter={cameraTarget}
                     targetZoom={cameraZoom}
+                    focusTrigger={focusCounter}
                     resetTrigger={resetCounter}
                     initialCenter={INITIAL_CENTER}
                     initialZoom={INITIAL_ZOOM}
@@ -630,35 +651,72 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
                   {/* 1. Communes / Zones de culture Markers */}
                   {filteredCommunes.map((commune) => {
                     const isSeddouk = commune.commune === 'Seddouk';
+                    const markerId = `commune-${commune.commune}`;
+                    const isHovered = hoveredMarkerId === markerId;
                     const isSelected =
                       selectedItem?.type === 'commune' &&
                       (selectedItem.data as CommuneStat).commune === commune.commune;
+                    const showTooltip = isHovered && !(isSelected && infoWindowOpen);
 
                     return (
                       <AdvancedMarker
-                        key={`commune-${commune.commune}`}
+                        key={markerId}
                         position={{ lat: commune.lat, lng: commune.lng }}
+                        clickable={true}
                         title={`Bassin Oléicole de ${commune.commune} (${(
                           commune.avgProductionLiters / 1000000
                         ).toFixed(1)}M L)`}
-                        zIndex={isSelected ? 40 : isSeddouk ? 30 : 20}
+                        zIndex={isHovered ? 100 : isSelected ? 40 : isSeddouk ? 30 : 20}
                         onClick={() => {
                           setSelectedItem({ type: 'commune', data: commune });
                           setInfoWindowOpen(true);
                           setCameraTarget({ lat: commune.lat, lng: commune.lng });
                           setCameraZoom(12);
+                          setFocusCounter((c) => c + 1);
                         }}
                       >
                         <div
-                          className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-white text-[11px] font-bold border-2 border-white shadow-lg transition-transform hover:scale-110 cursor-pointer whitespace-nowrap ${
-                            isSeddouk ? 'bg-[#B47A16]' : 'bg-[#233416]'
-                          } ${isSelected ? 'ring-2 ring-[#E6AB3C] scale-110' : ''}`}
+                          onMouseEnter={() => setHoveredMarkerId(markerId)}
+                          onMouseLeave={() =>
+                            setHoveredMarkerId((prev) => (prev === markerId ? null : prev))
+                          }
+                          onFocus={() => setHoveredMarkerId(markerId)}
+                          onBlur={() =>
+                            setHoveredMarkerId((prev) => (prev === markerId ? null : prev))
+                          }
+                          aria-label={`Commune de ${commune.commune}`}
+                          className="group relative flex items-center justify-center"
                         >
-                          <span>{isSeddouk ? '⭐' : '🫒'}</span>
-                          <span>{commune.commune}</span>
-                          <span className="bg-white/25 rounded px-1 py-0.2 text-[9px] font-extrabold">
-                            {(commune.avgProductionLiters / 1000000).toFixed(1)}M L
-                          </span>
+                          {/* Hover Tooltip */}
+                          <div
+                            role="tooltip"
+                            className={`pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 z-50 px-3 py-1.5 rounded-xl bg-[#18230F]/95 text-[#FAF7F2] shadow-xl border border-[#8CBE5D]/40 whitespace-nowrap transition-all duration-200 delay-75 ${
+                              showTooltip
+                                ? 'opacity-100 translate-y-0 scale-100'
+                                : 'opacity-0 translate-y-1 scale-95'
+                            }`}
+                          >
+                            <div className="text-[11px] font-bold tracking-wide leading-tight flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#8CBE5D] shrink-0" />
+                              <span>Commune de {commune.commune}</span>
+                            </div>
+                            <div className="text-[9px] text-[#E6DEC9]/90 font-medium mt-0.5">
+                              Daïra de {commune.daira} · {commune.millsCount} huileries
+                            </div>
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-[#18230F]/95" />
+                          </div>
+
+                          <div
+                            className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-white text-[11px] font-bold border-2 border-white shadow-lg transition-all duration-200 group-hover:scale-110 group-hover:shadow-xl group-hover:ring-2 group-hover:ring-[#E6AB3C]/80 cursor-pointer whitespace-nowrap ${
+                              isSeddouk ? 'bg-[#B47A16]' : 'bg-[#233416]'
+                            } ${isSelected ? 'ring-2 ring-[#E6AB3C] scale-110' : ''}`}
+                          >
+                            <span>{isSeddouk ? '⭐' : '🫒'}</span>
+                            <span>{commune.commune}</span>
+                            <span className="bg-white/25 rounded px-1 py-0.2 text-[9px] font-extrabold">
+                              {(commune.avgProductionLiters / 1000000).toFixed(1)}M L
+                            </span>
+                          </div>
                         </div>
                       </AdvancedMarker>
                     );
@@ -684,30 +742,84 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
                         ? '🏆'
                         : '🤝';
 
+                    const markerId = `mill-${mill.id}`;
+                    const isHovered = hoveredMarkerId === markerId;
                     const isSelected =
                       selectedItem?.type === 'mill' && (selectedItem.data as OliveMill).id === mill.id;
+                    const showTooltip = isHovered && !(isSelected && infoWindowOpen);
 
                     return (
                       <AdvancedMarker
-                        key={`mill-${mill.id}`}
+                        key={markerId}
                         position={{ lat: mill.lat, lng: mill.lng }}
-                        title={`${mill.name} (${mill.commune})`}
-                        zIndex={isSelected ? 50 : 25}
-                        onClick={() => {
-                          setSelectedItem({ type: 'mill', data: mill });
-                          setInfoWindowOpen(true);
-                          setCameraTarget({ lat: mill.lat, lng: mill.lng });
-                          setCameraZoom(13);
-                          if (onSelectMill) onSelectMill(mill);
-                        }}
+                        clickable={true}
+                        title={`${mill.name} (${mill.commune}) — Cliquer pour centrer et zoomer`}
+                        zIndex={isHovered ? 100 : isSelected ? 55 : 25}
+                        onClick={() => focusOnMill(mill)}
                       >
                         <div
-                          style={{ backgroundColor: pinColor }}
-                          className={`w-8 h-8 rounded-full border-2 border-white shadow-lg flex items-center justify-center cursor-pointer transition-transform hover:scale-115 ${
-                            isSelected ? 'ring-3 ring-[#E6AB3C] scale-115' : ''
-                          }`}
+                          role="button"
+                          tabIndex={0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            focusOnMill(mill);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              focusOnMill(mill);
+                            }
+                          }}
+                          onMouseEnter={() => setHoveredMarkerId(markerId)}
+                          onMouseLeave={() =>
+                            setHoveredMarkerId((prev) => (prev === markerId ? null : prev))
+                          }
+                          onFocus={() => setHoveredMarkerId(markerId)}
+                          onBlur={() =>
+                            setHoveredMarkerId((prev) => (prev === markerId ? null : prev))
+                          }
+                          aria-label={`Centrer la carte sur ${mill.name} (${mill.commune})`}
+                          className="group relative flex items-center justify-center focus:outline-none"
                         >
-                          <span className="text-xs leading-none">{pinEmoji}</span>
+                          {/* Hover Tooltip */}
+                          <div
+                            role="tooltip"
+                            className={`pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 z-50 px-3 py-1.5 rounded-xl bg-[#18230F]/95 text-[#FAF7F2] shadow-xl border border-[#E6AB3C]/40 whitespace-nowrap transition-all duration-200 delay-75 ${
+                              showTooltip
+                                ? 'opacity-100 translate-y-0 scale-100'
+                                : 'opacity-0 translate-y-1 scale-95'
+                            }`}
+                          >
+                            <div className="text-[11px] font-bold tracking-wide leading-tight flex items-center gap-1.5">
+                              <span
+                                className="w-2 h-2 rounded-full border border-white/60 shrink-0"
+                                style={{ backgroundColor: pinColor }}
+                              />
+                              <span>{mill.name}</span>
+                            </div>
+                            <div className="text-[9px] text-[#E6DEC9]/90 font-medium mt-0.5">
+                              Commune de {mill.commune} · {mill.capacityQxPerDay} qx/j
+                            </div>
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-[#18230F]/95" />
+                          </div>
+
+                          {/* Pulsing ring when mill is selected and centered */}
+                          {isSelected && (
+                            <span
+                              className="pointer-events-none absolute -inset-1.5 rounded-full opacity-55 animate-ping"
+                              style={{ backgroundColor: '#E6AB3C' }}
+                            />
+                          )}
+
+                          <div
+                            style={{ backgroundColor: pinColor }}
+                            className={`relative w-8 h-8 rounded-full border-2 border-white shadow-lg flex items-center justify-center cursor-pointer transition-all duration-200 group-hover:scale-125 group-hover:shadow-xl group-hover:ring-2 group-hover:ring-[#E6AB3C] ${
+                              isSelected ? 'ring-3 ring-[#E6AB3C] scale-125 shadow-xl' : ''
+                            }`}
+                          >
+                            <span className="text-xs leading-none">{pinEmoji}</span>
+                          </div>
                         </div>
                       </AdvancedMarker>
                     );
@@ -715,29 +827,66 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
 
                   {/* 3. Collection Points Markers */}
                   {filteredCPs.map((cp) => {
+                    const markerId = `cp-${cp.id}`;
+                    const isHovered = hoveredMarkerId === markerId;
                     const isSelected =
                       selectedItem?.type === 'collection_point' &&
                       (selectedItem.data as CollectionPoint).id === cp.id;
+                    const showTooltip = isHovered && !(isSelected && infoWindowOpen);
 
                     return (
                       <AdvancedMarker
-                        key={`cp-${cp.id}`}
+                        key={markerId}
                         position={{ lat: cp.lat, lng: cp.lng }}
+                        clickable={true}
                         title={`${cp.name} (${cp.commune})`}
-                        zIndex={isSelected ? 45 : 15}
+                        zIndex={isHovered ? 100 : isSelected ? 45 : 15}
                         onClick={() => {
                           setSelectedItem({ type: 'collection_point', data: cp });
                           setInfoWindowOpen(true);
                           setCameraTarget({ lat: cp.lat, lng: cp.lng });
-                          setCameraZoom(13);
+                          setCameraZoom(14);
+                          setFocusCounter((c) => c + 1);
                         }}
                       >
                         <div
-                          className={`w-8 h-8 bg-[#D97706] border-2 border-white rounded-lg rotate-45 shadow-lg flex items-center justify-center cursor-pointer transition-transform hover:scale-110 ${
-                            isSelected ? 'ring-2 ring-white scale-110' : ''
-                          }`}
+                          onMouseEnter={() => setHoveredMarkerId(markerId)}
+                          onMouseLeave={() =>
+                            setHoveredMarkerId((prev) => (prev === markerId ? null : prev))
+                          }
+                          onFocus={() => setHoveredMarkerId(markerId)}
+                          onBlur={() =>
+                            setHoveredMarkerId((prev) => (prev === markerId ? null : prev))
+                          }
+                          aria-label={`${cp.name} (${cp.commune})`}
+                          className="group relative flex items-center justify-center"
                         >
-                          <span className="-rotate-45 text-xs leading-none">⚖️</span>
+                          {/* Hover Tooltip */}
+                          <div
+                            role="tooltip"
+                            className={`pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 z-50 px-3 py-1.5 rounded-xl bg-[#18230F]/95 text-[#FAF7F2] shadow-xl border border-[#D97706]/50 whitespace-nowrap transition-all duration-200 delay-75 ${
+                              showTooltip
+                                ? 'opacity-100 translate-y-0 scale-100'
+                                : 'opacity-0 translate-y-1 scale-95'
+                            }`}
+                          >
+                            <div className="text-[11px] font-bold tracking-wide leading-tight flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#D97706] shrink-0" />
+                              <span>{cp.name}</span>
+                            </div>
+                            <div className="text-[9px] text-[#E6DEC9]/90 font-medium mt-0.5">
+                              Commune de {cp.commune} · {cp.capacityTonnes} T
+                            </div>
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-[#18230F]/95" />
+                          </div>
+
+                          <div
+                            className={`w-8 h-8 bg-[#D97706] border-2 border-white rounded-lg rotate-45 shadow-lg flex items-center justify-center cursor-pointer transition-all duration-200 group-hover:scale-115 group-hover:shadow-xl group-hover:ring-2 group-hover:ring-[#E6AB3C] ${
+                              isSelected ? 'ring-2 ring-white scale-110' : ''
+                            }`}
+                          >
+                            <span className="-rotate-45 text-xs leading-none">⚖️</span>
+                          </div>
                         </div>
                       </AdvancedMarker>
                     );
@@ -764,8 +913,9 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
                         lat: selectedItem.data.lat,
                         lng: selectedItem.data.lng,
                       }}
-                      pixelOffset={[0, -18]}
-                      maxWidth={260}
+                      pixelOffset={[0, -22]}
+                      maxWidth={270}
+                      disableAutoPan={true}
                       onCloseClick={() => setInfoWindowOpen(false)}
                     >
                       {selectedItem.type === 'commune' ? (
@@ -806,7 +956,7 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
                             ? `https://www.google.com/maps/dir/?api=1&origin=${userLocation[0]},${userLocation[1]}&destination=${m.lat},${m.lng}&travelmode=driving`
                             : `https://www.google.com/maps/dir/?api=1&destination=${m.lat},${m.lng}&travelmode=driving`;
                           return (
-                            <div className="p-1 text-left font-sans min-w-[190px]">
+                            <div className="p-1 text-left font-sans min-w-[200px]">
                               <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#567B34]">
                                 {m.commune} · {m.typeLabel}
                               </div>
@@ -828,6 +978,14 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
                                   className="flex-1 py-1.5 px-2 rounded-lg bg-[#31491E] hover:bg-[#233416] text-white text-[11px] font-bold text-center cursor-pointer"
                                 >
                                   🧭 Tracer l'itinéraire
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => focusOnMill(m, 17)}
+                                  className="py-1.5 px-2 rounded-lg bg-[#FEF5DB] text-[#B47A16] border border-[#E6AB3C]/40 text-[11px] font-bold hover:bg-[#E6AB3C] hover:text-white transition-colors cursor-pointer"
+                                  title="Zoom rapproché sur le site du moulin"
+                                >
+                                  🔍 +
                                 </button>
                                 <a
                                   href={googleDirUrl}
@@ -1206,6 +1364,38 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
                             Calcul d'itinéraire routier via Google Maps Routes API depuis votre position GPS (ou depuis Seddouk par défaut).
                           </p>
                         )}
+
+                        <div className="flex items-center justify-between gap-2 pt-1">
+                          <span className="text-[11px] font-semibold text-[#567B34]">
+                            Cadrage sur le site :
+                          </span>
+                          <div className="inline-flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => focusOnMill(mill, 15)}
+                              className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
+                                cameraZoom === 15
+                                  ? 'bg-[#31491E] text-white border-[#31491E]'
+                                  : 'bg-white text-[#31491E] border-[#E6DEC9] hover:bg-[#E8F4D9]'
+                              }`}
+                              title="Centrer et zoomer sur le moulin (Zoom ×15)"
+                            >
+                              Moulin (×15)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => focusOnMill(mill, 17)}
+                              className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
+                                cameraZoom === 17
+                                  ? 'bg-[#31491E] text-white border-[#31491E]'
+                                  : 'bg-white text-[#31491E] border-[#E6DEC9] hover:bg-[#E8F4D9]'
+                              }`}
+                              title="Zoom très rapproché sur l'accès du moulin (Zoom ×17)"
+                            >
+                              Site précis (×17)
+                            </button>
+                          </div>
+                        </div>
 
                         <div className="grid grid-cols-2 gap-2">
                           <a

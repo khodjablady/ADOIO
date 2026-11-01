@@ -609,9 +609,12 @@ async function startServer() {
     const vite = await createViteServer({
       server: {
         middlewareMode: true,
-        hmr: {
-          server: httpServer,
-        },
+        hmr:
+          process.env.DISABLE_HMR === 'true'
+            ? false
+            : {
+                server: httpServer,
+              },
         watch: process.env.DISABLE_HMR === 'true' ? null : undefined,
       },
       appType: 'spa',
@@ -637,9 +640,16 @@ async function startServer() {
     });
   }
 
+  httpServer.on('error', (err: NodeJS.ErrnoException) => {
+    console.error('Erreur serveur HTTP:', err.message);
+  });
+
   httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`Serveur Olive Béjaïa ADOIO démarré sur http://0.0.0.0:${PORT}`);
   });
 }
 
-startServer();
+startServer().catch((err) => {
+  console.error('Échec du démarrage du serveur:', err);
+  process.exit(1);
+});

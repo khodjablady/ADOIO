@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { OLIVE_VARIETIES, OliveVariety } from '../data/bejaiaOliveData';
 import {
@@ -14,6 +14,10 @@ import {
   Shield,
   Scale,
   Sprout,
+  Filter,
+  Search,
+  RotateCcw,
+  X,
 } from 'lucide-react';
 import { ShareVarietyModal } from './ShareVarietyModal';
 import { VarietyTenYearYieldChart } from './VarietyTenYearYieldChart';
@@ -55,8 +59,12 @@ const tabButtonVariants: Variants = {
   },
 };
 
+export type VarietyCategoryFilter = 'all' | 'oil' | 'mixed';
+export type VarietyPrecocityFilter = 'all' | 'early' | 'mid' | 'late';
+
 interface VarietyAgronomicMetrics {
   precocityRank: number; // 1 = très précoce, 4 = tardive
+  precocityGroup: 'early' | 'mid' | 'late';
   precocityBadge: string;
   precocityDetail: string;
   avgYieldNum: number; // average % for visual bar
@@ -65,11 +73,13 @@ interface VarietyAgronomicMetrics {
   droughtTolerance: string;
   altitudeZone: string;
   pollinationNote: string;
+  shortLabel: string;
 }
 
-const VARIETY_AGRONOMIC_METRICS: Record<string, VarietyAgronomicMetrics> = {
+export const VARIETY_AGRONOMIC_METRICS: Record<string, VarietyAgronomicMetrics> = {
   chemlal: {
     precocityRank: 3,
+    precocityGroup: 'mid',
     precocityBadge: 'Mi-saison à Tardive (Nov – Janv)',
     precocityDetail: 'Véraison progressive dès mi-novembre ; maturité complète en décembre.',
     avgYieldNum: 18,
@@ -78,9 +88,11 @@ const VARIETY_AGRONOMIC_METRICS: Record<string, VarietyAgronomicMetrics> = {
     droughtTolerance: 'Très élevée (système racinaire profond)',
     altitudeZone: 'Coteaux, moyenne montagne & vallée (150 – 850 m)',
     pollinationNote: 'Auto-stérile partielle : nécessite 10 à 15 % d’Azeradj comme pollinisateur.',
+    shortLabel: 'Chemlal',
   },
   azeradj: {
     precocityRank: 1,
+    precocityGroup: 'early',
     precocityBadge: 'Très Précoce (Octobre – Novembre)',
     precocityDetail: 'Première variété récoltée en Kabylie (verte en oct., tournante en nov.).',
     avgYieldNum: 22.5,
@@ -89,9 +101,11 @@ const VARIETY_AGRONOMIC_METRICS: Record<string, VarietyAgronomicMetrics> = {
     droughtTolerance: 'Modérée (apprécie les sols profonds et frais)',
     altitudeZone: 'Plateaux de Seddouk, plaines et piémonts (100 – 600 m)',
     pollinationNote: 'Pollinisateur universel de référence pour les vergers de Chemlal.',
+    shortLabel: 'Azeradj',
   },
   bouchouk: {
     precocityRank: 2,
+    precocityGroup: 'early',
     precocityBadge: 'Précoce à Mi-saison (Oct – Déc)',
     precocityDetail: 'Récolte dès octobre pour la table et novembre pour l’extraction d’huile.',
     avgYieldNum: 22.5,
@@ -100,9 +114,11 @@ const VARIETY_AGRONOMIC_METRICS: Record<string, VarietyAgronomicMetrics> = {
     droughtTolerance: 'Bonne tolérance estivale',
     altitudeZone: 'Vallée de la Soummam, Sidi-Aïch & Chemini (200 – 650 m)',
     pollinationNote: 'Bonne compatibilité florale avec Chemlal et Limli.',
+    shortLabel: 'Bouchouk',
   },
   limli: {
     precocityRank: 2,
+    precocityGroup: 'early',
     precocityBadge: 'Précoce (Novembre – Mi-Décembre)',
     precocityDetail: 'Lipogenèse rapide produisant les premières huiles primeurs ardentes.',
     avgYieldNum: 20,
@@ -111,9 +127,11 @@ const VARIETY_AGRONOMIC_METRICS: Record<string, VarietyAgronomicMetrics> = {
     droughtTolerance: 'Élevée sur coteaux schisteux et marno-calcaires',
     altitudeZone: 'Coteaux de la Haute et Moyenne Soummam (150 – 550 m)',
     pollinationNote: 'Floraison abondante, idéale en verger mixte dans le bassin de Sidi-Aïch.',
+    shortLabel: 'Limli',
   },
   aberkane: {
     precocityRank: 4,
+    precocityGroup: 'late',
     precocityBadge: 'Tardive de Montagne (Déc – Fév)',
     precocityDetail: 'Noircissement précoce de l’épiderme mais maturité pulpaire hivernale.',
     avgYieldNum: 21,
@@ -122,9 +140,11 @@ const VARIETY_AGRONOMIC_METRICS: Record<string, VarietyAgronomicMetrics> = {
     droughtTolerance: 'Élevée sur pentes rocheuses escarpées',
     altitudeZone: 'Versants d’altitude et reliefs escarpés (500 – 1 000 m)',
     pollinationNote: 'Arbres centenaires rustiques adaptés aux terroirs froids et humides.',
+    shortLabel: 'Aberkane',
   },
   autres: {
     precocityRank: 3,
+    precocityGroup: 'mid',
     precocityBadge: 'Mi-saison (Novembre – Janvier)',
     precocityDetail: 'Échelonnement variable selon le cultivar (Sigoise, Picholine, Arbequina).',
     avgYieldNum: 20,
@@ -133,11 +153,73 @@ const VARIETY_AGRONOMIC_METRICS: Record<string, VarietyAgronomicMetrics> = {
     droughtTolerance: 'Moyenne à bonne (souvent conduite avec irrigation d’appoint)',
     altitudeZone: 'Plaines alluviales et vergers intensifs pilotes (50 – 400 m)',
     pollinationNote: 'Complément de biodiversité et d’assemblage aromatique.',
+    shortLabel: 'Autres cultivars',
   },
 };
 
+export interface FilterVarietiesOptions {
+  varietyId?: string; // 'all' or specific variety id ('chemlal', 'bouchouk', 'azeradj', etc.)
+  category?: VarietyCategoryFilter;
+  precocity?: VarietyPrecocityFilter;
+  searchQuery?: string;
+}
+
+export function filterOliveVarieties(
+  varieties: OliveVariety[],
+  options: FilterVarietiesOptions
+): OliveVariety[] {
+  const {
+    varietyId = 'all',
+    category = 'all',
+    precocity = 'all',
+    searchQuery = '',
+  } = options;
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+
+  return varieties.filter((v) => {
+    if (varietyId !== 'all' && v.id !== varietyId) {
+      return false;
+    }
+    if (category !== 'all' && v.category !== category) {
+      return false;
+    }
+    if (precocity !== 'all') {
+      const metrics = VARIETY_AGRONOMIC_METRICS[v.id];
+      if (!metrics || metrics.precocityGroup !== precocity) {
+        return false;
+      }
+    }
+    if (normalizedQuery) {
+      const metrics = VARIETY_AGRONOMIC_METRICS[v.id];
+      const searchableText = [
+        v.name,
+        v.kabyleName,
+        v.description,
+        v.fruitCharacteristics,
+        v.resistance,
+        v.bestUse,
+        v.harvestWindow,
+        ...v.flavorProfile,
+        metrics?.altitudeZone || '',
+        metrics?.precocityBadge || '',
+      ]
+        .join(' ')
+        .toLowerCase();
+      if (!searchableText.includes(normalizedQuery)) {
+        return false;
+      }
+    }
+    return true;
+  });
+}
+
 export const VarietiesGuide: React.FC = () => {
   const [selectedVariety, setSelectedVariety] = useState<OliveVariety>(OLIVE_VARIETIES[0]);
+  const [activeVarietyFilter, setActiveVarietyFilter] = useState<string>('all');
+  const [categoryFilter, setCategoryFilter] = useState<VarietyCategoryFilter>('all');
+  const [precocityFilter, setPrecocityFilter] = useState<VarietyPrecocityFilter>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
   const [compareVarietyAId, setCompareVarietyAId] = useState<string>(OLIVE_VARIETIES[0].id); // Chemlal
   const [compareVarietyBId, setCompareVarietyBId] = useState<string>(
     OLIVE_VARIETIES.find((v) => v.id === 'azeradj')?.id || OLIVE_VARIETIES[1].id
@@ -145,6 +227,58 @@ export const VarietiesGuide: React.FC = () => {
   const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
   const [varietyToShare, setVarietyToShare] = useState<OliveVariety>(OLIVE_VARIETIES[0]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const filteredVarieties = useMemo(
+    () =>
+      filterOliveVarieties(OLIVE_VARIETIES, {
+        varietyId: activeVarietyFilter,
+        category: categoryFilter,
+        precocity: precocityFilter,
+        searchQuery,
+      }),
+    [activeVarietyFilter, categoryFilter, precocityFilter, searchQuery]
+  );
+
+  const hasActiveFilters =
+    activeVarietyFilter !== 'all' ||
+    categoryFilter !== 'all' ||
+    precocityFilter !== 'all' ||
+    searchQuery.trim() !== '';
+
+  const handleToggleVarietyFilter = (varietyId: string) => {
+    if (varietyId === 'all') {
+      setActiveVarietyFilter('all');
+      return;
+    }
+    const found = OLIVE_VARIETIES.find((v) => v.id === varietyId);
+    if (found) {
+      setSelectedVariety(found);
+      window.history.replaceState(null, '', `#varietes-${found.id}`);
+    }
+    setActiveVarietyFilter((prev) => (prev === varietyId ? 'all' : varietyId));
+  };
+
+  const handleSelectVariety = (variety: OliveVariety) => {
+    setSelectedVariety(variety);
+    window.history.replaceState(null, '', `#varietes-${variety.id}`);
+  };
+
+  const handleResetFilters = () => {
+    setActiveVarietyFilter('all');
+    setCategoryFilter('all');
+    setPrecocityFilter('all');
+    setSearchQuery('');
+  };
+
+  // Keep selectedVariety synced if filters narrow down the list
+  useEffect(() => {
+    if (
+      filteredVarieties.length > 0 &&
+      !filteredVarieties.some((v) => v.id === selectedVariety.id)
+    ) {
+      setSelectedVariety(filteredVarieties[0]);
+    }
+  }, [filteredVarieties, selectedVariety.id]);
 
   const varietyA =
     OLIVE_VARIETIES.find((v) => v.id === compareVarietyAId) || OLIVE_VARIETIES[0];
@@ -340,144 +474,370 @@ export const VarietiesGuide: React.FC = () => {
           </motion.div>
         </motion.div>
 
-        {/* Variety Selection Tabs with progressive staggered scroll entrance */}
+        {/* Système de Filtrage & Bascule des Variétés Autochtones de Béjaïa */}
         <motion.div
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
-          variants={containerVariants}
-          className="flex flex-wrap gap-2.5 mb-8"
+          viewport={{ once: true, amount: 0.15 }}
+          variants={cardRevealVariants}
+          className="bg-white rounded-3xl border border-[#E6DEC9] p-5 sm:p-6 shadow-xs mb-8"
+          aria-label="Système de filtrage des variétés d'oliviers de Béjaïa"
         >
-          {OLIVE_VARIETIES.map((v) => {
-            const isSelected = selectedVariety.id === v.id;
-            return (
-              <motion.button
-                key={v.id}
-                variants={tabButtonVariants}
-                whileHover={{ y: -2 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setSelectedVariety(v)}
-                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer ${
-                  isSelected
-                    ? 'bg-[#233416] text-[#FAF7F2] shadow-md -translate-y-0.5'
-                    : 'bg-white text-[#242A20] border border-[#E6DEC9] hover:border-[#8CBE5D]'
+          {/* Top Row: Filter Title, Live Count & Reset */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#E6DEC9]">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#233416] text-[#E6AB3C] flex items-center justify-center shrink-0">
+                <Filter className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="font-serif text-base sm:text-lg font-bold text-[#18230F] leading-tight">
+                  Filtrer & Explorer les Cultivars de Béjaïa
+                </h3>
+                <p className="text-xs text-[#567B34]">
+                  Basculez entre Chemlal, Bouchouk, Azeradj, Limli ou Aberkane et filtrez par vocation ou maturité
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 self-start sm:self-auto">
+              <span
+                data-testid="varieties-filter-count"
+                className="font-mono text-xs font-bold tabular-nums px-3 py-1.5 rounded-xl bg-[#FAF7F2] text-[#233416] border border-[#E6DEC9] whitespace-nowrap"
+              >
+                {filteredVarieties.length} sur {OLIVE_VARIETIES.length} variété{filteredVarieties.length > 1 ? 's' : ''}
+              </span>
+
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  data-testid="reset-variety-filters"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#E8F4D9] hover:bg-[#d7ebc0] text-[#233416] text-xs font-bold transition-colors cursor-pointer whitespace-nowrap"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-[#567B34]" />
+                  <span>Réinitialiser</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Primary Toggle Row: Native Varieties of Béjaïa (Chemlal, Bouchouk, Azeradj, etc.) */}
+          <div className="mt-4">
+            <div className="flex items-center justify-between gap-2 mb-2.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#567B34]">
+                Accès rapide par cultivar autochtone :
+              </span>
+              <span className="text-[11px] text-[#6F9D44] hidden sm:inline">
+                Cliquez sur une variété pour filtrer et afficher sa fiche complète
+              </span>
+            </div>
+
+            <div
+              role="group"
+              aria-label="Filtrer par variété d'olive"
+              className="flex flex-wrap gap-2"
+            >
+              <button
+                type="button"
+                onClick={() => handleToggleVarietyFilter('all')}
+                data-testid="filter-variety-all"
+                aria-pressed={activeVarietyFilter === 'all'}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+                  activeVarietyFilter === 'all'
+                    ? 'bg-[#233416] text-[#FAF7F2] shadow-sm'
+                    : 'bg-[#FAF7F2] text-[#242A20] border border-[#E6DEC9] hover:border-[#8CBE5D]'
                 }`}
               >
-                <span>{v.name}</span>
+                <span>Toutes les variétés</span>
                 <span
-                  className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
-                    isSelected
+                  className={`font-mono text-[10px] tabular-nums px-1.5 py-0.5 rounded ${
+                    activeVarietyFilter === 'all'
                       ? 'bg-[#FAF7F2]/15 text-[#E6AB3C]'
-                      : 'bg-[#FAF7F2] text-[#567B34]'
+                      : 'bg-white text-[#567B34]'
                   }`}
                 >
-                  {v.category === 'oil' ? 'À Huile' : 'Huile & Table'}
+                  {OLIVE_VARIETIES.length}
                 </span>
-              </motion.button>
-            );
-          })}
-        </motion.div>
+              </button>
 
-        {/* Progressive Scroll Variety Cards Grid (Aperçu Synoptique des Cultivars) */}
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.12 }}
-          variants={containerVariants}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10"
-        >
-          {OLIVE_VARIETIES.map((variety) => {
-            const isSelected = selectedVariety.id === variety.id;
-            const isComparedA = compareVarietyAId === variety.id;
-            const isComparedB = compareVarietyBId === variety.id;
+              {OLIVE_VARIETIES.map((v) => {
+                const isVarietyFiltered = activeVarietyFilter === v.id;
+                const isCurrentlySelected = selectedVariety.id === v.id && activeVarietyFilter === 'all';
+                const shortName = VARIETY_AGRONOMIC_METRICS[v.id]?.shortLabel || v.name;
 
-            return (
-              <motion.article
-                key={variety.id}
-                variants={cardRevealVariants}
-                whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                onClick={() => setSelectedVariety(variety)}
-                className={`rounded-2xl p-5 border transition-colors cursor-pointer flex flex-col justify-between ${
-                  isSelected
-                    ? 'bg-[#233416] text-[#FAF7F2] border-[#233416] shadow-md'
-                    : 'bg-white text-[#18230F] border-[#E6DEC9] hover:border-[#8CBE5D] shadow-xs'
-                }`}
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-2 text-xs mb-2">
-                    <span
-                      className={`font-serif italic ${
-                        isSelected ? 'text-[#E6AB3C]' : 'text-[#567B34]'
-                      }`}
-                    >
-                      {variety.kabyleName}
-                    </span>
-                    <span
-                      className={`font-mono text-[11px] font-semibold ${
-                        isSelected ? 'text-[#E8F4D9]/90' : 'text-[#436229]'
-                      }`}
-                    >
-                      {variety.oilYieldPercent}
-                    </span>
-                  </div>
-                  <h3 className="font-serif text-lg font-bold leading-snug">
-                    {variety.name}
-                  </h3>
-                  <p
-                    className={`text-xs mt-1.5 line-clamp-2 leading-relaxed ${
-                      isSelected ? 'text-[#E8F4D9]/85' : 'text-[#436229]'
+                return (
+                  <button
+                    key={v.id}
+                    type="button"
+                    onClick={() => handleToggleVarietyFilter(v.id)}
+                    data-testid={`filter-variety-${v.id}`}
+                    aria-pressed={isVarietyFiltered}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+                      isVarietyFiltered
+                        ? 'bg-[#233416] text-[#FAF7F2] shadow-sm ring-2 ring-[#E6AB3C]/50'
+                        : isCurrentlySelected
+                        ? 'bg-[#E8F4D9] text-[#18230F] border border-[#8CBE5D]'
+                        : 'bg-white text-[#242A20] border border-[#E6DEC9] hover:border-[#8CBE5D]'
                     }`}
                   >
-                    {variety.description}
-                  </p>
-                </div>
+                    <span>{shortName}</span>
+                    <span
+                      className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                        isVarietyFiltered
+                          ? 'bg-[#FAF7F2]/15 text-[#E6AB3C]'
+                          : isCurrentlySelected
+                          ? 'bg-[#233416] text-[#FAF7F2]'
+                          : 'bg-[#FAF7F2] text-[#567B34]'
+                      }`}
+                    >
+                      {v.category === 'oil' ? 'Huile' : 'Mixte'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-                <div
-                  className={`mt-4 pt-3 border-t flex items-center justify-between gap-2 text-[11px] ${
+          {/* Secondary Filter Row: Vocation, Precocity & Search Input */}
+          <div className="mt-4 pt-4 border-t border-[#E6DEC9] grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+            {/* Vocation / Category Filter */}
+            <div className="md:col-span-4">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-[#567B34] mb-1.5">
+                Vocation oléicole
+              </label>
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrer par vocation">
+                {(
+                  [
+                    { id: 'all', label: 'Toutes' },
+                    { id: 'oil', label: 'À Huile (Vierge Extra)' },
+                    { id: 'mixed', label: 'Double Fin (Huile & Table)' },
+                  ] as const
+                ).map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    data-testid={`filter-category-${cat.id}`}
+                    aria-pressed={categoryFilter === cat.id}
+                    onClick={() => setCategoryFilter(cat.id)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer whitespace-nowrap ${
+                      categoryFilter === cat.id
+                        ? 'bg-[#567B34] text-white shadow-2xs'
+                        : 'bg-[#FAF7F2] text-[#242A20] border border-[#E6DEC9] hover:border-[#8CBE5D]'
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Precocity / Harvest Maturity Filter */}
+            <div className="md:col-span-5">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-[#567B34] mb-1.5">
+                Maturité & Période de récolte
+              </label>
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrer par précocité">
+                {(
+                  [
+                    { id: 'all', label: 'Toutes saisons' },
+                    { id: 'early', label: 'Précoce (Oct–Nov)' },
+                    { id: 'mid', label: 'Mi-saison (Nov–Jan)' },
+                    { id: 'late', label: 'Tardive (Déc–Fév)' },
+                  ] as const
+                ).map((prec) => (
+                  <button
+                    key={prec.id}
+                    type="button"
+                    data-testid={`filter-precocity-${prec.id}`}
+                    aria-pressed={precocityFilter === prec.id}
+                    onClick={() => setPrecocityFilter(prec.id)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer whitespace-nowrap ${
+                      precocityFilter === prec.id
+                        ? 'bg-[#E6AB3C] text-[#18230F] shadow-2xs'
+                        : 'bg-[#FAF7F2] text-[#242A20] border border-[#E6DEC9] hover:border-[#8CBE5D]'
+                    }`}
+                  >
+                    {prec.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Search Query Input */}
+            <div className="md:col-span-3">
+              <label
+                htmlFor="variety-search-input"
+                className="block text-[11px] font-bold uppercase tracking-wider text-[#567B34] mb-1.5"
+              >
+                Recherche (nom, arôme, terroir)
+              </label>
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-[#567B34] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  id="variety-search-input"
+                  data-testid="variety-search-input"
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Ex: Chemlal, artichaut, Soummam..."
+                  className="w-full pl-8 pr-8 py-1.5 rounded-xl bg-[#FAF7F2] border border-[#E6DEC9] text-xs text-[#18230F] placeholder:text-[#567B34]/60 focus:outline-none focus:border-[#233416] focus:bg-white transition-colors"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    aria-label="Effacer la recherche"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#567B34] hover:text-[#18230F] cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Progressive Scroll Variety Cards Grid (Aperçu Synoptique des Cultivars Filtrés) */}
+        {filteredVarieties.length === 0 ? (
+          <div
+            data-testid="varieties-empty-state"
+            className="bg-white rounded-3xl border border-[#E6DEC9] p-8 text-center mb-10 shadow-2xs"
+          >
+            <p className="font-serif text-lg font-bold text-[#18230F]">
+              Aucune variété ne correspond aux filtres sélectionnés
+            </p>
+            <p className="text-xs text-[#567B34] mt-1 max-w-md mx-auto">
+              Essayez de modifier vos critères de vocation, de période de récolte ou de réinitialiser le filtre variétal.
+            </p>
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#233416] text-[#FAF7F2] text-xs font-bold hover:bg-[#31491E] transition-colors cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-[#E6AB3C]" />
+              <span>Afficher toutes les variétés de Béjaïa</span>
+            </button>
+          </div>
+        ) : (
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.12 }}
+            variants={containerVariants}
+            data-testid="varieties-cards-grid"
+            className={`grid grid-cols-1 ${
+              filteredVarieties.length === 1
+                ? 'sm:grid-cols-1 max-w-2xl'
+                : filteredVarieties.length === 2
+                ? 'sm:grid-cols-2'
+                : 'sm:grid-cols-2 lg:grid-cols-3'
+            } gap-4 mb-10`}
+          >
+            {filteredVarieties.map((variety) => {
+              const isSelected = selectedVariety.id === variety.id;
+              const isComparedA = compareVarietyAId === variety.id;
+              const isComparedB = compareVarietyBId === variety.id;
+
+              return (
+                <motion.article
+                  key={variety.id}
+                  data-testid={`variety-card-${variety.id}`}
+                  variants={cardRevealVariants}
+                  whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                  onClick={() => handleSelectVariety(variety)}
+                  className={`rounded-2xl p-5 border transition-colors cursor-pointer flex flex-col justify-between ${
                     isSelected
-                      ? 'border-[#FAF7F2]/15 text-[#B0D984]'
-                      : 'border-[#E6DEC9] text-[#567B34]'
+                      ? 'bg-[#233416] text-[#FAF7F2] border-[#233416] shadow-md'
+                      : 'bg-white text-[#18230F] border-[#E6DEC9] hover:border-[#8CBE5D] shadow-xs'
                   }`}
                 >
-                  <span>{variety.harvestWindow}</span>
-                  <div
-                    className="flex items-center gap-1"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handleAssignToComparator(variety.id, 'A')}
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors cursor-pointer ${
-                        isComparedA
-                          ? 'bg-[#E6AB3C] text-[#18230F]'
-                          : isSelected
-                          ? 'bg-[#FAF7F2]/15 text-[#FAF7F2] hover:bg-[#FAF7F2]/25'
-                          : 'bg-[#FAF7F2] text-[#233416] border border-[#E6DEC9] hover:border-[#8CBE5D]'
+                  <div>
+                    <div className="flex items-center justify-between gap-2 text-xs mb-2">
+                      <span
+                        className={`font-serif italic ${
+                          isSelected ? 'text-[#E6AB3C]' : 'text-[#567B34]'
+                        }`}
+                      >
+                        {variety.kabyleName}
+                      </span>
+                      <span
+                        className={`font-mono text-[11px] font-semibold tabular-nums ${
+                          isSelected ? 'text-[#E8F4D9]/90' : 'text-[#436229]'
+                        }`}
+                      >
+                        {variety.oilYieldPercent}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="font-serif text-lg font-bold leading-snug">
+                        {variety.name}
+                      </h3>
+                      <span
+                        className={`text-[10px] font-mono px-2 py-0.5 rounded shrink-0 ${
+                          isSelected
+                            ? 'bg-[#FAF7F2]/15 text-[#E6AB3C]'
+                            : 'bg-[#FAF7F2] text-[#567B34]'
+                        }`}
+                      >
+                        {variety.category === 'oil' ? 'À Huile' : 'Huile & Table'}
+                      </span>
+                    </div>
+                    <p
+                      className={`text-xs mt-1.5 line-clamp-2 leading-relaxed ${
+                        isSelected ? 'text-[#E8F4D9]/85' : 'text-[#436229]'
                       }`}
-                      title={`Définir ${variety.name} comme Variété A dans le comparateur`}
                     >
-                      {isComparedA ? '✓ Variété A' : 'Comparer A'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleAssignToComparator(variety.id, 'B')}
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors cursor-pointer ${
-                        isComparedB
-                          ? 'bg-[#8CBE5D] text-[#18230F]'
-                          : isSelected
-                          ? 'bg-[#FAF7F2]/15 text-[#FAF7F2] hover:bg-[#FAF7F2]/25'
-                          : 'bg-[#FAF7F2] text-[#233416] border border-[#E6DEC9] hover:border-[#8CBE5D]'
-                      }`}
-                      title={`Définir ${variety.name} comme Variété B dans le comparateur`}
-                    >
-                      {isComparedB ? '✓ Variété B' : 'Comparer B'}
-                    </button>
+                      {variety.description}
+                    </p>
                   </div>
-                </div>
-              </motion.article>
-            );
-          })}
-        </motion.div>
+
+                  <div
+                    className={`mt-4 pt-3 border-t flex items-center justify-between gap-2 text-[11px] ${
+                      isSelected
+                        ? 'border-[#FAF7F2]/15 text-[#B0D984]'
+                        : 'border-[#E6DEC9] text-[#567B34]'
+                    }`}
+                  >
+                    <span>{variety.harvestWindow}</span>
+                    <div
+                      className="flex items-center gap-1"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handleAssignToComparator(variety.id, 'A')}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors cursor-pointer whitespace-nowrap ${
+                          isComparedA
+                            ? 'bg-[#E6AB3C] text-[#18230F]'
+                            : isSelected
+                            ? 'bg-[#FAF7F2]/15 text-[#FAF7F2] hover:bg-[#FAF7F2]/25'
+                            : 'bg-[#FAF7F2] text-[#233416] border border-[#E6DEC9] hover:border-[#8CBE5D]'
+                        }`}
+                        title={`Définir ${variety.name} comme Variété A dans le comparateur`}
+                      >
+                        {isComparedA ? '✓ Variété A' : 'Comparer A'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAssignToComparator(variety.id, 'B')}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors cursor-pointer whitespace-nowrap ${
+                          isComparedB
+                            ? 'bg-[#8CBE5D] text-[#18230F]'
+                            : isSelected
+                            ? 'bg-[#FAF7F2]/15 text-[#FAF7F2] hover:bg-[#FAF7F2]/25'
+                            : 'bg-[#FAF7F2] text-[#233416] border border-[#E6DEC9] hover:border-[#8CBE5D]'
+                        }`}
+                        title={`Définir ${variety.name} comme Variété B dans le comparateur`}
+                      >
+                        {isComparedB ? '✓ Variété B' : 'Comparer B'}
+                      </button>
+                    </div>
+                  </div>
+                </motion.article>
+              );
+            })}
+          </motion.div>
+        )}
 
         {/* Active Variety Detail Card with scroll-in and variety-switch motion */}
         <motion.div
@@ -1149,10 +1509,10 @@ export const VarietiesGuide: React.FC = () => {
           <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#18230F]">
-                Tableau Récapitulatif de l’Ensemble des Variétés de la Wilaya
+                Tableau Récapitulatif des Variétés de la Wilaya
               </h3>
               <p className="text-xs text-[#567B34] mt-1">
-                Repères techniques pour les oléiculteurs et pépiniéristes de Béjaïa
+                Repères techniques pour les oléiculteurs et pépiniéristes de Béjaïa ({filteredVarieties.length} sur {OLIVE_VARIETIES.length} affichée{filteredVarieties.length > 1 ? 's' : ''})
               </p>
             </div>
             <span className="text-[11px] text-[#6F9D44] font-medium">
@@ -1174,20 +1534,35 @@ export const VarietiesGuide: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E6DEC9]">
-                {OLIVE_VARIETIES.map((v) => {
+                {(filteredVarieties.length > 0 ? filteredVarieties : OLIVE_VARIETIES).map((v) => {
                   const rowShare = getVarietyShareData(v);
+                  const isRowSelected = selectedVariety.id === v.id;
                   return (
                     <tr
                       key={v.id}
-                      onClick={() => setSelectedVariety(v)}
-                      className="hover:bg-[#FAF7F2] cursor-pointer transition-colors"
+                      onClick={() => handleSelectVariety(v)}
+                      className={`cursor-pointer transition-colors ${
+                        isRowSelected
+                          ? 'bg-[#E8F4D9]/65 hover:bg-[#E8F4D9]'
+                          : 'hover:bg-[#FAF7F2]'
+                      }`}
                     >
-                      <td className="py-3.5 px-4 font-bold text-[#18230F]">{v.name}</td>
+                      <td className="py-3.5 px-4 font-bold text-[#18230F]">
+                        <div className="flex items-center gap-2">
+                          {isRowSelected && (
+                            <span
+                              className="w-2 h-2 rounded-full bg-[#233416] shrink-0"
+                              aria-hidden="true"
+                            />
+                          )}
+                          <span>{v.name}</span>
+                        </div>
+                      </td>
                       <td className="py-3.5 px-4 font-serif italic text-[#567B34]">
                         {v.kabyleName}
                       </td>
-                      <td className="py-3.5 px-4 font-semibold">{v.proportionKabylie}</td>
-                      <td className="py-3.5 px-4 font-bold text-[#E6AB3C]">
+                      <td className="py-3.5 px-4 font-semibold tabular-nums">{v.proportionKabylie}</td>
+                      <td className="py-3.5 px-4 font-bold text-[#E6AB3C] tabular-nums">
                         {v.oilYieldPercent}
                       </td>
                       <td className="py-3.5 px-4">{v.harvestWindow}</td>
