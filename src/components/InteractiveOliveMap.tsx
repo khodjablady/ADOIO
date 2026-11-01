@@ -53,6 +53,238 @@ function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: num
   return Math.round(R * c * 10) / 10;
 }
 
+export type OliveIconVariant =
+  | 'bassin-branch'
+  | 'adoio-wreath'
+  | 'mill-modern'
+  | 'mill-traditional'
+  | 'mill-domaine'
+  | 'mill-cooperative'
+  | 'collection-harvest';
+
+// Custom SVG Olive-Themed Icons reflecting the agricultural identity of Béjaïa (Azemmur & Zzit Uzemmur)
+const OliveThemeIcon: React.FC<{ variant: OliveIconVariant; className?: string }> = ({
+  variant,
+  className = 'w-4 h-4',
+}) => {
+  switch (variant) {
+    case 'bassin-branch':
+      // Botanical Olive Branch with Leaves & Drupes (Verger / Zone de culture)
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+          <path
+            d="M3.5 19.5C8.5 15.5 14 10.5 20.5 4.5"
+            stroke="currentColor"
+            strokeWidth="1.9"
+            strokeLinecap="round"
+          />
+          <path
+            d="M14.5 9.5C13.5 6.3 10.2 5.2 7.5 6.8C9.1 9.5 11.8 10.5 14.5 9.5Z"
+            fill="currentColor"
+          />
+          <path
+            d="M18.5 6.2C17.8 3.5 15 2.7 12.6 4C13.9 6.3 16.2 7.1 18.5 6.2Z"
+            fill="currentColor"
+          />
+          <path
+            d="M11 13C12.2 15.8 15.3 16.9 18 15.3C16.4 12.7 13.7 11.9 11 13Z"
+            fill="currentColor"
+          />
+          <ellipse cx="9.2" cy="14.8" rx="2.4" ry="3.1" transform="rotate(-28 9.2 14.8)" fill="#E6AB3C" />
+          <ellipse cx="14.8" cy="10.2" rx="2" ry="2.6" transform="rotate(24 14.8 10.2)" fill="#8CBE5D" />
+        </svg>
+      );
+
+    case 'adoio-wreath':
+      // Golden Olive Wreath & Crowned Olive Drupe (Siège ADOIO Seddouk)
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+          <path
+            d="M7 19C4.2 16.2 3.5 11.5 5.8 7.5C7 5.5 8.8 4.2 10.5 3.6"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+          <path
+            d="M17 19C19.8 16.2 20.5 11.5 18.2 7.5C17 5.5 15.2 4.2 13.5 3.6"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+          <ellipse cx="12" cy="12.5" rx="3.4" ry="4.4" fill="#FAF7F2" />
+          <circle cx="12" cy="11.2" r="1.2" fill="#B47A16" />
+          <path d="M5.5 12.5L3.5 11M18.5 12.5L20.5 11M6.8 8.5L5 7M17.2 8.5L19 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      );
+
+    case 'mill-modern':
+      // Olive Oil Golden Drop + Botanical Leaf & Millstone Gear (Huilerie Moderne Continue)
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+          <path
+            d="M12 3.2C12 3.2 6.2 10.1 6.2 14.5C6.2 17.8 8.8 20.5 12 20.5C15.2 20.5 17.8 17.8 17.8 14.5C17.8 10.1 12 3.2 12 3.2Z"
+            fill="#E6AB3C"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          />
+          <path
+            d="M12.2 8.5C14.8 8.5 16.5 6.4 16.8 4C14.3 4.2 12.4 5.9 12.2 8.5Z"
+            fill="currentColor"
+          />
+          <circle cx="12" cy="14.8" r="2.7" stroke="#18230F" strokeWidth="1.5" fill="#FAF7F2" />
+          <circle cx="12" cy="14.8" r="0.9" fill="#18230F" />
+        </svg>
+      );
+
+    case 'mill-traditional':
+      // Traditional Kabyle Millstone & Terracotta Olive Amphora (Taâssart / Presse Traditionnelle)
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+          <path
+            d="M9 3.5H15M10 3.5V6.2C7.6 7.5 6.5 10.2 6.8 13.2C7.1 16.5 9.2 19.5 12 20.5C14.8 19.5 16.9 16.5 17.2 13.2C17.5 10.2 16.4 7.5 14 6.2V3.5"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M6.8 9C5 8.8 4 10.2 4.5 11.8C5 13 6.2 13.4 7 13.2M17.2 9C19 8.8 20 10.2 19.5 11.8C19 13 17.8 13.4 17 13.2"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+          <ellipse cx="12" cy="12.8" rx="2.3" ry="3" fill="#E6AB3C" />
+          <path d="M12 9.5C13.2 8.3 14.8 8.3 15.4 9.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+        </svg>
+      );
+
+    case 'mill-domaine':
+      // Estate Olive Branch & Medallion Droplet (Domaine Oléicole Intégré)
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+          <path
+            d="M12 3.5L14.1 7.6L18.6 8.2L15.3 11.4L16.1 15.9L12 13.7L7.9 15.9L8.7 11.4L5.4 8.2L9.9 7.6L12 3.5Z"
+            fill="#FAF7F2"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinejoin="round"
+          />
+          <ellipse cx="12" cy="10.8" rx="2.1" ry="2.8" fill="#31491E" />
+          <path
+            d="M6.5 19.2C9.5 17.6 14.5 17.6 17.5 19.2"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+        </svg>
+      );
+
+    case 'mill-cooperative':
+      // Cooperative Twin Olive Branches & Shared Olive Drupes
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+          <path
+            d="M4.5 17.5C6.5 12.5 10 8.5 16.5 5.5M19.5 17.5C17.5 12.5 14 8.5 7.5 5.5"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinecap="round"
+          />
+          <ellipse cx="9.5" cy="13.5" rx="2.2" ry="2.9" transform="rotate(-18 9.5 13.5)" fill="#E6AB3C" />
+          <ellipse cx="14.5" cy="13.5" rx="2.2" ry="2.9" transform="rotate(18 14.5 13.5)" fill="#8CBE5D" />
+          <circle cx="12" cy="7.5" r="2" fill="#FAF7F2" />
+        </svg>
+      );
+
+    case 'collection-harvest':
+      // Olive Harvest Basket / Crate with Olives & Weighing Beam (Point de Collecte)
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+          <path
+            d="M4.5 11.5H19.5L17.8 19.2C17.6 20 16.9 20.5 16 20.5H8C7.1 20.5 6.4 20 6.2 19.2L4.5 11.5Z"
+            fill="#FAF7F2"
+             fillOpacity="0.22"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinejoin="round"
+          />
+          <ellipse cx="9" cy="9.2" rx="2.1" ry="2.6" transform="rotate(-15 9 9.2)" fill="#8CBE5D" stroke="currentColor" strokeWidth="1.2" />
+          <ellipse cx="12.5" cy="8.5" rx="2.2" ry="2.8" fill="#31491E" stroke="currentColor" strokeWidth="1.2" />
+          <ellipse cx="15.5" cy="9.5" rx="2" ry="2.5" transform="rotate(18 15.5 9.5)" fill="#E6AB3C" stroke="currentColor" strokeWidth="1.2" />
+          <path d="M8.5 15.5H15.5M12 13.5V17.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        </svg>
+      );
+  }
+};
+
+// Sculpted Olive-Themed Teardrop Pin for Map Markers
+const OliveMapPin: React.FC<{
+  color: string;
+  accentColor?: string;
+  variant: OliveIconVariant;
+  isSelected?: boolean;
+}> = ({ color, accentColor = '#E6AB3C', variant, isSelected = false }) => {
+  return (
+    <div
+      className={`relative flex flex-col items-center justify-center cursor-pointer transition-all duration-200 group-hover:-translate-y-1 group-hover:scale-120 ${
+        isSelected ? '-translate-y-1 scale-125' : ''
+      }`}
+    >
+      {/* Decorative top olive leaf sprig on pin */}
+      <svg
+        viewBox="0 0 28 12"
+        className="w-6 h-2.5 -mb-1 z-20 drop-shadow-xs pointer-events-none"
+        fill="none"
+        aria-hidden="true"
+      >
+        <path
+          d="M14 10C10.5 9.2 7.5 6.5 6.5 2.5C10.2 3.2 12.8 5.8 14 10Z"
+          fill="#8CBE5D"
+          stroke="#FFFFFF"
+          strokeWidth="1"
+        />
+        <path
+          d="M14 10C17.5 9.2 20.5 6.5 21.5 2.5C17.8 3.2 15.2 5.8 14 10Z"
+          fill="#567B34"
+          stroke="#FFFFFF"
+          strokeWidth="1"
+        />
+      </svg>
+
+      {/* Main Sculpted Olive Drop Pin Body */}
+      <div className="relative w-9 h-11 flex items-center justify-center">
+        <svg
+          viewBox="0 0 36 44"
+          className="w-full h-full drop-shadow-md"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path
+            d="M18 2C9.16 2 2 9.16 2 18C2 28.2 14.8 39.4 17.1 41.3C17.6 41.7 18.4 41.7 18.9 41.3C21.2 39.4 34 28.2 34 18C34 9.16 26.84 2 18 2Z"
+            fill={color}
+            stroke={isSelected ? accentColor : '#FFFFFF'}
+            strokeWidth={isSelected ? '3' : '2.2'}
+          />
+          <circle
+            cx="18"
+            cy="17.5"
+            r="11.5"
+            fill="#18230F"
+            fillOpacity="0.22"
+            stroke={accentColor}
+            strokeOpacity={isSelected ? '0.95' : '0.55'}
+            strokeWidth="1.2"
+          />
+        </svg>
+
+        {/* Inner Botanical / Olive Mill Icon */}
+        <div className="absolute top-[7px] left-1/2 -translate-x-1/2 w-5 h-5 flex items-center justify-center text-white">
+          <OliveThemeIcon variant={variant} className="w-4 h-4 text-white" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Camera Controller for smooth Google Maps programmatic pan & zoom
 interface MapCameraControllerProps {
   targetCenter: { lat: number; lng: number } | null;
@@ -435,7 +667,7 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
                     : 'bg-[#FAF7F2] text-[#31491E] hover:bg-[#E8F4D9] border border-[#E6DEC9]'
                 }`}
               >
-                <span>🏭</span>
+                <OliveThemeIcon variant="mill-modern" className="w-4 h-4 text-[#E6AB3C]" />
                 <span>Moulins</span>
                 <span
                   className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
@@ -456,7 +688,7 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
                     : 'bg-[#FAF7F2] text-[#233416] hover:bg-[#E8F4D9] border border-[#E6DEC9]'
                 }`}
               >
-                <span>🫒</span>
+                <OliveThemeIcon variant="bassin-branch" className="w-4 h-4 text-[#8CBE5D]" />
                 <span>Zones de culture</span>
                 <span
                   className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
@@ -477,7 +709,7 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
                     : 'bg-[#FAF7F2] text-[#B45309] hover:bg-[#FEF5DB] border border-[#E6DEC9]'
                 }`}
               >
-                <span>⚖️</span>
+                <OliveThemeIcon variant="collection-harvest" className="w-4 h-4 text-[#E6AB3C]" />
                 <span>Points de collecte</span>
                 <span
                   className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
@@ -706,16 +938,29 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
                             <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-[#18230F]/95" />
                           </div>
 
-                          <div
-                            className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-white text-[11px] font-bold border-2 border-white shadow-lg transition-all duration-200 group-hover:scale-110 group-hover:shadow-xl group-hover:ring-2 group-hover:ring-[#E6AB3C]/80 cursor-pointer whitespace-nowrap ${
-                              isSeddouk ? 'bg-[#B47A16]' : 'bg-[#233416]'
-                            } ${isSelected ? 'ring-2 ring-[#E6AB3C] scale-110' : ''}`}
-                          >
-                            <span>{isSeddouk ? '⭐' : '🫒'}</span>
-                            <span>{commune.commune}</span>
-                            <span className="bg-white/25 rounded px-1 py-0.2 text-[9px] font-extrabold">
-                              {(commune.avgProductionLiters / 1000000).toFixed(1)}M L
-                            </span>
+                          <div className="flex flex-col items-center">
+                            <div
+                              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-white text-[11px] font-bold border-2 border-white shadow-lg transition-all duration-200 group-hover:scale-110 group-hover:shadow-xl group-hover:ring-2 group-hover:ring-[#E6AB3C]/80 cursor-pointer whitespace-nowrap ${
+                                isSeddouk ? 'bg-[#B47A16]' : 'bg-[#233416]'
+                              } ${isSelected ? 'ring-2 ring-[#E6AB3C] scale-110' : ''}`}
+                            >
+                              <span className="w-4 h-4 rounded-full bg-white/15 flex items-center justify-center shrink-0">
+                                <OliveThemeIcon
+                                  variant={isSeddouk ? 'adoio-wreath' : 'bassin-branch'}
+                                  className="w-3.5 h-3.5 text-white"
+                                />
+                              </span>
+                              <span>{commune.commune}</span>
+                              <span className="bg-white/25 rounded px-1 py-0.2 text-[9px] font-extrabold">
+                                {(commune.avgProductionLiters / 1000000).toFixed(1)}M L
+                              </span>
+                            </div>
+                            {/* Olive stem pin tip */}
+                            <div
+                              className={`w-2 h-2 rotate-45 -mt-1 border-r-2 border-b-2 border-white shadow-xs ${
+                                isSeddouk ? 'bg-[#B47A16]' : 'bg-[#233416]'
+                              }`}
+                            />
                           </div>
                         </div>
                       </AdvancedMarker>
@@ -733,14 +978,14 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
                         ? '#B47A16'
                         : '#2A52BE';
 
-                    const pinEmoji =
+                    const pinVariant: OliveIconVariant =
                       mill.type === 'modern'
-                        ? '🏭'
+                        ? 'mill-modern'
                         : mill.type === 'traditional'
-                        ? '🏺'
+                        ? 'mill-traditional'
                         : mill.type === 'domaine'
-                        ? '🏆'
-                        : '🤝';
+                        ? 'mill-domaine'
+                        : 'mill-cooperative';
 
                     const markerId = `mill-${mill.id}`;
                     const isHovered = hoveredMarkerId === markerId;
@@ -807,19 +1052,16 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
                           {/* Pulsing ring when mill is selected and centered */}
                           {isSelected && (
                             <span
-                              className="pointer-events-none absolute -inset-1.5 rounded-full opacity-55 animate-ping"
+                              className="pointer-events-none absolute top-1.5 w-9 h-9 rounded-full opacity-55 animate-ping"
                               style={{ backgroundColor: '#E6AB3C' }}
                             />
                           )}
 
-                          <div
-                            style={{ backgroundColor: pinColor }}
-                            className={`relative w-8 h-8 rounded-full border-2 border-white shadow-lg flex items-center justify-center cursor-pointer transition-all duration-200 group-hover:scale-125 group-hover:shadow-xl group-hover:ring-2 group-hover:ring-[#E6AB3C] ${
-                              isSelected ? 'ring-3 ring-[#E6AB3C] scale-125 shadow-xl' : ''
-                            }`}
-                          >
-                            <span className="text-xs leading-none">{pinEmoji}</span>
-                          </div>
+                          <OliveMapPin
+                            color={pinColor}
+                            variant={pinVariant}
+                            isSelected={isSelected}
+                          />
                         </div>
                       </AdvancedMarker>
                     );
@@ -880,13 +1122,12 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
                             <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-[#18230F]/95" />
                           </div>
 
-                          <div
-                            className={`w-8 h-8 bg-[#D97706] border-2 border-white rounded-lg rotate-45 shadow-lg flex items-center justify-center cursor-pointer transition-all duration-200 group-hover:scale-115 group-hover:shadow-xl group-hover:ring-2 group-hover:ring-[#E6AB3C] ${
-                              isSelected ? 'ring-2 ring-white scale-110' : ''
-                            }`}
-                          >
-                            <span className="-rotate-45 text-xs leading-none">⚖️</span>
-                          </div>
+                          <OliveMapPin
+                            color="#D97706"
+                            accentColor="#FEF5DB"
+                            variant="collection-harvest"
+                            isSelected={isSelected}
+                          />
                         </div>
                       </AdvancedMarker>
                     );
@@ -1088,57 +1329,59 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
                 {isLegendOpen && (
                   <div className="space-y-2 animate-in fade-in-50 duration-200">
                     <div className="text-[10px] text-[#6F9D44] font-bold uppercase tracking-wider">
-                      1. Bassins Oléicoles
+                      1. Bassins Oléicoles (Azemmur)
                     </div>
                     <div className="space-y-1.5 text-[11px]">
                       <div className="flex items-center gap-2">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#233416] text-white text-[10px] font-bold border border-white shadow-xs shrink-0">
-                          🫒 Akbou
+                          <OliveThemeIcon variant="bassin-branch" className="w-3 h-3 text-white" />
+                          <span>Akbou</span>
                         </span>
-                        <span className="text-[#31491E]">Commune / Bassin</span>
+                        <span className="text-[#31491E]">Rameau d'olivier · Bassin</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#B47A16] text-white text-[10px] font-bold border border-white shadow-xs shrink-0">
-                          ⭐ Seddouk
+                          <OliveThemeIcon variant="adoio-wreath" className="w-3 h-3 text-white" />
+                          <span>Seddouk</span>
                         </span>
-                        <span className="text-[#31491E]">Siège ADOIO</span>
+                        <span className="text-[#31491E]">Couronne d'olivier · Siège ADOIO</span>
                       </div>
                     </div>
 
                     <div className="pt-2 border-t border-[#E6DEC9]/60 text-[10px] text-[#6F9D44] font-bold uppercase tracking-wider">
-                      2. Huileries & Moulins
+                      2. Huileries & Moulins (Zzit Uzemmur)
                     </div>
                     <div className="grid grid-cols-1 gap-1.5 text-[11px]">
                       <div className="flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-[#31491E] text-white text-[9px] flex items-center justify-center border border-white shadow-xs shrink-0">
-                          🏭
+                        <span className="w-5 h-5 rounded-full bg-[#31491E] text-white flex items-center justify-center border border-white shadow-xs shrink-0">
+                          <OliveThemeIcon variant="mill-modern" className="w-3.5 h-3.5 text-white" />
                         </span>
                         <span>
-                          <strong>Moderne Continu</strong> (Inox)
+                          <strong>Goutte d'Or & Meule</strong> · Continu Inox
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-[#AF4D24] text-white text-[9px] flex items-center justify-center border border-white shadow-xs shrink-0">
-                          🏺
+                        <span className="w-5 h-5 rounded-full bg-[#AF4D24] text-white flex items-center justify-center border border-white shadow-xs shrink-0">
+                          <OliveThemeIcon variant="mill-traditional" className="w-3.5 h-3.5 text-white" />
                         </span>
                         <span>
-                          <strong>Presse Traditionnelle</strong>
+                          <strong>Amphore & Taâssart</strong> · Traditionnel
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-[#B47A16] text-white text-[9px] flex items-center justify-center border border-white shadow-xs shrink-0">
-                          🏆
+                        <span className="w-5 h-5 rounded-full bg-[#B47A16] text-white flex items-center justify-center border border-white shadow-xs shrink-0">
+                          <OliveThemeIcon variant="mill-domaine" className="w-3.5 h-3.5 text-white" />
                         </span>
                         <span>
-                          <strong>Domaine Intégré</strong>
+                          <strong>Médaille d'Olivier</strong> · Domaine Intégré
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-[#2A52BE] text-white text-[9px] flex items-center justify-center border border-white shadow-xs shrink-0">
-                          🤝
+                        <span className="w-5 h-5 rounded-full bg-[#2A52BE] text-white flex items-center justify-center border border-white shadow-xs shrink-0">
+                          <OliveThemeIcon variant="mill-cooperative" className="w-3.5 h-3.5 text-white" />
                         </span>
                         <span>
-                          <strong>Coopérative</strong>
+                          <strong>Rameaux Croisés</strong> · Coopérative
                         </span>
                       </div>
                     </div>
@@ -1147,11 +1390,11 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
                       3. Points de Collecte
                     </div>
                     <div className="flex items-center gap-2 text-[11px]">
-                      <span className="w-5 h-5 rounded-md bg-[#D97706] text-white text-[10px] flex items-center justify-center border border-white shadow-xs shrink-0">
-                        ⚖️
+                      <span className="w-5 h-5 rounded-full bg-[#D97706] text-white flex items-center justify-center border border-white shadow-xs shrink-0">
+                        <OliveThemeIcon variant="collection-harvest" className="w-3.5 h-3.5 text-white" />
                       </span>
                       <span>
-                        <strong>Point de collecte & pesage</strong>
+                        <strong>Couffin de Récolte</strong> · Collecte & pesage
                       </span>
                     </div>
                   </div>
@@ -1163,20 +1406,28 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3 px-2 text-[11px] text-[#436229]">
               <div className="flex flex-wrap items-center gap-4">
                 <span className="flex items-center gap-1.5 font-medium">
-                  <span className="w-3 h-3 rounded-full bg-[#233416] inline-block border border-white shadow-xs"></span>
-                  Zone de culture (Commune)
+                  <span className="w-4 h-4 rounded-full bg-[#233416] text-white inline-flex items-center justify-center border border-white shadow-xs">
+                    <OliveThemeIcon variant="bassin-branch" className="w-2.5 h-2.5 text-white" />
+                  </span>
+                  Rameau d'olivier (Bassin)
                 </span>
                 <span className="flex items-center gap-1.5 font-medium">
-                  <span className="w-3 h-3 rounded-full bg-[#31491E] inline-block border border-white shadow-xs"></span>
-                  Moulin Continu (Inox)
+                  <span className="w-4 h-4 rounded-full bg-[#31491E] text-white inline-flex items-center justify-center border border-white shadow-xs">
+                    <OliveThemeIcon variant="mill-modern" className="w-2.5 h-2.5 text-white" />
+                  </span>
+                  Moulin Continu (Goutte d'Or)
                 </span>
                 <span className="flex items-center gap-1.5 font-medium">
-                  <span className="w-3 h-3 rounded-full bg-[#AF4D24] inline-block border border-white shadow-xs"></span>
-                  Presse Traditionnelle
+                  <span className="w-4 h-4 rounded-full bg-[#AF4D24] text-white inline-flex items-center justify-center border border-white shadow-xs">
+                    <OliveThemeIcon variant="mill-traditional" className="w-2.5 h-2.5 text-white" />
+                  </span>
+                  Presse Traditionnelle (Amphore)
                 </span>
                 <span className="flex items-center gap-1.5 font-medium">
-                  <span className="w-3 h-3 rounded-md bg-[#D97706] inline-block border border-white shadow-xs"></span>
-                  Point de Collecte (Pesage)
+                  <span className="w-4 h-4 rounded-full bg-[#D97706] text-white inline-flex items-center justify-center border border-white shadow-xs">
+                    <OliveThemeIcon variant="collection-harvest" className="w-2.5 h-2.5 text-white" />
+                  </span>
+                  Point de Collecte (Couffin d'olives)
                 </span>
               </div>
               <span className="text-gray-400 text-[10px]">
