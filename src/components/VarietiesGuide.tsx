@@ -18,10 +18,12 @@ import {
   Search,
   RotateCcw,
   X,
+  BellRing,
 } from 'lucide-react';
 import { ShareVarietyModal } from './ShareVarietyModal';
 import { VarietyTenYearYieldChart } from './VarietyTenYearYieldChart';
 import { ArticleAudioReader } from './ArticleAudioReader';
+import { RegionalHarvestNotificationBanner } from './RegionalHarvestNotificationBanner';
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -1079,8 +1081,22 @@ export const VarietiesGuide: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Cross-linking to Yield Simulator */}
-                  <div className="pt-2">
+                  {/* Cross-linking to Harvest Notification & Yield Simulator */}
+                  <div className="pt-2 space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const notifEl = document.getElementById('alertes-fenetre-recolte-variete');
+                        if (notifEl) {
+                          notifEl.scrollIntoView({ behavior: 'smooth' });
+                        }
+                      }}
+                      className="w-full py-2.5 px-3 rounded-xl bg-[#233416] hover:bg-[#31491E] text-white text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs"
+                    >
+                      <BellRing className="w-3.5 h-3.5 text-[#E6AB3C]" />
+                      <span>Alerte navigateur : Fenêtre optimale ({selectedVariety.name})</span>
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => {
@@ -1100,6 +1116,17 @@ export const VarietiesGuide: React.FC = () => {
             </motion.div>
           </AnimatePresence>
         </motion.div>
+
+        {/* Browser-Based Regional Harvest Window Notification Center */}
+        <RegionalHarvestNotificationBanner
+          selectedVarietyId={selectedVariety.id}
+          onSelectVarietyId={(vid) => {
+            const found = OLIVE_VARIETIES.find((v) => v.id === vid);
+            if (found) {
+              setSelectedVariety(found);
+            }
+          }}
+        />
 
         {/* Side-by-Side Two-Variety Comparator (Rendement, Précocité, Résistance) */}
         <motion.div

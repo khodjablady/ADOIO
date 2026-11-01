@@ -45,6 +45,12 @@ export const SILOS_CONFIG: SiloItem[] = [
         description: 'Gouvernance, conseil d’administration et programme de labellisation.',
       },
       {
+        id: 'actualites-adoio',
+        slug: 'actualites-agricoles',
+        title: 'Actualités & Communiqués',
+        description: 'Articles agronomiques récents, dépêches de campagne et communiqués ADOIO.',
+      },
+      {
         id: 'potential',
         slug: 'chiffres-verger',
         title: 'Potentiel & Chiffres Clés',

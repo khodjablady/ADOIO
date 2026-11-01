@@ -24,6 +24,9 @@ const StatsAndPotential = lazy(() =>
 const OliveLandscapesGallery = lazy(() =>
   import('./components/OliveLandscapesGallery').then((m) => ({ default: m.OliveLandscapesGallery }))
 );
+const NewsFeed = lazy(() =>
+  import('./components/NewsFeed').then((m) => ({ default: m.NewsFeed }))
+);
 const InteractiveOliveMap = lazy(() =>
   import('./components/InteractiveOliveMap').then((m) => ({ default: m.InteractiveOliveMap }))
 );
@@ -514,6 +517,7 @@ export default function App() {
   useEffect(() => {
     const sectionIds = [
       'adoio',
+      'actualites-adoio',
       'potential',
       'galerie-paysages',
       'carte-interactive',
@@ -654,6 +658,15 @@ export default function App() {
         <div id="terroir-adoio" className="scroll-mt-44" role="region" aria-label="Pilier 1 : Terroir et Association ADOIO">
           {/* ADOIO Association Section (Missions, Jubilé 25 ans, Bureau) */}
           <AdoioSection onOpenAdhesion={() => setIsAdhesionOpen(true)} />
+
+          {/* Recent Agricultural Articles & Official ADOIO Updates */}
+          <DeferredSection
+            id="actualites-adoio"
+            label="Actualités Agricoles & Communiqués ADOIO"
+            forceMount={Boolean(forcedSections['actualites-adoio'])}
+          >
+            <NewsFeed onNavigate={scrollToSection} />
+          </DeferredSection>
 
           {/* Potentialities & Official Figures (Verger, 52 communes) */}
           <DeferredSection

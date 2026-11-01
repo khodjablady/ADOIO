@@ -598,6 +598,30 @@ export const InteractiveOliveMap: React.FC<InteractiveOliveMapProps> = ({ onSele
     setResetCounter((c) => c + 1);
   };
 
+  // Listen for external requests (e.g. from QR Code Scanner or MillsDirectory) to focus a specific huilerie on the map
+  useEffect(() => {
+    const handleFocusMillEvent = (event: Event) => {
+      const customEvent = event as CustomEvent<{ millId?: string }>;
+      const millId = customEvent.detail?.millId;
+      if (!millId) return;
+      const foundMill = REPRESENTATIVE_MILLS.find((m) => m.id === millId);
+      if (!foundMill) return;
+
+      setActiveLayer('all');
+      setSelectedMillType('all');
+      setSelectedItem({ type: 'mill', data: foundMill });
+      setInfoWindowOpen(true);
+      setCameraTarget({ lat: foundMill.lat, lng: foundMill.lng });
+      setCameraZoom(14);
+      setFocusCounter((c) => c + 1);
+    };
+
+    window.addEventListener('adoio:focus-mill-on-map', handleFocusMillEvent);
+    return () => {
+      window.removeEventListener('adoio:focus-mill-on-map', handleFocusMillEvent);
+    };
+  }, []);
+
   return (
     <section id="carte-interactive" className="py-16 sm:py-24 bg-[#FAF7F2] border-b border-[#E6DEC9]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

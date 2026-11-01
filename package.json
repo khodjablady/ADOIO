@@ -17,6 +17,7 @@
   "dependencies": {
     "@google/genai": "^2.4.0",
     "@tailwindcss/vite": "^4.3.3",
+    "@types/qrcode": "^1.5.6",
     "@vis.gl/react-google-maps": "^1.10.1",
     "@vitejs/plugin-react": "^6.1.1",
     "d3": "^7.9.0",
@@ -24,8 +25,10 @@
     "express": "^4.21.2",
     "firebase": "^13.1.0",
     "framer-motion": "^14.6.0",
+    "jsqr": "^1.4.0",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
+    "qrcode": "^1.5.4",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "recharts": "^3.10.1",

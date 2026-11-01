@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   REPRESENTATIVE_MILLS, 
+  BEJAIA_COMMUNES_DATA,
   OliveMill 
 } from '../data/bejaiaOliveData';
 import { 
@@ -24,9 +25,15 @@ import {
   Scale,
   Recycle,
   Navigation,
+  LocateFixed,
+  Compass,
+  SlidersHorizontal,
   Printer,
   Share2,
-  Check
+  Check,
+  QrCode,
+  Smartphone,
+  Camera
 } from 'lucide-react';
 import { 
   getStoredReviews, 
@@ -42,8 +49,51 @@ import {
 } from '../firebase';
 import { MillReviewsSection } from './MillReviewsSection';
 import { shareFinding } from '../utils/webShare';
+import {
+  MillQrCodeModal,
+  MillQrSvg,
+  buildMillMobileMapUrl
+} from './MillQrCodeModal';
+import { MillQrScannerModal } from './MillQrScannerModal';
 
 const FAVORITES_STORAGE_KEY = 'adoio_favorite_mills_v1';
+
+export interface UserProximityLocation {
+  lat: number;
+  lng: number;
+  label: string;
+  source: 'gps' | 'commune';
+}
+
+export function calculateDistanceKm(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number
+): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const R = 6371; // Earth radius in km
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c * 10) / 10;
+}
+
+const REFERENCE_LOCATIONS: Array<{ id: string; label: string; lat: number; lng: number }> = [
+  { id: 'bejaia-centre', label: 'Béjaïa-Centre (Chef-lieu)', lat: 36.7509, lng: 5.0567 },
+  ...BEJAIA_COMMUNES_DATA.map((c) => ({
+    id: c.commune.toLowerCase().replace(/\s+/g, '-'),
+    label: `${c.commune} (Daïra de ${c.daira})`,
+    lat: c.lat,
+    lng: c.lng,
+  })),
+];
 
 function loadStoredFavorites(): string[] {
   try {
@@ -67,7 +117,14 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
   const [onlyBio, setOnlyBio] = useState<boolean>(false);
   const [activeDirectoryTab, setActiveDirectoryTab] = useState<'all' | 'favorites'>('all');
   const [minRating, setMinRating] = useState<number | 'all'>('all');
-  const [sortBy, setSortBy] = useState<'default' | 'favorites' | 'rating' | 'reviews' | 'capacity'>('default');
+  const [sortBy, setSortBy] = useState<'default' | 'distance' | 'favorites' | 'rating' | 'reviews' | 'capacity'>('default');
+
+  // Proximity & Geolocation filter states
+  const [userLocation, setUserLocation] = useState<UserProximityLocation | null>(null);
+  const [maxDistanceKm, setMaxDistanceKm] = useState<number | 'all'>('all');
+  const [isLocating, setIsLocating] = useState<boolean>(false);
+  const [locationNotice, setLocationNotice] = useState<string | null>(null);
+  const [selectedRefLocationId, setSelectedRefLocationId] = useState<string>('');
 
   const onlyFavorites = activeDirectoryTab === 'favorites';
   const setOnlyFavorites = (val: boolean | ((prev: boolean) => boolean)) => {
@@ -89,6 +146,10 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
   const [copiedMillLink, setCopiedMillLink] = useState<boolean>(false);
   const [sharedMillId, setSharedMillId] = useState<string | null>(null);
   const [sharedDirectory, setSharedDirectory] = useState<boolean>(false);
+  const [expandedQrMillId, setExpandedQrMillId] = useState<string | null>(null);
+  const [activeQrModalMill, setActiveQrModalMill] = useState<OliveMill | null>(null);
+  const [isQrScannerOpen, setIsQrScannerOpen] = useState<boolean>(false);
+  const [lastScannedMill, setLastScannedMill] = useState<OliveMill | null>(null);
 
   // Hydrate initial state from URL search params (?mill=..., ?commune=..., ?tab=favorites)
   useEffect(() => {
@@ -342,13 +403,156 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
     return ['all', ...Array.from(new Set(REPRESENTATIVE_MILLS.map((m) => m.commune)))];
   }, []);
 
-  // Compute stats for each mill
+  // Count of mills per extraction type (Continuous, Traditional, Domaine, Cooperative)
+  const typeCounts = useMemo(() => {
+    const basePool = onlyFavorites
+      ? REPRESENTATIVE_MILLS.filter((m) => favoriteIds.includes(m.id))
+      : REPRESENTATIVE_MILLS;
+    return {
+      all: basePool.length,
+      modern: basePool.filter((m) => m.type === 'modern').length,
+      traditional: basePool.filter((m) => m.type === 'traditional').length,
+      domaine: basePool.filter((m) => m.type === 'domaine').length,
+      cooperative: basePool.filter((m) => m.type === 'cooperative').length,
+    };
+  }, [onlyFavorites, favoriteIds]);
+
+  // Activate browser GPS location with intelligent fallback for Béjaïa
+  const handleUseGpsLocation = () => {
+    setLocationNotice(null);
+    if (!('geolocation' in navigator)) {
+      const defaultRef = REFERENCE_LOCATIONS.find((r) => r.id === 'seddouk') || REFERENCE_LOCATIONS[0];
+      setUserLocation({
+        lat: defaultRef.lat,
+        lng: defaultRef.lng,
+        label: defaultRef.label,
+        source: 'commune',
+      });
+      setSelectedRefLocationId(defaultRef.id);
+      setSortBy('distance');
+      if (maxDistanceKm === 'all') setMaxDistanceKm(25);
+      setLocationNotice(
+        `Géolocalisation navigateur indisponible : position de référence fixée sur ${defaultRef.label}.`
+      );
+      return;
+    }
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setIsLocating(false);
+        const { latitude, longitude } = pos.coords;
+        const distFromBejaiaCenter = calculateDistanceKm(latitude, longitude, 36.62, 4.75);
+
+        if (distFromBejaiaCenter > 150) {
+          // User is located far outside Béjaïa (e.g., international visitor or another region)
+          setUserLocation({
+            lat: latitude,
+            lng: longitude,
+            label: 'Votre position GPS actuelle',
+            source: 'gps',
+          });
+          setSelectedRefLocationId('');
+          setMaxDistanceKm('all');
+          setSortBy('distance');
+          setLocationNotice(
+            `Position GPS détectée à ${distFromBejaiaCenter.toFixed(0)} km de Béjaïa. Les huileries sont triées de la plus proche à la plus éloignée (rayon « Tous »). Vous pouvez aussi choisir une commune de départ en Kabylie.`
+          );
+        } else {
+          setUserLocation({
+            lat: latitude,
+            lng: longitude,
+            label: 'Ma position GPS (Béjaïa)',
+            source: 'gps',
+          });
+          setSelectedRefLocationId('');
+          if (maxDistanceKm === 'all') {
+            setMaxDistanceKm(20);
+          }
+          setSortBy('distance');
+          setLocationNotice(null);
+        }
+      },
+      () => {
+        setIsLocating(false);
+        const defaultRef = REFERENCE_LOCATIONS.find((r) => r.id === 'seddouk') || REFERENCE_LOCATIONS[0];
+        setUserLocation({
+          lat: defaultRef.lat,
+          lng: defaultRef.lng,
+          label: defaultRef.label,
+          source: 'commune',
+        });
+        setSelectedRefLocationId(defaultRef.id);
+        if (maxDistanceKm === 'all') {
+          setMaxDistanceKm(20);
+        }
+        setSortBy('distance');
+        setLocationNotice(
+          `Accès GPS non autorisé dans cet aperçu : point de référence initialisé sur ${defaultRef.label}. Vous pouvez changer de commune ci-contre.`
+        );
+      },
+      { enableHighAccuracy: true, timeout: 7000, maximumAge: 60000 }
+    );
+  };
+
+  const handleSelectReferenceLocation = (refId: string) => {
+    setLocationNotice(null);
+    setSelectedRefLocationId(refId);
+    if (!refId) {
+      setUserLocation(null);
+      setMaxDistanceKm('all');
+      if (sortBy === 'distance') setSortBy('default');
+      return;
+    }
+    const found = REFERENCE_LOCATIONS.find((r) => r.id === refId);
+    if (found) {
+      setUserLocation({
+        lat: found.lat,
+        lng: found.lng,
+        label: found.label,
+        source: 'commune',
+      });
+      setSortBy('distance');
+    }
+  };
+
+  const handleSelectRadius = (radius: number | 'all') => {
+    setMaxDistanceKm(radius);
+    if (!userLocation && radius !== 'all') {
+      const defaultRef = REFERENCE_LOCATIONS.find((r) => r.id === 'seddouk') || REFERENCE_LOCATIONS[0];
+      setUserLocation({
+        lat: defaultRef.lat,
+        lng: defaultRef.lng,
+        label: defaultRef.label,
+        source: 'commune',
+      });
+      setSelectedRefLocationId(defaultRef.id);
+      setSortBy('distance');
+    } else if (userLocation) {
+      setSortBy('distance');
+    }
+  };
+
+  const clearProximityFilter = () => {
+    setUserLocation(null);
+    setMaxDistanceKm('all');
+    setSelectedRefLocationId('');
+    setLocationNotice(null);
+    if (sortBy === 'distance') {
+      setSortBy('default');
+    }
+  };
+
+  // Compute stats and optional proximity distance for each mill
   const millsWithStats = useMemo(() => {
     return REPRESENTATIVE_MILLS.map((mill) => {
       const stats = calculateMillStats(mill.id, reviews);
-      return { mill, stats };
+      const distanceKm = userLocation
+        ? calculateDistanceKm(userLocation.lat, userLocation.lng, mill.lat, mill.lng)
+        : null;
+      return { mill, stats, distanceKm };
     });
-  }, [reviews]);
+  }, [reviews, userLocation]);
 
   // Saved favorite mill objects for the Favorites tab & quick-access bar
   const favoriteMills = useMemo(() => {
@@ -370,7 +574,7 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
   // Filtered and sorted mills
   const filteredMills = useMemo(() => {
     return millsWithStats
-      .filter(({ mill, stats }) => {
+      .filter(({ mill, stats, distanceKm }) => {
         if (onlyFavorites && !favoriteIds.includes(mill.id)) {
           return false;
         }
@@ -386,16 +590,24 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
         const matchesType = selectedType === 'all' || mill.type === selectedType;
         const matchesBio = !onlyBio || mill.certifiedBio;
         const matchesRating = minRating === 'all' || stats.averageRating >= minRating;
+        const matchesDistance =
+          !userLocation ||
+          maxDistanceKm === 'all' ||
+          (distanceKm !== null && distanceKm <= maxDistanceKm);
 
         return (
           matchesSearch &&
           matchesCommune &&
           matchesType &&
           matchesBio &&
-          matchesRating
+          matchesRating &&
+          matchesDistance
         );
       })
       .sort((a, b) => {
+        if (sortBy === 'distance' && a.distanceKm !== null && b.distanceKm !== null) {
+          return a.distanceKm - b.distanceKm;
+        }
         if (sortBy === 'favorites') {
           const aFav = favoriteIds.includes(a.mill.id) ? 1 : 0;
           const bFav = favoriteIds.includes(b.mill.id) ? 1 : 0;
@@ -404,6 +616,9 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
         if (sortBy === 'rating') return b.stats.averageRating - a.stats.averageRating;
         if (sortBy === 'reviews') return b.stats.totalReviews - a.stats.totalReviews;
         if (sortBy === 'capacity') return b.mill.capacityQxPerDay - a.mill.capacityQxPerDay;
+        if (userLocation && a.distanceKm !== null && b.distanceKm !== null) {
+          return a.distanceKm - b.distanceKm;
+        }
         return 0; // default order
       });
   }, [
@@ -416,6 +631,8 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
     favoriteIds,
     minRating,
     sortBy,
+    userLocation,
+    maxDistanceKm,
   ]);
 
   const handleOpenMill = (mill: OliveMill, tab: 'info' | 'reviews' = 'info') => {
@@ -447,6 +664,16 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
     return calculateMillStats(activeModalMill.id, reviews);
   }, [activeModalMill, reviews]);
 
+  const activeModalMillDistanceKm: number | null = useMemo(() => {
+    if (!activeModalMill || !userLocation) return null;
+    return calculateDistanceKm(
+      userLocation.lat,
+      userLocation.lng,
+      activeModalMill.lat,
+      activeModalMill.lng
+    );
+  }, [activeModalMill, userLocation]);
+
   const hasActiveFilters =
     Boolean(searchTerm) ||
     selectedCommune !== 'all' ||
@@ -454,6 +681,8 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
     onlyBio ||
     onlyFavorites ||
     minRating !== 'all' ||
+    Boolean(userLocation) ||
+    maxDistanceKm !== 'all' ||
     sortBy !== 'default';
 
   const resetAllFilters = () => {
@@ -463,6 +692,10 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
     setOnlyBio(false);
     setOnlyFavorites(false);
     setMinRating('all');
+    setUserLocation(null);
+    setMaxDistanceKm('all');
+    setSelectedRefLocationId('');
+    setLocationNotice(null);
     setSortBy('default');
   };
 
@@ -501,6 +734,16 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
             </button>
             <button
               type="button"
+              onClick={() => setIsQrScannerOpen(true)}
+              aria-label="Scanner le code QR d'une huilerie avec la caméra"
+              title="Utiliser la caméra pour scanner le code QR d'une huilerie et ouvrir instantanément sa fiche et sa localisation"
+              className="px-3.5 py-2 rounded-xl bg-[#233416] hover:bg-[#31491E] text-white border border-[#233416] shadow-2xs text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+            >
+              <Camera className="w-3.5 h-3.5 text-[#E6AB3C]" aria-hidden="true" />
+              <span>Scanner QR Huilerie</span>
+            </button>
+            <button
+              type="button"
               onClick={handleShareDirectoryFindings}
               aria-label="Partager les résultats de l'annuaire des huileries"
               title="Partager la sélection actuelle d'huileries via Web Share ou copier le lien"
@@ -520,6 +763,65 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
             </button>
           </div>
         </div>
+
+        {/* Last Scanned QR Huilerie Quick-Access Banner */}
+        {lastScannedMill && (
+          <div className="mb-6 p-4 rounded-2xl bg-[#E8F4D9] border border-[#8CBE5D] flex flex-wrap items-center justify-between gap-3 animate-in fade-in duration-150">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#233416] text-[#E6AB3C] flex items-center justify-center shrink-0">
+                <QrCode className="w-4 h-4" aria-hidden="true" />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#31491E] block">
+                  Dernière huilerie scannée par caméra QR
+                </span>
+                <p className="text-xs sm:text-sm font-bold text-[#18230F]">
+                  {lastScannedMill.name}{' '}
+                  <span className="font-normal text-[#436229]">
+                    ({lastScannedMill.commune}, Daïra de {lastScannedMill.daira} · GPS {lastScannedMill.lat.toFixed(4)}° N, {lastScannedMill.lng.toFixed(4)}° E)
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleOpenMill(lastScannedMill, 'info')}
+                className="px-3 py-1.5 rounded-xl bg-[#233416] hover:bg-[#31491E] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+              >
+                <Building2 className="w-3.5 h-3.5 text-[#E6AB3C]" aria-hidden="true" />
+                <span>Ouvrir la fiche</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  window.dispatchEvent(
+                    new CustomEvent('adoio:focus-mill-on-map', {
+                      detail: { millId: lastScannedMill.id },
+                    })
+                  );
+                  const mapEl = document.getElementById('carte-interactive');
+                  if (mapEl) {
+                    mapEl.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
+                className="px-3 py-1.5 rounded-xl bg-white hover:bg-[#FAF7F2] text-[#233416] border border-[#8CBE5D] text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+              >
+                <MapPin className="w-3.5 h-3.5 text-[#AF4D24]" aria-hidden="true" />
+                <span>Localiser sur la carte</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setLastScannedMill(null)}
+                aria-label="Masquer la bannière de l'huilerie scannée"
+                className="p-1.5 rounded-lg hover:bg-white/60 text-[#436229] cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Primary Directory Tab Navigation: 'Toutes les Huileries' vs 'Favoris' */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-[#E6DEC9]">
@@ -664,9 +966,358 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
           </div>
         )}
 
-        {/* Filters Toolbar */}
-        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-[#E6DEC9] shadow-xs mb-8 space-y-3.5">
-            {/* Row 1: Search, Commune, Type, Sort */}
+        {/* Filters Toolbar: Type (Continuous / Traditional), Proximity (GPS & Commune Radius), Search & Sort */}
+        <div className="bg-white p-4 sm:p-6 rounded-3xl border border-[#E6DEC9] shadow-xs mb-8 space-y-5">
+            {/* Block 1: Extraction System Type Filter (Continuous vs Traditional) */}
+            <div className="space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#31491E]">
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-[#E6AB3C]" aria-hidden="true" />
+                  <span>Filtrer par Système d'Extraction (Type de Moulin)</span>
+                </div>
+                {selectedType !== 'all' && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedType('all')}
+                    className="text-[11px] font-bold text-[#AF4D24] hover:underline cursor-pointer"
+                  >
+                    Afficher tous les types ({typeCounts.all})
+                  </button>
+                )}
+              </div>
+
+              <div
+                role="group"
+                aria-label="Filtrer par type d'huilerie (Chaîne continue ou Presse traditionnelle)"
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5"
+              >
+                <button
+                  type="button"
+                  onClick={() => setSelectedType('all')}
+                  aria-pressed={selectedType === 'all'}
+                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                    selectedType === 'all'
+                      ? 'bg-[#233416] border-[#233416] text-white shadow-xs'
+                      : 'bg-[#FAF7F2] border-[#E6DEC9] text-[#18230F] hover:border-[#8CBE5D] hover:bg-white'
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold truncate">Tous les systèmes</p>
+                    <p
+                      className={`text-[10px] truncate mt-0.5 ${
+                        selectedType === 'all' ? 'text-[#D4E8BF]' : 'text-[#567B34]'
+                      }`}
+                    >
+                      Parc oléicole complet
+                    </p>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded-lg text-xs font-extrabold tabular-nums shrink-0 ${
+                      selectedType === 'all'
+                        ? 'bg-[#31491E] text-[#E6AB3C]'
+                        : 'bg-[#E6DEC9]/70 text-[#233416]'
+                    }`}
+                  >
+                    {typeCounts.all}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedType(selectedType === 'modern' ? 'all' : 'modern')}
+                  aria-pressed={selectedType === 'modern'}
+                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                    selectedType === 'modern'
+                      ? 'bg-[#31491E] border-[#31491E] text-white shadow-xs'
+                      : 'bg-[#FAF7F2] border-[#E6DEC9] text-[#18230F] hover:border-[#8CBE5D] hover:bg-white'
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <Cpu
+                        className={`w-3.5 h-3.5 shrink-0 ${
+                          selectedType === 'modern' ? 'text-[#E6AB3C]' : 'text-[#31491E]'
+                        }`}
+                        aria-hidden="true"
+                      />
+                      <p className="text-xs font-bold truncate">Chaîne Continue</p>
+                    </div>
+                    <p
+                      className={`text-[10px] truncate mt-0.5 ${
+                        selectedType === 'modern' ? 'text-[#D4E8BF]' : 'text-[#567B34]'
+                      }`}
+                    >
+                      Inox 2 & 3 phases (&lt; 27°C)
+                    </p>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded-lg text-xs font-extrabold tabular-nums shrink-0 ${
+                      selectedType === 'modern'
+                        ? 'bg-white/20 text-white'
+                        : 'bg-[#E8F4D9] text-[#31491E]'
+                    }`}
+                  >
+                    {typeCounts.modern}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelectedType(selectedType === 'traditional' ? 'all' : 'traditional')
+                  }
+                  aria-pressed={selectedType === 'traditional'}
+                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                    selectedType === 'traditional'
+                      ? 'bg-[#8C5828] border-[#8C5828] text-white shadow-xs'
+                      : 'bg-[#FAF7F2] border-[#E6DEC9] text-[#18230F] hover:border-[#8C5828]/50 hover:bg-white'
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <Scale
+                        className={`w-3.5 h-3.5 shrink-0 ${
+                          selectedType === 'traditional' ? 'text-[#FDE68A]' : 'text-[#8C5828]'
+                        }`}
+                        aria-hidden="true"
+                      />
+                      <p className="text-xs font-bold truncate">Presse Traditionnelle</p>
+                    </div>
+                    <p
+                      className={`text-[10px] truncate mt-0.5 ${
+                        selectedType === 'traditional' ? 'text-[#FDE68A]/90' : 'text-[#567B34]'
+                      }`}
+                    >
+                      Taâssart · Meules de granit
+                    </p>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded-lg text-xs font-extrabold tabular-nums shrink-0 ${
+                      selectedType === 'traditional'
+                        ? 'bg-white/20 text-white'
+                        : 'bg-[#F4EEE1] text-[#8C5828]'
+                    }`}
+                  >
+                    {typeCounts.traditional}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedType(selectedType === 'domaine' ? 'all' : 'domaine')}
+                  aria-pressed={selectedType === 'domaine'}
+                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                    selectedType === 'domaine'
+                      ? 'bg-[#436229] border-[#436229] text-white shadow-xs'
+                      : 'bg-[#FAF7F2] border-[#E6DEC9] text-[#18230F] hover:border-[#8CBE5D] hover:bg-white'
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <Award
+                        className={`w-3.5 h-3.5 shrink-0 ${
+                          selectedType === 'domaine' ? 'text-[#E6AB3C]' : 'text-[#436229]'
+                        }`}
+                        aria-hidden="true"
+                      />
+                      <p className="text-xs font-bold truncate">Domaine Intégré</p>
+                    </div>
+                    <p
+                      className={`text-[10px] truncate mt-0.5 ${
+                        selectedType === 'domaine' ? 'text-[#D4E8BF]' : 'text-[#567B34]'
+                      }`}
+                    >
+                      Olivaie & mise en bouteille
+                    </p>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded-lg text-xs font-extrabold tabular-nums shrink-0 ${
+                      selectedType === 'domaine'
+                        ? 'bg-white/20 text-white'
+                        : 'bg-[#E8F4D9] text-[#31491E]'
+                    }`}
+                  >
+                    {typeCounts.domaine}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelectedType(selectedType === 'cooperative' ? 'all' : 'cooperative')
+                  }
+                  aria-pressed={selectedType === 'cooperative'}
+                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                    selectedType === 'cooperative'
+                      ? 'bg-[#AF4D24] border-[#AF4D24] text-white shadow-xs'
+                      : 'bg-[#FAF7F2] border-[#E6DEC9] text-[#18230F] hover:border-[#AF4D24]/50 hover:bg-white'
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <Building2
+                        className={`w-3.5 h-3.5 shrink-0 ${
+                          selectedType === 'cooperative' ? 'text-white' : 'text-[#AF4D24]'
+                        }`}
+                        aria-hidden="true"
+                      />
+                      <p className="text-xs font-bold truncate">Coopérative</p>
+                    </div>
+                    <p
+                      className={`text-[10px] truncate mt-0.5 ${
+                        selectedType === 'cooperative' ? 'text-white/85' : 'text-[#567B34]'
+                      }`}
+                    >
+                      Collectif d'oléiculteurs
+                    </p>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded-lg text-xs font-extrabold tabular-nums shrink-0 ${
+                      selectedType === 'cooperative'
+                        ? 'bg-white/20 text-white'
+                        : 'bg-[#AF4D24]/15 text-[#AF4D24]'
+                    }`}
+                  >
+                    {typeCounts.cooperative}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* Block 2: Proximity & Geolocation Filter (Autour de ma position / Commune de départ) */}
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#FAF7F2] border border-[#E6DEC9] space-y-3">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#233416]">
+                    <Compass className="w-4 h-4 text-[#31491E]" aria-hidden="true" />
+                    <span>Proximité & Géolocalisation :</span>
+                  </div>
+
+                  {/* GPS Locate Button */}
+                  <button
+                    type="button"
+                    onClick={handleUseGpsLocation}
+                    disabled={isLocating}
+                    aria-pressed={userLocation?.source === 'gps'}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                      userLocation?.source === 'gps'
+                        ? 'bg-[#31491E] text-white border-[#31491E] shadow-2xs'
+                        : 'bg-white text-[#233416] border-[#8CBE5D] hover:bg-[#E8F4D9]'
+                    }`}
+                  >
+                    <LocateFixed
+                      className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin' : ''}`}
+                      aria-hidden="true"
+                    />
+                    <span>
+                      {isLocating
+                        ? 'Localisation GPS…'
+                        : userLocation?.source === 'gps'
+                        ? 'Position GPS active'
+                        : 'Autour de ma position (GPS)'}
+                    </span>
+                  </button>
+
+                  {/* Or select a reference commune in Béjaïa */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-semibold text-[#567B34]">ou départ :</span>
+                    <select
+                      value={selectedRefLocationId}
+                      onChange={(e) => handleSelectReferenceLocation(e.target.value)}
+                      aria-label="Choisir une commune de départ pour calculer les distances"
+                      className="px-3 py-2 text-xs rounded-xl border border-[#E6DEC9] focus:outline-none focus:border-[#31491E] bg-white font-semibold text-[#18230F] cursor-pointer"
+                    >
+                      <option value="">Choisir un point de départ en Kabylie…</option>
+                      {REFERENCE_LOCATIONS.map((loc) => (
+                        <option key={loc.id} value={loc.id}>
+                          📍 {loc.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Radius Selector Buttons */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] font-bold text-[#567B34] mr-1">Rayon max :</span>
+                  {(
+                    [
+                      { value: 'all', label: 'Tous' },
+                      { value: 5, label: '≤ 5 km' },
+                      { value: 10, label: '≤ 10 km' },
+                      { value: 20, label: '≤ 20 km' },
+                      { value: 35, label: '≤ 35 km' },
+                      { value: 50, label: '≤ 50 km' },
+                    ] as const
+                  ).map((opt) => {
+                    const isActive =
+                      Boolean(userLocation) && maxDistanceKm === opt.value;
+                    return (
+                      <button
+                        key={String(opt.value)}
+                        type="button"
+                        onClick={() => handleSelectRadius(opt.value)}
+                        aria-pressed={isActive}
+                        className={`px-2.5 py-1.5 rounded-xl text-xs font-bold tabular-nums transition-all cursor-pointer whitespace-nowrap shrink-0 border ${
+                          isActive
+                            ? 'bg-[#233416] text-white border-[#233416] shadow-2xs'
+                            : 'bg-white text-[#436229] border-[#E6DEC9] hover:border-[#8CBE5D]'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+
+                  {userLocation && (
+                    <button
+                      type="button"
+                      onClick={clearProximityFilter}
+                      className="ml-1 px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-[#AF4D24] hover:bg-[#AF4D24]/10 transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0"
+                      title="Désactiver le filtre de proximité"
+                    >
+                      <X className="w-3.5 h-3.5" aria-hidden="true" />
+                      <span>Désactiver</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Active Proximity Status Banner */}
+              {userLocation && (
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#E6DEC9]/70 text-xs">
+                  <div className="flex flex-wrap items-center gap-2 text-[#233416]">
+                    <Navigation className="w-3.5 h-3.5 text-[#31491E] shrink-0" aria-hidden="true" />
+                    <span>
+                      Distances calculées depuis{' '}
+                      <strong className="text-[#18230F]">{userLocation.label}</strong>
+                      {maxDistanceKm !== 'all' ? (
+                        <>
+                          {' '}
+                          · Rayon actif :{' '}
+                          <strong className="text-[#31491E] tabular-nums">
+                            ≤ {maxDistanceKm} km
+                          </strong>
+                        </>
+                      ) : (
+                        ' · Toutes distances (triées de la plus proche à la plus éloignée)'
+                      )}
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-bold text-[#31491E] tabular-nums">
+                    {filteredMills.length} huilerie{filteredMills.length > 1 ? 's' : ''} dans ce périmètre
+                  </span>
+                </div>
+              )}
+
+              {locationNotice && (
+                <p className="text-[11px] text-[#8C5828] bg-[#F4EEE1] px-3 py-1.5 rounded-xl border border-[#E6DEC9]">
+                  {locationNotice}
+                </p>
+              )}
+            </div>
+
+            {/* Block 3: Search, Commune, System Dropdown & Sort */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-center">
               {/* Search Input */}
               <div className="lg:col-span-4 relative">
@@ -732,11 +1383,18 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
               <div className="lg:col-span-3">
                 <select
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                  onChange={(e) => {
+                    const nextSort = e.target.value as typeof sortBy;
+                    setSortBy(nextSort);
+                    if (nextSort === 'distance' && !userLocation) {
+                      handleUseGpsLocation();
+                    }
+                  }}
                   aria-label="Trier les huileries"
                   className="w-full px-3 py-2 text-xs rounded-xl border border-[#E6DEC9] focus:outline-none focus:border-[#31491E] bg-[#FAF7F2] font-bold text-[#233416] cursor-pointer"
                 >
                   <option value="default">Trier : Par défaut</option>
+                  <option value="distance">📍 Plus proches de ma position</option>
                   <option value="favorites">♥ Mes favoris en premier</option>
                   <option value="rating">★ Mieux notés par les oléiculteurs</option>
                   <option value="reviews">💬 Plus d'avis déposés</option>
@@ -930,19 +1588,32 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
               Aucune huilerie ne correspond à vos filtres
             </h3>
             <p className="text-xs text-[#567B34] max-w-md mx-auto">
-              Essayez d'assouplir vos critères de recherche ou de réinitialiser les filtres actifs.
+              {userLocation && maxDistanceKm !== 'all'
+                ? `Aucune huilerie trouvée dans un rayon de ${maxDistanceKm} km autour de ${userLocation.label}. Essayez d'élargir le rayon de proximité ou de réinitialiser les filtres.`
+                : "Essayez d'assouplir vos critères de recherche ou de réinitialiser les filtres actifs."}
             </p>
-            <button
-              type="button"
-              onClick={resetAllFilters}
-              className="mt-2 px-4 py-2 bg-[#31491E] text-white rounded-xl text-xs font-bold cursor-pointer"
-            >
-              Réinitialiser les filtres
-            </button>
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+              {userLocation && maxDistanceKm !== 'all' && (
+                <button
+                  type="button"
+                  onClick={() => setMaxDistanceKm('all')}
+                  className="px-4 py-2 bg-[#E8F4D9] text-[#233416] border border-[#8CBE5D] rounded-xl text-xs font-bold cursor-pointer"
+                >
+                  Élargir à toutes les distances
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={resetAllFilters}
+                className="px-4 py-2 bg-[#31491E] text-white rounded-xl text-xs font-bold cursor-pointer"
+              >
+                Réinitialiser les filtres
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredMills.map(({ mill, stats }) => {
+            {filteredMills.map(({ mill, stats, distanceKm }) => {
               const isFavorite = favoriteIds.includes(mill.id);
               const systemLabel =
                 mill.type === 'modern'
@@ -952,6 +1623,8 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                   : mill.type === 'domaine'
                   ? 'Domaine Intégré'
                   : 'Coopérative';
+              const estimatedDriveMinutes =
+                distanceKm !== null ? Math.max(3, Math.round(distanceKm * 1.45)) : null;
 
               return (
                 <div
@@ -1007,6 +1680,32 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                         <span>Favoris</span>
                       </button>
                     </div>
+
+                    {/* Proximity Distance Banner on Card when Geolocation / Reference Point is Active */}
+                    {distanceKm !== null && (
+                      <div className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-[#E8F4D9]/75 border border-[#8CBE5D]/50 text-xs">
+                        <div className="flex items-center gap-1.5 font-bold text-[#18230F] tabular-nums">
+                          <Navigation className="w-3.5 h-3.5 text-[#31491E] shrink-0" aria-hidden="true" />
+                          <span>À {distanceKm.toFixed(1)} km</span>
+                          {estimatedDriveMinutes !== null && distanceKm <= 120 && (
+                            <span className="text-[11px] font-medium text-[#436229]">
+                              (~{estimatedDriveMinutes} min par route)
+                            </span>
+                          )}
+                        </div>
+                        <a
+                          href={`https://www.google.com/maps/dir/?api=1&origin=${userLocation?.lat},${userLocation?.lng}&destination=${mill.lat},${mill.lng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-[11px] font-bold text-[#31491E] hover:underline flex items-center gap-1 shrink-0"
+                          title={`Ouvrir l'itinéraire routier vers ${mill.name}`}
+                        >
+                          <span>Itinéraire</span>
+                          <ExternalLink className="w-3 h-3" aria-hidden="true" />
+                        </a>
+                      </div>
+                    )}
 
                     {/* Mill Title & Description */}
                     <div>
@@ -1100,6 +1799,29 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedQrMillId((prev) => (prev === mill.id ? null : mill.id));
+                          }}
+                          aria-expanded={expandedQrMillId === mill.id}
+                          aria-label={`Afficher le code QR GPS pour ${mill.name}`}
+                          title={`Générer et scanner le code QR GPS de ${mill.name} sur mobile`}
+                          className={`p-1.5 px-2.5 rounded-lg border text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer active:scale-95 ${
+                            expandedQrMillId === mill.id
+                              ? 'bg-[#233416] text-white border-[#233416]'
+                              : 'bg-[#FAF7F2] hover:bg-[#E8F4D9] text-[#233416] border-[#E6DEC9] hover:border-[#8CBE5D]'
+                          }`}
+                        >
+                          <QrCode
+                            className={`w-3.5 h-3.5 ${
+                              expandedQrMillId === mill.id ? 'text-[#E6AB3C]' : 'text-[#31491E]'
+                            }`}
+                            aria-hidden="true"
+                          />
+                          <span>QR GPS</span>
+                        </button>
+                        <button
+                          type="button"
                           onClick={(e) => handleShareMill(mill, stats, e)}
                           aria-label={`Partager ${mill.name}`}
                           title={`Partager la fiche de ${mill.name} (Web Share ou copie du lien)`}
@@ -1113,7 +1835,7 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                           ) : (
                             <>
                               <Share2 className="w-3 h-3 text-[#31491E]" aria-hidden="true" />
-                              <span>Partager</span>
+                              <span className="hidden sm:inline">Partager</span>
                             </>
                           )}
                         </button>
@@ -1143,6 +1865,71 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                         </a>
                       </div>
                     </div>
+
+                    {/* Inline Scannable GPS QR Code Drawer for this Huilerie */}
+                    {expandedQrMillId === mill.id && (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-3.5 rounded-2xl bg-[#FAF7F2] border border-[#8CBE5D] space-y-3 animate-in fade-in duration-150"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-[#18230F]">
+                            <Smartphone className="w-4 h-4 text-[#31491E] shrink-0" aria-hidden="true" />
+                            <span>Scanner pour ouvrir sur votre GPS mobile</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setExpandedQrMillId(null)}
+                            aria-label="Masquer le code QR"
+                            className="p-1 rounded-lg hover:bg-white text-[#567B34] hover:text-[#18230F] cursor-pointer"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row items-center gap-3.5 bg-white p-3 rounded-xl border border-[#E6DEC9]">
+                          <div className="p-1.5 rounded-xl bg-white border border-[#31491E]/20 shrink-0">
+                            <MillQrSvg
+                              value={buildMillMobileMapUrl(mill, 'google_pin', userLocation)}
+                              size={116}
+                              fgColor="#18230F"
+                              bgColor="#FFFFFF"
+                              title={`Code QR GPS de ${mill.name} (${mill.commune})`}
+                            />
+                          </div>
+                          <div className="space-y-1.5 text-center sm:text-left flex-1 min-w-0">
+                            <p className="text-xs font-bold text-[#18230F] truncate">
+                              {mill.name}
+                            </p>
+                            <p className="text-[11px] text-[#567B34] leading-snug">
+                              {mill.address} · {mill.commune}
+                            </p>
+                            <p className="font-mono text-[11px] font-bold text-[#31491E] tabular-nums">
+                              GPS : {mill.lat.toFixed(4)}° N, {mill.lng.toFixed(4)}° E
+                            </p>
+                            <div className="pt-1 flex flex-wrap items-center justify-center sm:justify-start gap-1.5">
+                              <a
+                                href={buildMillMobileMapUrl(mill, 'google_pin', userLocation)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-2.5 py-1 rounded-lg bg-[#31491E] hover:bg-[#233416] text-white text-[11px] font-bold inline-flex items-center gap-1 transition-colors"
+                              >
+                                <Navigation className="w-3 h-3 text-[#E6AB3C]" aria-hidden="true" />
+                                <span>Ouvrir Maps</span>
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => setActiveQrModalMill(mill)}
+                                className="px-2.5 py-1 rounded-lg bg-[#FAF7F2] hover:bg-[#E8F4D9] text-[#233416] border border-[#E6DEC9] text-[11px] font-bold inline-flex items-center gap-1 transition-colors cursor-pointer"
+                              >
+                                <QrCode className="w-3 h-3 text-[#AF4D24]" aria-hidden="true" />
+                                <span>Agrandir / Waze / PNG</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Direct WhatsApp Recommendation Button */}
                     <a
@@ -1221,6 +2008,11 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                     <div className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#567B34]">
                       <MapPin className="w-4 h-4 text-[#E6AB3C]" aria-hidden="true" />
                       <span>{activeModalMill.commune} · Daïra de {activeModalMill.daira}</span>
+                      {activeModalMillDistanceKm !== null && (
+                        <span className="text-[11px] font-bold text-[#233416] normal-case tabular-nums">
+                          · À {activeModalMillDistanceKm.toFixed(1)} km de votre position
+                        </span>
+                      )}
                       {activeModalMill.certifiedBio && (
                         <span className="text-[11px] font-bold text-[#31491E] normal-case">
                           · Certifié Bio / Raisonné
@@ -1269,6 +2061,16 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                             <span>Partager</span>
                           </>
                         )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setActiveQrModalMill(activeModalMill)}
+                        className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-white text-[#18230F] border border-[#E6DEC9] hover:border-[#31491E] hover:bg-[#E8F4D9]/50 transition-colors cursor-pointer"
+                        title="Afficher et télécharger le code QR GPS pour ouvrir cette huilerie sur mobile"
+                      >
+                        <QrCode className="w-3.5 h-3.5 text-[#AF4D24]" aria-hidden="true" />
+                        <span>Code QR GPS</span>
                       </button>
 
                       <button
@@ -1552,63 +2354,101 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                         </div>
                       </div>
 
-                      {/* Contact & Master Miller */}
+                      {/* Contact, Master Miller & Embedded Scannable GPS QR Code */}
                       <div className="mill-print-section bg-white p-5 rounded-2xl border border-[#E6DEC9] space-y-3 text-xs text-[#31491E]">
-                        <h4 className="font-bold text-xs uppercase tracking-wider text-[#18230F] flex items-center gap-1.5">
-                          <MapPin className="w-4 h-4 text-[#E6AB3C]" aria-hidden="true" />
-                          <span>Coordonnées & Maître Moulinier</span>
-                        </h4>
-                        <div className="space-y-2">
-                          <p>
-                            <strong className="text-[#18230F]">Responsable / Contact :</strong>{' '}
-                            {activeModalMill.contactPerson}
-                          </p>
-                          <p>
-                            <strong className="text-[#18230F]">Adresse :</strong>{' '}
-                            {activeModalMill.address}
-                          </p>
-                          <p>
-                            <strong className="text-[#18230F]">Téléphone direct :</strong>{' '}
-                            <a
-                              href={`tel:${activeModalMill.phone.split('/')[0].trim()}`}
-                              className="text-[#31491E] underline font-bold"
-                            >
-                              {activeModalMill.phone}
-                            </a>
-                          </p>
-                          <p>
-                            <strong className="text-[#18230F]">Coordonnées GPS :</strong>{' '}
-                            <span className="font-mono text-[11px] text-[#567B34] tabular-nums">
-                              {activeModalMill.lat.toFixed(4)}° N, {activeModalMill.lng.toFixed(4)}° E
-                            </span>
-                          </p>
-                          <div className="mill-modal-no-print pt-2 flex flex-wrap items-center gap-2">
-                            <a
-                              href={`https://www.google.com/maps/dir/?api=1&destination=${activeModalMill.lat},${activeModalMill.lng}&travelmode=driving`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#E8F4D9] hover:bg-[#D4E8BF] text-[#18230F] text-xs font-bold border border-[#8CBE5D]/50 transition-colors"
-                              title={`Calculer l'itinéraire Google Maps vers ${activeModalMill.name} (${activeModalMill.lat}, ${activeModalMill.lng})`}
-                            >
-                              <Navigation className="w-3.5 h-3.5 text-[#31491E]" aria-hidden="true" />
-                              <span>Itinéraire Google Maps</span>
-                              <ExternalLink className="w-3 h-3 text-[#567B34]" aria-hidden="true" />
-                            </a>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setActiveModalMill(null);
-                                const mapEl = document.getElementById('carte-interactive');
-                                if (mapEl) {
-                                  mapEl.scrollIntoView({ behavior: 'smooth' });
-                                }
-                              }}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF7F2] hover:bg-[#F4EEE1] text-[#31491E] text-xs font-bold border border-[#E6DEC9] transition-colors cursor-pointer"
-                            >
-                              <MapPin className="w-3.5 h-3.5 text-[#AF4D24]" aria-hidden="true" />
-                              <span>Voir sur la carte SIG</span>
-                            </button>
+                        <div className="flex items-center justify-between gap-2">
+                          <h4 className="font-bold text-xs uppercase tracking-wider text-[#18230F] flex items-center gap-1.5">
+                            <MapPin className="w-4 h-4 text-[#E6AB3C]" aria-hidden="true" />
+                            <span>Coordonnées, Maître Moulinier & QR GPS</span>
+                          </h4>
+                          <button
+                            type="button"
+                            onClick={() => setActiveQrModalMill(activeModalMill)}
+                            className="mill-modal-no-print text-[11px] font-bold text-[#31491E] hover:underline flex items-center gap-1 cursor-pointer"
+                          >
+                            <QrCode className="w-3.5 h-3.5 text-[#AF4D24]" aria-hidden="true" />
+                            <span>Options QR</span>
+                          </button>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                          <div className="space-y-2 flex-1">
+                            <p>
+                              <strong className="text-[#18230F]">Responsable / Contact :</strong>{' '}
+                              {activeModalMill.contactPerson}
+                            </p>
+                            <p>
+                              <strong className="text-[#18230F]">Adresse :</strong>{' '}
+                              {activeModalMill.address}
+                            </p>
+                            <p>
+                              <strong className="text-[#18230F]">Téléphone direct :</strong>{' '}
+                              <a
+                                href={`tel:${activeModalMill.phone.split('/')[0].trim()}`}
+                                className="text-[#31491E] underline font-bold"
+                              >
+                                {activeModalMill.phone}
+                              </a>
+                            </p>
+                            <p>
+                              <strong className="text-[#18230F]">Coordonnées GPS :</strong>{' '}
+                              <span className="font-mono text-[11px] text-[#567B34] tabular-nums">
+                                {activeModalMill.lat.toFixed(4)}° N, {activeModalMill.lng.toFixed(4)}° E
+                              </span>
+                            </p>
                           </div>
+
+                          {/* Scannable QR Code right inside the mill sheet */}
+                          <div className="p-2 rounded-2xl bg-[#FAF7F2] border border-[#E6DEC9] flex flex-col items-center text-center shrink-0 mx-auto sm:mx-0">
+                            <div className="p-1.5 bg-white rounded-xl border border-[#31491E]/15">
+                              <MillQrSvg
+                                value={buildMillMobileMapUrl(activeModalMill, 'google_pin', userLocation)}
+                                size={96}
+                                fgColor="#18230F"
+                                bgColor="#FFFFFF"
+                                title={`Scanner pour ouvrir ${activeModalMill.name} sur Maps`}
+                              />
+                            </div>
+                            <span className="text-[10px] font-bold text-[#18230F] mt-1">
+                              Scanner pour GPS
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="mill-modal-no-print pt-2 flex flex-wrap items-center gap-2">
+                          <a
+                            href={`https://www.google.com/maps/dir/?api=1&destination=${activeModalMill.lat},${activeModalMill.lng}&travelmode=driving`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#E8F4D9] hover:bg-[#D4E8BF] text-[#18230F] text-xs font-bold border border-[#8CBE5D]/50 transition-colors"
+                            title={`Calculer l'itinéraire Google Maps vers ${activeModalMill.name} (${activeModalMill.lat}, ${activeModalMill.lng})`}
+                          >
+                            <Navigation className="w-3.5 h-3.5 text-[#31491E]" aria-hidden="true" />
+                            <span>Itinéraire Google Maps</span>
+                            <ExternalLink className="w-3 h-3 text-[#567B34]" aria-hidden="true" />
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => setActiveQrModalMill(activeModalMill)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF7F2] hover:bg-[#F4EEE1] text-[#233416] text-xs font-bold border border-[#E6DEC9] transition-colors cursor-pointer"
+                          >
+                            <QrCode className="w-3.5 h-3.5 text-[#AF4D24]" aria-hidden="true" />
+                            <span>QR Mobile / Waze / PNG</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveModalMill(null);
+                              const mapEl = document.getElementById('carte-interactive');
+                              if (mapEl) {
+                                mapEl.scrollIntoView({ behavior: 'smooth' });
+                              }
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF7F2] hover:bg-[#F4EEE1] text-[#31491E] text-xs font-bold border border-[#E6DEC9] transition-colors cursor-pointer"
+                          >
+                            <MapPin className="w-3.5 h-3.5 text-[#AF4D24]" aria-hidden="true" />
+                            <span>Voir sur la carte SIG</span>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -1706,6 +2546,45 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
               </div>
             </div>
           </div>
+        )}
+
+        {/* Dedicated GPS QR Code Modal for Scanning & Downloading */}
+        {activeQrModalMill && (
+          <MillQrCodeModal
+            mill={activeQrModalMill}
+            userOrigin={userLocation}
+            onClose={() => setActiveQrModalMill(null)}
+          />
+        )}
+
+        {/* Camera QR Code Scanner Modal to Scan Physical Huilerie Codes */}
+        {isQrScannerOpen && (
+          <MillQrScannerModal
+            onClose={() => setIsQrScannerOpen(false)}
+            onSelectMillDetails={(mill) => {
+              setIsQrScannerOpen(false);
+              setLastScannedMill(mill);
+              window.dispatchEvent(
+                new CustomEvent('adoio:focus-mill-on-map', {
+                  detail: { millId: mill.id },
+                })
+              );
+              handleOpenMill(mill, 'info');
+            }}
+            onLocateMillOnMap={(mill) => {
+              setIsQrScannerOpen(false);
+              setLastScannedMill(mill);
+              window.dispatchEvent(
+                new CustomEvent('adoio:focus-mill-on-map', {
+                  detail: { millId: mill.id },
+                })
+              );
+              const mapEl = document.getElementById('carte-interactive');
+              if (mapEl) {
+                mapEl.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
+          />
         )}
       </div>
     </section>

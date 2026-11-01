@@ -189,7 +189,63 @@ export const EXACT_TRANSLATIONS: Record<string, { en: string; ar: string }> = {
   "Vue d'ensemble": { en: 'Overview', ar: 'نظرة عامة' },
   'Adhésion ADOIO': { en: 'ADOIO Membership', ar: 'عضوية ADOIO' },
 
-  // Mobile Menu Links
+  // Mobile Menu Links & NewsFeed
+  'Actualités & Communiqués': {
+    en: 'News & Official Updates',
+    ar: 'الأخبار والبيانات الرسمية',
+  },
+  'Bulletin Agronomique & Dépêches Officielles': {
+    en: 'Agronomic Bulletin & Official Dispatches',
+    ar: 'النشرة الفلاحية والبيانات الرسمية',
+  },
+  'Édition Campagne 2026–2027': {
+    en: '2026–2027 Harvest Campaign Edition',
+    ar: 'طبعة موسم الجني 2026–2027',
+  },
+  'Actualités Agricoles & Communiqués de l’ADOIO': {
+    en: 'Agricultural News & ADOIO Official Updates',
+    ar: 'الأخبار الفلاحية وبيانات جمعية ADOIO',
+  },
+  'Toutes les actualités': {
+    en: 'All News',
+    ar: 'جميع الأخبار',
+  },
+  'Communiqués ADOIO': {
+    en: 'ADOIO Updates',
+    ar: 'بيانات ADOIO',
+  },
+  'Communiqué ADOIO': {
+    en: 'ADOIO Official Update',
+    ar: 'بيان رسمي ADOIO',
+  },
+  'Agronomie & Verger': {
+    en: 'Agronomy & Orchard',
+    ar: 'الزراعة والبستان',
+  },
+  'Qualité & Trituration': {
+    en: 'Quality & Milling',
+    ar: 'الجودة والعصر',
+  },
+  'Événements & Formation': {
+    en: 'Events & Training',
+    ar: 'الفعاليات والتكوين',
+  },
+  'Lire le dossier': {
+    en: 'Read Full Article',
+    ar: 'قراءة الملف الكامل',
+  },
+  'Dossiers Agronomiques & Qualité Oléicole': {
+    en: 'Agronomic Reports & Olive Oil Quality',
+    ar: 'الملفات الفلاحية وجودة زيت الزيتون',
+  },
+  'Dépêches de Terrain & Calendrier de Vulgarisation': {
+    en: 'Field Dispatches & Extension Calendar',
+    ar: 'برقيات ميدانية ورزنامة الإرشاد الفلاحي',
+  },
+  'Points clés à retenir au verger et au moulin': {
+    en: 'Key Takeaways for the Orchard and Olive Mill',
+    ar: 'النقاط الأساسية للبستان والمعصرة',
+  },
   'ADOIO & Terroir (25 ans)': {
     en: 'ADOIO & Terroir (25 Years)',
     ar: 'جمعية ADOIO والإقليم (25 سنة)',
@@ -473,6 +529,116 @@ export const PHRASE_TRANSLATIONS: Array<{ fr: string; en: string; ar: string }> 
     fr: 'Tous les systèmes',
     en: 'All extraction systems',
     ar: 'جميع أنظمة الاستخلاص',
+  },
+  {
+    fr: "Filtrer par Système d'Extraction (Type de Moulin)",
+    en: 'Filter by Extraction System (Mill Type)',
+    ar: 'التصفية حسب نظام الاستخلاص (نوع المعصرة)',
+  },
+  {
+    fr: 'Chaîne Continue',
+    en: 'Continuous Line',
+    ar: 'خط استخلاص مستمر',
+  },
+  {
+    fr: 'Inox 2 & 3 phases (< 27°C)',
+    en: 'Stainless 2 & 3-phase (< 27°C)',
+    ar: 'فولاذ غير قابل للصدأ طورين و3 أطوار (< 27°م)',
+  },
+  {
+    fr: 'Presse Traditionnelle',
+    en: 'Traditional Press',
+    ar: 'معصرة تقليدية بالحجر',
+  },
+  {
+    fr: 'Taâssart · Meules de granit',
+    en: 'Taâssart · Granite millstones',
+    ar: 'ثعصارت · رحى الغرانيت الحجرية',
+  },
+  {
+    fr: 'Domaine Intégré',
+    en: 'Integrated Estate',
+    ar: 'مزرعة ومعصرة مدمجة',
+  },
+  {
+    fr: 'Proximité & Géolocalisation :',
+    en: 'Proximity & Geolocation:',
+    ar: 'القرب الجغرافي وتحديد الموقع:',
+  },
+  {
+    fr: 'Autour de ma position (GPS)',
+    en: 'Near my location (GPS)',
+    ar: 'بالقرب من موقعي (GPS)',
+  },
+  {
+    fr: 'Position GPS active',
+    en: 'GPS location active',
+    ar: 'موقع GPS مفعل',
+  },
+  {
+    fr: 'Choisir un point de départ en Kabylie…',
+    en: 'Choose a starting point in Kabylia…',
+    ar: 'اختر نقطة انطلاق في منطقة القبائل…',
+  },
+  {
+    fr: 'Rayon max :',
+    en: 'Max radius:',
+    ar: 'أقصى نطاق مسافة:',
+  },
+  {
+    fr: '📍 Plus proches de ma position',
+    en: '📍 Nearest to my location',
+    ar: '📍 الأقرب إلى موقعي',
+  },
+  {
+    fr: 'Alertes Navigateur & Phénologie Régionale · Wilaya de Béjaïa',
+    en: 'Browser Alerts & Regional Phenology · Béjaïa Province',
+    ar: 'تنبيهات المتصفح والفينولوجيا الإقليمية · ولاية بجاية',
+  },
+  {
+    fr: 'Notification de Fenêtre Optimale de Récolte par Variété & Commune',
+    en: 'Optimal Harvest Window Notification by Variety & Municipality',
+    ar: 'إشعار فترة الجني المثلى حسب الصنف والبلدية',
+  },
+  {
+    fr: "1. Votre variété d'olives :",
+    en: '1. Your olive variety:',
+    ar: '1. صنف الزيتون الخاص بك:',
+  },
+  {
+    fr: '2. Bassin régional / Commune :',
+    en: '2. Regional basin / Municipality:',
+    ar: '2. الحوض الإقليمي / البلدية:',
+  },
+  {
+    fr: 'Surveiller cette variété',
+    en: 'Monitor this variety',
+    ar: 'مراقبة هذا الصنف',
+  },
+  {
+    fr: 'Alerte Activée',
+    en: 'Alert Active',
+    ar: 'التنبيه مفعل',
+  },
+  {
+    fr: "Tester l'alerte",
+    en: 'Test alert',
+    ar: 'اختبار التنبيه',
+  },
+  {
+    fr: 'Fenêtre Optimale Active (Cueillette Recommandée)',
+    en: 'Optimal Window Active (Harvest Recommended)',
+    ar: 'الفترة المثلى نشطة (ينصح بالجني)',
+  },
+  {
+    fr: 'Fenêtre Régionale Calculée',
+    en: 'Calculated Regional Window',
+    ar: 'فترة الجني الإقليمية المحسوبة',
+  },
+  {
+    fr: 'Indice de Maturité (Jaén)',
+    en: 'Maturity Index (Jaén)',
+    ar: 'مؤشر النضج (جاين)',
   },
   {
     fr: 'Système Continu (2 ou 3 phases)',

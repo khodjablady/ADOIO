@@ -293,6 +293,288 @@ export function calculateQuickConversion(weightKg: number, yieldPercent: number)
   };
 }
 
+export interface TheoreticalDateYieldResult {
+  varietyId: string;
+  varietyLabel: string;
+  harvestDateStr: string;
+  formattedDateFr: string;
+  campaignDay: number; // Days since Oct 1 (0 to 135)
+  theoreticalYieldLitersPerQuintal: number;
+  periodYieldFactor: number;
+  maturityIndexJaen: number;
+  fruitMoisturePercent: number;
+  dryMatterOilPercent: number;
+  expectedPolyphenolsMgKg: number;
+  baselineAcidityPercent: number;
+  stageTitle: string;
+  stageAdvice: string;
+  derivedPeriod: HarvestPeriod;
+  weeklyEvolution: Array<{
+    dateStr: string;
+    shortDateLabel: string;
+    yieldLitersPerQx: number;
+    maturityIndex: number;
+    isSelectedWindow: boolean;
+  }>;
+}
+
+const VARIETY_LIPOGENESIS_MODELS: Record<
+  string,
+  {
+    label: string;
+    earlyYieldOct1: number;
+    optimalYieldDec1: number;
+    lateYieldJan25: number;
+    peakLipogenesisDay: number; // Day from Oct 1 where dry-matter oil synthesis plateaus
+    basePolyphenols: number;
+    optimalWindowLabel: string;
+  }
+> = {
+  chemlal: {
+    label: 'Chemlal de Kabylie',
+    earlyYieldOct1: 14.2,
+    optimalYieldDec1: 18.5,
+    lateYieldJan25: 21.0,
+    peakLipogenesisDay: 65, // ~Dec 5
+    basePolyphenols: 460,
+    optimalWindowLabel: '15 Novembre – 10 Janvier',
+  },
+  bouchouk: {
+    label: 'Bouchouk de Kabylie',
+    earlyYieldOct1: 17.6,
+    optimalYieldDec1: 22.8,
+    lateYieldJan25: 25.4,
+    peakLipogenesisDay: 52, // ~Nov 22
+    basePolyphenols: 490,
+    optimalWindowLabel: '25 Octobre – 10 Décembre',
+  },
+  azeradj: {
+    label: 'Azeradj (Adjeraz)',
+    earlyYieldOct1: 18.0,
+    optimalYieldDec1: 23.2,
+    lateYieldJan25: 25.2,
+    peakLipogenesisDay: 46, // ~Nov 16
+    basePolyphenols: 510,
+    optimalWindowLabel: '20 Octobre – 30 Novembre',
+  },
+  limli: {
+    label: 'Limli de Sidi-Aïch',
+    earlyYieldOct1: 17.2,
+    optimalYieldDec1: 22.4,
+    lateYieldJan25: 24.8,
+    peakLipogenesisDay: 56, // ~Nov 26
+    basePolyphenols: 450,
+    optimalWindowLabel: '01 Novembre – 20 Décembre',
+  },
+  aberkane: {
+    label: 'Aberkane',
+    earlyYieldOct1: 15.6,
+    optimalYieldDec1: 19.8,
+    lateYieldJan25: 22.4,
+    peakLipogenesisDay: 62, // ~Dec 2
+    basePolyphenols: 390,
+    optimalWindowLabel: '05 Novembre – 25 Décembre',
+  },
+  autres: {
+    label: 'Autres Cultivars (Sigoise, Picholine)',
+    earlyYieldOct1: 15.8,
+    optimalYieldDec1: 20.2,
+    lateYieldJan25: 22.6,
+    peakLipogenesisDay: 58,
+    basePolyphenols: 380,
+    optimalWindowLabel: '05 Novembre – 25 Décembre',
+  },
+  assemblage: {
+    label: 'Assemblage Traditionnel Kabyle',
+    earlyYieldOct1: 15.8,
+    optimalYieldDec1: 20.0,
+    lateYieldJan25: 22.5,
+    peakLipogenesisDay: 60, // ~Nov 30
+    basePolyphenols: 430,
+    optimalWindowLabel: '10 Novembre – 31 Décembre',
+  },
+};
+
+export const HARVEST_DATE_PRESETS: Array<{
+  dateStr: string;
+  shortLabel: string;
+  stageSubLabel: string;
+  period: HarvestPeriod;
+}> = [
+  {
+    dateStr: '2026-10-20',
+    shortLabel: '20 Octobre',
+    stageSubLabel: 'Récolte ultra-précoce (Vert)',
+    period: 'early',
+  },
+  {
+    dateStr: '2026-11-05',
+    shortLabel: '05 Novembre',
+    stageSubLabel: 'Début véraison (Primeur)',
+    period: 'early',
+  },
+  {
+    dateStr: '2026-11-25',
+    shortLabel: '25 Novembre',
+    stageSubLabel: 'Mi-véraison (Cœur de saison)',
+    period: 'mid',
+  },
+  {
+    dateStr: '2026-12-10',
+    shortLabel: '10 Décembre',
+    stageSubLabel: 'Optimum lipogenèse',
+    period: 'mid',
+  },
+  {
+    dateStr: '2027-01-05',
+    shortLabel: '05 Janvier',
+    stageSubLabel: 'Maturité noire complète',
+    period: 'late',
+  },
+  {
+    dateStr: '2027-01-28',
+    shortLabel: '28 Janvier',
+    stageSubLabel: 'Fin de campagne (Tardive)',
+    period: 'late',
+  },
+];
+
+function computeCampaignDayFromDate(dateStr: string): number {
+  try {
+    const parsed = new Date(`${dateStr}T12:00:00`);
+    if (Number.isNaN(parsed.getTime())) return 55;
+    const month = parsed.getMonth(); // 0 = Jan, 9 = Oct, 10 = Nov, 11 = Dec
+    const day = parsed.getDate();
+    // Map campaign year (Oct 1 = day 0, Nov 1 = 31, Dec 1 = 61, Jan 1 = 92, Feb 1 = 123)
+    if (month === 8) return Math.max(0, day - 25); // Late Sept
+    if (month === 9) return day - 1; // October (0..30)
+    if (month === 10) return 31 + (day - 1); // November (31..60)
+    if (month === 11) return 61 + (day - 1); // December (61..91)
+    if (month === 0) return 92 + (day - 1); // January (92..122)
+    if (month === 1) return Math.min(138, 123 + (day - 1)); // February (123..138)
+    return 55;
+  } catch {
+    return 55;
+  }
+}
+
+export function calculateTheoreticalYieldByDate(
+  varietyId: string,
+  harvestDateStr: string,
+  extractionType: ExtractionType = 'modern'
+): TheoreticalDateYieldResult {
+  const model = VARIETY_LIPOGENESIS_MODELS[varietyId] || VARIETY_LIPOGENESIS_MODELS.chemlal;
+  const baseReference = VARIETY_BASE_YIELDS[varietyId] || 18.0;
+  const campaignDay = Math.max(0, Math.min(135, computeCampaignDayFromDate(harvestDateStr)));
+
+  const computeYieldAtDay = (d: number): number => {
+    if (d <= model.peakLipogenesisDay) {
+      // Sigmoidal / progressive lipogenesis from Oct 1 to peak lipogenesis day
+      const ratio = d / Math.max(1, model.peakLipogenesisDay);
+      const smoothProgress = 1 - Math.pow(1 - ratio, 1.45);
+      return model.earlyYieldOct1 + (model.optimalYieldDec1 - model.earlyYieldOct1) * smoothProgress;
+    }
+    // After peak lipogenesis, apparent yield rises slightly due to fruit water loss (desiccation)
+    const lateRatio = Math.min(1, (d - model.peakLipogenesisDay) / Math.max(1, 125 - model.peakLipogenesisDay));
+    return model.optimalYieldDec1 + (model.lateYieldJan25 - model.optimalYieldDec1) * Math.pow(lateRatio, 0.85);
+  };
+
+  const techFactor = extractionType === 'modern' ? 1.02 : 0.96;
+  const rawYieldAtDay = computeYieldAtDay(campaignDay) * techFactor;
+  const theoreticalYieldLitersPerQuintal = Number(rawYieldAtDay.toFixed(1));
+  const periodYieldFactor = Number((computeYieldAtDay(campaignDay) / baseReference).toFixed(3));
+
+  const maturityIndexJaen = Number(
+    Math.min(4.9, Math.max(1.1, 1.25 + (campaignDay / 125) * 3.45)).toFixed(2)
+  );
+  const fruitMoisturePercent = Number(
+    Math.max(41, Math.min(60, 58.5 - (campaignDay / 130) * 16.0)).toFixed(1)
+  );
+  const dryMatterOilPercent = Number(
+    Math.min(48.5, Math.max(32.0, 34.0 + Math.min(1, campaignDay / (model.peakLipogenesisDay + 12)) * 12.5)).toFixed(1)
+  );
+
+  const polyphenolDecay =
+    campaignDay <= 35
+      ? 1.12
+      : campaignDay <= 70
+      ? 1.12 - ((campaignDay - 35) / 35) * 0.18
+      : Math.max(0.62, 0.94 - ((campaignDay - 70) / 65) * 0.32);
+  const expectedPolyphenolsMgKg = Math.round(model.basePolyphenols * polyphenolDecay);
+
+  const baselineAcidityPercent = Number(
+    (0.20 + Math.pow(campaignDay / 120, 2.1) * 0.42).toFixed(2)
+  );
+
+  let derivedPeriod: HarvestPeriod = 'mid';
+  let stageTitle = 'Optimum de Véraison (Équilibre Rendement & Arômes HOVE)';
+  let stageAdvice =
+    'Période idéale ADOIO : la synthèse lipidique dans la drupe est maximale et les polyphénols garantissent une Huile Vierge Extra de longue garde.';
+
+  if (campaignDay < 40) {
+    derivedPeriod = 'early';
+    stageTitle = 'Récolte Précoce (Stade Vert Tournant · Huile Primeur)';
+    stageAdvice =
+      'Rendement plus modéré car la drupe contient encore ~54% d’eau végétale, mais concentration record en antioxydants et fruité vert intense.';
+  } else if (campaignDay > 82) {
+    derivedPeriod = 'late';
+    stageTitle = 'Récolte Tardive (Maturité Noire · Effet Déshydratation)';
+    stageAdvice =
+      'Le rendement apparent (L/qx) augmente surtout par perte en eau du fruit ; cueillez rapidement pour éviter la chute au sol et la hausse d’acidité.';
+  }
+
+  let formattedDateFr = harvestDateStr;
+  try {
+    const dObj = new Date(`${harvestDateStr}T12:00:00`);
+    if (!Number.isNaN(dObj.getTime())) {
+      formattedDateFr = dObj.toLocaleDateString('fr-FR', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+    }
+  } catch {
+    // Keep raw date string
+  }
+
+  const milestoneDays = [
+    { dateStr: '2026-10-15', label: '15 Oct', day: 14 },
+    { dateStr: '2026-11-01', label: '01 Nov', day: 31 },
+    { dateStr: '2026-11-15', label: '15 Nov', day: 45 },
+    { dateStr: '2026-12-01', label: '01 Déc', day: 61 },
+    { dateStr: '2026-12-20', label: '20 Déc', day: 80 },
+    { dateStr: '2027-01-10', label: '10 Jan', day: 101 },
+    { dateStr: '2027-01-30', label: '30 Jan', day: 121 },
+  ];
+
+  const weeklyEvolution = milestoneDays.map((m) => ({
+    dateStr: m.dateStr,
+    shortDateLabel: m.label,
+    yieldLitersPerQx: Number((computeYieldAtDay(m.day) * techFactor).toFixed(1)),
+    maturityIndex: Number((1.25 + (m.day / 125) * 3.45).toFixed(1)),
+    isSelectedWindow: Math.abs(m.day - campaignDay) <= 9,
+  }));
+
+  return {
+    varietyId,
+    varietyLabel: model.label,
+    harvestDateStr,
+    formattedDateFr,
+    campaignDay,
+    theoreticalYieldLitersPerQuintal,
+    periodYieldFactor,
+    maturityIndexJaen,
+    fruitMoisturePercent,
+    dryMatterOilPercent,
+    expectedPolyphenolsMgKg,
+    baselineAcidityPercent,
+    stageTitle,
+    stageAdvice,
+    derivedPeriod,
+    weeklyEvolution,
+  };
+}
+
 export const YieldSimulator: React.FC = () => {
   // Quick Converter state (top of section: 15% to 25% configurable yield)
   const [quickWeightKg, setQuickWeightKg] = useState<number>(300);
@@ -308,6 +590,7 @@ export const YieldSimulator: React.FC = () => {
   const [comparedVariety, setComparedVariety] = useState<string>('bouchouk');
   const [isComparingVarieties, setIsComparingVarieties] = useState<boolean>(true);
 
+  const [estimatedHarvestDate, setEstimatedHarvestDate] = useState<string>('2026-11-25');
   const [harvestPeriod, setHarvestPeriod] = useState<'early' | 'mid' | 'late'>('mid');
   const [extractionType, setExtractionType] = useState<'modern' | 'traditional'>('modern');
   const [delayHours, setDelayHours] = useState<'fast' | 'medium' | 'slow'>('fast');
@@ -412,23 +695,52 @@ export const YieldSimulator: React.FC = () => {
     },
   };
 
-  // Modifier by harvest period
-  const periodYieldFactor = {
-    early: 0.85, // ~17 L/qx (early green)
-    mid: 1.0,    // ~20.5 L/qx (optimum)
-    late: 1.12,  // ~23 L/qx (black mature)
-  }[harvestPeriod];
+  // Calculate theoretical yield from selected variety + estimated harvest date
+  const dateYieldMetrics = calculateTheoreticalYieldByDate(
+    selectedVariety,
+    estimatedHarvestDate,
+    extractionType
+  );
+  const comparedDateYieldMetrics = calculateTheoreticalYieldByDate(
+    comparedVariety,
+    estimatedHarvestDate,
+    extractionType
+  );
+
+  const handleSelectHarvestDate = (newDateStr: string) => {
+    setEstimatedHarvestDate(newDateStr);
+    const evaluated = calculateTheoreticalYieldByDate(
+      selectedVariety,
+      newDateStr,
+      extractionType
+    );
+    setHarvestPeriod(evaluated.derivedPeriod);
+  };
+
+  const handleSelectHarvestPeriodPreset = (period: HarvestPeriod) => {
+    setHarvestPeriod(period);
+    if (period === 'early') {
+      setEstimatedHarvestDate('2026-11-05');
+    } else if (period === 'mid') {
+      setEstimatedHarvestDate('2026-12-05');
+    } else {
+      setEstimatedHarvestDate('2027-01-10');
+    }
+  };
+
+  // Modifier by harvest period / date
+  const periodYieldFactor = dateYieldMetrics.periodYieldFactor;
 
   // Modifier by extraction technology
   const techYieldFactor = extractionType === 'modern' ? 1.02 : 0.96;
 
   // Final estimated yield in Liters per quintal (Variety A)
-  const finalYieldPerQuintal = (varietyBaseYields[selectedVariety] || 20) * periodYieldFactor * techYieldFactor;
+  const finalYieldPerQuintal = dateYieldMetrics.theoreticalYieldLitersPerQuintal;
   // Total estimated oil in Liters (Variety A)
   const estimatedOilLiters = Math.round(totalQuintals * finalYieldPerQuintal);
 
   // Final estimated yield in Liters per quintal (Variety B - Compared)
-  const comparedYieldPerQuintal = (varietyBaseYields[comparedVariety] || 20) * periodYieldFactor * techYieldFactor;
+  const comparedYieldPerQuintal = comparedDateYieldMetrics.theoreticalYieldLitersPerQuintal;
   // Total estimated oil in Liters (Variety B - Compared)
   const comparedEstimatedOilLiters = Math.round(totalQuintals * comparedYieldPerQuintal);
 
@@ -491,7 +803,7 @@ export const YieldSimulator: React.FC = () => {
   // Sync simulator data with CalendarAndPractices local harvest window notification
   useEffect(() => {
     const profile = VARIETY_HARVEST_PROFILES[selectedVariety] || VARIETY_HARVEST_PROFILES.chemlal;
-    const maturityIndex = harvestPeriod === 'early' ? 2.3 : harvestPeriod === 'mid' ? 3.1 : 4.2;
+    const maturityIndex = dateYieldMetrics.maturityIndexJaen;
     const snapshot = {
       varietyId: selectedVariety,
       varietyName: varietyNames[selectedVariety] || profile.name,
@@ -792,9 +1104,358 @@ export const YieldSimulator: React.FC = () => {
               sectionId="simulateur"
               title="Simulateur de Récolte et Rendement en Huile d'Olive"
               text={() =>
-                `Simulateur décisionnel de récolte et rendement en huile d'olive de Kabylie. Pour un lot de ${totalWeight} kilogrammes d'olives (${totalQuintals.toFixed(1)} quintaux) de variété ${selectedVariety}, le rendement estimé est de ${finalYieldPerQuintal.toFixed(1)} litres par quintal, soit une production totale de ${estimatedOilLiters} litres d'huile d'olive. Taux d'acidité oléique estimé : ${estimatedAcidity} pour cent, correspondant à la catégorie officielle ${qualityGrade}. Règle agronomique essentielle : cueillir au stade de véraison tournante, transporter les olives dans des caisses plastiques ajourées et triturer en moins de 24 à 48 heures à une température inférieure à 27 degrés Celsius.`
+                `Outils Pratiques : Simulateur décisionnel de récolte et rendement théorique en huile d'olive de Kabylie. Pour la variété ${varietyNames[selectedVariety]} récoltée autour du ${dateYieldMetrics.formattedDateFr}, le rendement théorique calculé est de ${dateYieldMetrics.theoreticalYieldLitersPerQuintal.toFixed(1)} litres par quintal, avec un indice de maturité de ${dateYieldMetrics.maturityIndexJaen} sur 7. Pour un lot de ${totalWeight} kilogrammes d'olives (${totalQuintals.toFixed(1)} quintaux), la production totale estimée est de ${estimatedOilLiters} litres d'huile d'olive.`
               }
             />
+          </div>
+        </div>
+
+        {/* Outils Pratiques : Calculateur de Rendement Théorique (Litres par Quintal) selon Variété & Date de Récolte Estimée */}
+        <div
+          id="calculateur-rendement-date"
+          className="mb-10 bg-white rounded-3xl border-2 border-[#31491E]/30 shadow-md overflow-hidden"
+        >
+          {/* Header Banner */}
+          <div className="bg-gradient-to-r from-[#18230F] via-[#243516] to-[#31491E] px-5 py-4 sm:px-7 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-[#E6AB3C]/20 border border-[#E6AB3C]/40 flex items-center justify-center text-[#E6AB3C] shrink-0">
+                <Calendar className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md bg-[#E6AB3C] text-[#18230F]">
+                    Outils Pratiques · Lipogenèse & Maturité
+                  </span>
+                  <span className="text-[11px] font-semibold text-[#E8F4D9]/90">
+                    Modèle Agronomique ITAFV / IOC (Litres / Quintal)
+                  </span>
+                </div>
+                <h3 className="text-base sm:text-lg font-serif font-bold text-white tracking-tight mt-0.5">
+                  Calculateur de Rendement Théorique par Variété & Date de Récolte Estimée
+                </h3>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono font-bold px-3 py-1.5 rounded-xl bg-white/10 text-[#FAF7F2] border border-white/15">
+                1 quintal (qx) = 100 kg d'olives
+              </span>
+            </div>
+          </div>
+
+          <div className="p-5 sm:p-7 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+              {/* Left Column: 1. Choix de la Variété & 2. Date de Récolte Estimée */}
+              <div className="lg:col-span-7 space-y-5 flex flex-col justify-between">
+                {/* Step 1: Variety Pills */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold uppercase tracking-wider text-[#18230F] flex items-center gap-1.5">
+                      <Sprout className="w-4 h-4 text-[#31491E]" />
+                      <span>1. Sélectionnez la variété d'olive (Cultivar de Béjaïa)</span>
+                    </label>
+                    <span className="text-[11px] font-mono font-bold text-[#567B34]">
+                      Potentiel : {VARIETY_LIPOGENESIS_MODELS[selectedVariety]?.earlyYieldOct1 ?? 14.2} –{' '}
+                      {VARIETY_LIPOGENESIS_MODELS[selectedVariety]?.lateYieldJan25 ?? 21.0} L/qx
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {[
+                      { id: 'chemlal', label: 'Chemlal de Kabylie', sub: '14,2 – 21,0 L/qx' },
+                      { id: 'bouchouk', label: 'Bouchouk (Soummam)', sub: '17,6 – 25,4 L/qx' },
+                      { id: 'azeradj', label: 'Azeradj / Adjeraz', sub: '18,0 – 25,2 L/qx' },
+                      { id: 'limli', label: 'Limli (Sidi-Aïch)', sub: '17,2 – 24,8 L/qx' },
+                      { id: 'aberkane', label: 'Aberkane Noire', sub: '15,6 – 22,4 L/qx' },
+                      { id: 'assemblage', label: 'Assemblage Kabyle', sub: '15,8 – 22,5 L/qx' },
+                    ].map((cultivar) => {
+                      const active = selectedVariety === cultivar.id;
+                      return (
+                        <button
+                          key={cultivar.id}
+                          type="button"
+                          onClick={() => setSelectedVariety(cultivar.id)}
+                          className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                            active
+                              ? 'bg-[#31491E] text-white border-[#31491E] shadow-xs'
+                              : 'bg-[#FAF7F2] text-[#18230F] border-[#E6DEC9] hover:border-[#31491E]'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-xs font-bold truncate">{cultivar.label}</span>
+                            {active && <CheckCircle2 className="w-3.5 h-3.5 text-[#E6AB3C] shrink-0" />}
+                          </div>
+                          <span
+                            className={`text-[10px] font-mono block mt-0.5 ${
+                              active ? 'text-[#E8F4D9]' : 'text-[#567B34]'
+                            }`}
+                          >
+                            {cultivar.sub}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Step 2: Estimated Harvest Date Picker + Quick Campaign Presets */}
+                <div className="space-y-3 p-4 rounded-2xl bg-[#FAF7F2] border border-[#E6DEC9]">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label
+                      htmlFor="estimated-harvest-date-input"
+                      className="text-xs font-bold uppercase tracking-wider text-[#18230F] flex items-center gap-1.5"
+                    >
+                      <Calendar className="w-4 h-4 text-[#31491E]" />
+                      <span>2. Date de récolte estimée par l'oléiculteur</span>
+                    </label>
+                    <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-[#E8F4D9] text-[#31491E] border border-[#C5DFB0]">
+                      Fenêtre optimale : {VARIETY_LIPOGENESIS_MODELS[selectedVariety]?.optimalWindowLabel}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+                    <div className="sm:col-span-5">
+                      <input
+                        id="estimated-harvest-date-input"
+                        type="date"
+                        min="2026-10-01"
+                        max="2027-02-15"
+                        value={estimatedHarvestDate}
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            handleSelectHarvestDate(e.target.value);
+                          }
+                        }}
+                        className="w-full px-3.5 py-2.5 rounded-xl border-2 border-[#31491E]/40 bg-white text-[#18230F] font-mono text-sm font-bold focus:outline-none focus:border-[#31491E] cursor-pointer"
+                      />
+                    </div>
+                    <div className="sm:col-span-7 flex items-center justify-between gap-2 bg-white px-3.5 py-2 rounded-xl border border-[#E6DEC9]">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#567B34] block">
+                          Stade phénologique au {dateYieldMetrics.formattedDateFr}
+                        </span>
+                        <span className="text-xs font-bold text-[#18230F]">
+                          {dateYieldMetrics.stageTitle}
+                        </span>
+                      </div>
+                      <span className="font-mono text-xs font-extrabold px-2.5 py-1 rounded-lg bg-[#FEF5DB] text-[#B47A16] border border-[#E6AB3C]/50 shrink-0 tabular-nums">
+                        IM {dateYieldMetrics.maturityIndexJaen.toFixed(1)} / 7
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Quick Date Presets across the Campaign */}
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#567B34] block">
+                      Repères rapides de campagne oléicole (Octobre → Février) :
+                    </span>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5">
+                      {HARVEST_DATE_PRESETS.map((preset) => {
+                        const isSelectedDate = estimatedHarvestDate === preset.dateStr;
+                        return (
+                          <button
+                            key={preset.dateStr}
+                            type="button"
+                            onClick={() => handleSelectHarvestDate(preset.dateStr)}
+                            className={`px-2 py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
+                              isSelectedDate
+                                ? 'bg-[#18230F] text-[#E6AB3C] border-[#18230F] font-bold shadow-xs'
+                                : 'bg-white text-[#31491E] border-[#E6DEC9] hover:border-[#31491E]'
+                            }`}
+                          >
+                            <span className="text-[11px] font-bold block leading-tight">{preset.shortLabel}</span>
+                            <span
+                              className={`text-[9px] block mt-0.5 truncate ${
+                                isSelectedDate ? 'text-[#FAF7F2]/90' : 'text-[#567B34]'
+                              }`}
+                            >
+                              {preset.stageSubLabel}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Theoretical Yield Output (Litres / Quintal) & Agronomic Breakdown */}
+              <div className="lg:col-span-5 bg-gradient-to-br from-[#18230F] via-[#223315] to-[#31491E] text-white p-5 sm:p-6 rounded-2xl border border-[#436229] flex flex-col justify-between space-y-4">
+                <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-[#E6AB3C] block">
+                        Rendement Théorique Estimé ({varietyNames[selectedVariety]})
+                      </span>
+                      <span className="text-xs text-[#E8F4D9]/80 block mt-0.5">
+                        Récolte prévue le {dateYieldMetrics.formattedDateFr} ({extractionType === 'modern' ? 'Moulin continu 2-phases' : 'Presse traditionnelle'})
+                      </span>
+                    </div>
+                    <span
+                      className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full border shrink-0 ${
+                        dateYieldMetrics.derivedPeriod === 'mid'
+                          ? 'bg-[#E8F4D9]/20 text-[#A9D87A] border-[#A9D87A]/40'
+                          : dateYieldMetrics.derivedPeriod === 'early'
+                          ? 'bg-[#E6AB3C]/20 text-[#E6AB3C] border-[#E6AB3C]/40'
+                          : 'bg-amber-500/20 text-amber-200 border-amber-400/40'
+                      }`}
+                    >
+                      {dateYieldMetrics.derivedPeriod === 'mid'
+                        ? '★ Fenêtre Optimale'
+                        : dateYieldMetrics.derivedPeriod === 'early'
+                        ? 'Récolte Précoce'
+                        : 'Maturité Avancée'}
+                    </span>
+                  </div>
+
+                  {/* Primary Metric: Litres per Quintal */}
+                  <div className="mt-4 p-4 rounded-2xl bg-white/10 border border-white/15 flex items-baseline justify-between gap-4">
+                    <div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-serif text-4xl sm:text-5xl font-extrabold text-[#E6AB3C] tabular-nums">
+                          {dateYieldMetrics.theoreticalYieldLitersPerQuintal.toFixed(1)}
+                        </span>
+                        <span className="text-base sm:text-lg font-bold text-white">
+                          Litres / quintal
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#E8F4D9]/90 mt-1 font-mono tabular-nums">
+                        Soit ~{(dateYieldMetrics.theoreticalYieldLitersPerQuintal * 0.916).toFixed(1)} kg d'huile / 100 kg d'olives ({(dateYieldMetrics.theoreticalYieldLitersPerQuintal / 10).toFixed(2)} L / 10 kg)
+                      </p>
+                    </div>
+
+                    <div className="text-right shrink-0 border-l border-white/15 pl-3">
+                      <span className="text-[10px] uppercase tracking-wider text-[#E8F4D9]/75 block">
+                        Pour {totalQuintals.toFixed(1)} qx ({totalWeight} kg)
+                      </span>
+                      <span className="font-mono text-xl font-extrabold text-white tabular-nums">
+                        {estimatedOilLiters} L
+                      </span>
+                      <span className="text-[10px] text-[#E6AB3C] block font-mono tabular-nums">
+                        ~{Math.floor(estimatedOilLiters / 5)} bidons 5L
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 4 Key Lipogenesis Indicators */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+                    <div className="bg-white/8 rounded-xl p-2.5 border border-white/10">
+                      <span className="text-[10px] text-[#E8F4D9]/75 block">Humidité fruit</span>
+                      <span className="font-mono text-xs sm:text-sm font-extrabold text-white tabular-nums">
+                        {dateYieldMetrics.fruitMoisturePercent}%
+                      </span>
+                    </div>
+                    <div className="bg-white/8 rounded-xl p-2.5 border border-white/10">
+                      <span className="text-[10px] text-[#E8F4D9]/75 block">Huile / Mat. Sèche</span>
+                      <span className="font-mono text-xs sm:text-sm font-extrabold text-[#A9D87A] tabular-nums">
+                        {dateYieldMetrics.dryMatterOilPercent}%
+                      </span>
+                    </div>
+                    <div className="bg-white/8 rounded-xl p-2.5 border border-white/10">
+                      <span className="text-[10px] text-[#E8F4D9]/75 block">Polyphénols est.</span>
+                      <span className="font-mono text-xs sm:text-sm font-extrabold text-[#E6AB3C] tabular-nums">
+                        {dateYieldMetrics.expectedPolyphenolsMgKg} mg/kg
+                      </span>
+                    </div>
+                    <div className="bg-white/8 rounded-xl p-2.5 border border-white/10">
+                      <span className="text-[10px] text-[#E8F4D9]/75 block">Acidité base arbre</span>
+                      <span className="font-mono text-xs sm:text-sm font-extrabold text-white tabular-nums">
+                        {dateYieldMetrics.baselineAcidityPercent}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Agronomic recommendation for the selected date & variety */}
+                <div className="p-3 rounded-xl bg-black/25 border border-white/10 text-[11px] text-[#E8F4D9] leading-relaxed">
+                  <strong className="text-[#E6AB3C]">Diagnostic lipogenèse :</strong>{' '}
+                  {dateYieldMetrics.stageAdvice}
+                </div>
+              </div>
+            </div>
+
+            {/* Campaign Yield Curve (Oct -> Feb) for Selected Variety */}
+            <div className="pt-4 border-t border-[#E6DEC9]">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-[#31491E]" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#18230F]">
+                    Courbe d'évolution du rendement théorique ({varietyNames[selectedVariety]}) selon la date de cueillette
+                  </h4>
+                </div>
+                <span className="text-[11px] text-[#567B34] font-medium">
+                  Cliquez sur un palier de campagne pour simuler le rendement à cette date
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-7 gap-2">
+                {dateYieldMetrics.weeklyEvolution.map((point) => {
+                  const isCurrentWeek = estimatedHarvestDate === point.dateStr || point.isSelectedWindow;
+                  const isOptimalPoint = point.maturityIndex >= 2.3 && point.maturityIndex <= 3.6;
+                  return (
+                    <button
+                      key={point.dateStr}
+                      type="button"
+                      onClick={() => handleSelectHarvestDate(point.dateStr)}
+                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                        isCurrentWeek
+                          ? 'bg-[#31491E] text-white border-[#31491E] shadow-xs ring-2 ring-[#E6AB3C]'
+                          : isOptimalPoint
+                          ? 'bg-[#F4F9EC] text-[#18230F] border-[#A9D87A] hover:border-[#31491E]'
+                          : 'bg-[#FAF7F2] text-[#436229] border-[#E6DEC9] hover:border-[#31491E]'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-[11px] font-bold">{point.shortDateLabel}</span>
+                        {isOptimalPoint && (
+                          <span
+                            className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
+                              isCurrentWeek
+                                ? 'bg-[#E6AB3C] text-[#18230F]'
+                                : 'bg-[#31491E]/15 text-[#31491E]'
+                            }`}
+                          >
+                            Optimum
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="my-2">
+                        <span
+                          className={`font-mono text-base font-extrabold tabular-nums block ${
+                            isCurrentWeek ? 'text-[#E6AB3C]' : 'text-[#18230F]'
+                          }`}
+                        >
+                          {point.yieldLitersPerQx.toFixed(1)} <span className="text-[11px] font-bold">L/qx</span>
+                        </span>
+                        <span
+                          className={`text-[10px] font-mono tabular-nums block ${
+                            isCurrentWeek ? 'text-[#E8F4D9]/90' : 'text-[#567B34]'
+                          }`}
+                        >
+                          IM {point.maturityIndex.toFixed(1)} / 7
+                        </span>
+                      </div>
+
+                      <div className="w-full bg-black/10 h-1.5 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${
+                            isCurrentWeek
+                              ? 'bg-[#E6AB3C]'
+                              : isOptimalPoint
+                              ? 'bg-[#31491E]'
+                              : 'bg-[#8FA876]'
+                          }`}
+                          style={{
+                            width: `${Math.min(100, Math.max(25, ((point.yieldLitersPerQx - 12) / 14) * 100))}%`,
+                          }}
+                        />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1227,49 +1888,73 @@ export const YieldSimulator: React.FC = () => {
               )}
             </div>
 
-            {/* Harvest Period */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-[#18230F] block">
-                Période de récolte & Véraison :
-              </label>
+            {/* Harvest Period & Date Synchronization */}
+            <div className="space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label className="text-xs font-bold text-[#18230F] block">
+                  Période de récolte & Date de cueillette estimée :
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-semibold text-[#567B34]">Date précise :</span>
+                  <input
+                    type="date"
+                    min="2026-10-01"
+                    max="2027-02-15"
+                    value={estimatedHarvestDate}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        handleSelectHarvestDate(e.target.value);
+                      }
+                    }}
+                    aria-label="Date de récolte estimée"
+                    className="px-2.5 py-1 rounded-lg border border-[#D5C7A3] bg-[#FAF7F2] text-xs font-mono font-bold text-[#18230F] focus:outline-none focus:border-[#31491E]"
+                  />
+                </div>
+              </div>
               <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={() => setHarvestPeriod('early')}
+                  onClick={() => handleSelectHarvestPeriodPreset('early')}
                   className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                     harvestPeriod === 'early'
                       ? 'border-[#31491E] bg-[#E8F4D9] text-[#18230F]'
                       : 'border-[#E6DEC9] bg-[#FAF7F2] text-[#436229]'
                   }`}
                 >
-                  <span className="font-bold text-xs block">Novembre (Primeur)</span>
-                  <span className="text-[10px] block opacity-80 mt-1">Fruité vert intense, acidité minime, rendement 16-18L</span>
+                  <span className="font-bold text-xs block">Oct – Mi-Nov (Primeur)</span>
+                  <span className="text-[10px] block opacity-80 mt-1">
+                    Fruité vert intense, polyphénols max, rendement 15–18 L/qx
+                  </span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setHarvestPeriod('mid')}
+                  onClick={() => handleSelectHarvestPeriodPreset('mid')}
                   className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                     harvestPeriod === 'mid'
                       ? 'border-[#31491E] bg-[#E8F4D9] text-[#18230F]'
                       : 'border-[#E6DEC9] bg-[#FAF7F2] text-[#436229]'
                   }`}
                 >
-                  <span className="font-bold text-xs block">Décembre (Optimal)</span>
-                  <span className="text-[10px] block opacity-80 mt-1">Équilibre idéal arômes & rendement 19-22L</span>
+                  <span className="font-bold text-xs block">Fin Nov – Déc (Optimal)</span>
+                  <span className="text-[10px] block opacity-80 mt-1">
+                    Véraison tournante, équilibre arômes & rendement 18–22 L/qx
+                  </span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setHarvestPeriod('late')}
+                  onClick={() => handleSelectHarvestPeriodPreset('late')}
                   className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                     harvestPeriod === 'late'
                       ? 'border-[#31491E] bg-[#E8F4D9] text-[#18230F]'
                       : 'border-[#E6DEC9] bg-[#FAF7F2] text-[#436229]'
                   }`}
                 >
-                  <span className="font-bold text-xs block">Janvier (Tardive)</span>
-                  <span className="text-[10px] block opacity-80 mt-1">Fruité mûr, max de litres (22-25L), acidité plus sensible</span>
+                  <span className="font-bold text-xs block">Janvier – Fév (Tardive)</span>
+                  <span className="text-[10px] block opacity-80 mt-1">
+                    Fruité mûr, max de litres (21–25 L/qx), acidité plus sensible
+                  </span>
                 </button>
               </div>
             </div>
