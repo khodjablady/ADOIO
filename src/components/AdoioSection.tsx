@@ -63,7 +63,7 @@ export const AdoioSection: React.FC<AdoioSectionProps> = ({ onOpenAdhesion }) =>
             </div>
           </div>
 
-          <div className="shrink-0 flex items-center gap-3.5 bg-white p-3.5 sm:p-4 rounded-2xl border border-[#E6DEC9] shadow-xs hover:border-[#8CBE5D] transition-all">
+          <div className="group shrink-0 flex items-center gap-3.5 bg-white p-3.5 sm:p-4 rounded-2xl border border-[#E6DEC9] shadow-xs hover:border-[#8CBE5D] transition-all">
             <Jubile25Logo size={85} />
             <div className="text-xs">
               <span className="font-bold text-[#18230F] block font-serif text-sm">25ᵉ Jubilé d'Argent</span>

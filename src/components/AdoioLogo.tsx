@@ -3,17 +3,23 @@ import React from 'react';
 interface AdoioLogoProps {
   className?: string;
   size?: number | string;
+  id?: string;
 }
 
-export const AdoioLogo: React.FC<AdoioLogoProps> = ({ className = '', size = 52 }) => {
+export const AdoioLogo: React.FC<AdoioLogoProps> = ({
+  className = '',
+  size = 52,
+  id = 'adoio-logo-svg',
+}) => {
   return (
     <svg
+      id={id}
       width={size}
       height={size}
       viewBox="0 0 500 500"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={`drop-shadow-md select-none ${className}`}
+      className={`adoio-logo-svg drop-shadow-md select-none transition-transform duration-500 ease-out hover:scale-110 hover:rotate-6 group-hover:scale-110 group-hover:rotate-6 ${className}`}
       role="img"
       aria-label="Logo officiel ADOIO Béjaïa"
     >

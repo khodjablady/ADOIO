@@ -381,3 +381,36 @@ html[dir="rtl"] .tabular-nums {
   unicode-bidi: isolate;
 }
 
+/* ==========================================================================
+   ANIMATION SURVOL & BOUNCE DOUX LOGO ADOIO (#adoio-logo-svg)
+   ========================================================================== */
+@keyframes adoioGentleBounce {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -5px;
+  }
+}
+
+#adoio-logo-svg,
+.adoio-logo-svg {
+  transform-origin: center center;
+  animation: adoioGentleBounce 3.2s ease-in-out infinite;
+  transition:
+    transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+    scale 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+    rotate 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+    filter 0.35s ease;
+  will-change: translate, transform, filter;
+}
+
+#adoio-logo-svg:hover,
+.adoio-logo-svg:hover,
+.group:hover #adoio-logo-svg,
+.group:hover .adoio-logo-svg {
+  transform: scale(1.1) rotate(6deg);
+  filter: drop-shadow(0 8px 16px rgba(230, 171, 60, 0.4));
+}
+

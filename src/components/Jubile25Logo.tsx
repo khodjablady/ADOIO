@@ -18,7 +18,7 @@ export const Jubile25Logo: React.FC<Jubile25LogoProps> = ({
       viewBox="0 0 620 620"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={`select-none transition-transform duration-300 ${showShadow ? 'drop-shadow-2xl' : ''} ${className}`}
+      className={`adoio-logo-svg select-none transition-all duration-500 ease-out hover:scale-108 hover:rotate-3 group-hover:scale-108 group-hover:rotate-3 ${showShadow ? 'drop-shadow-2xl' : ''} ${className}`}
       role="img"
       aria-label="Logo officiel du 25e Jubilé d'Argent de l'ADOIO - Fête de l'Olive de Béjaïa 2026"
     >
