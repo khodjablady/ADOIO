@@ -199,8 +199,43 @@ export const AdhesionModal: React.FC<AdhesionModalProps> = ({ isOpen, onClose })
               </span>
             </div>
 
-            <div className="text-xs text-[#567B34] max-w-sm mx-auto">
-              Un représentant de l'association prendra contact avec vous au <strong>{phone}</strong> pour finaliser votre affiliation ou convenir d'un rendez-vous technique.
+            <div className="text-xs text-[#567B34] max-w-sm mx-auto space-y-2">
+              <p>
+                Un représentant de l'association prendra contact avec vous au{' '}
+                <a
+                  href={`tel:${phone.replace(/\s+/g, '')}`}
+                  className="font-bold text-[#18230F] underline hover:text-[#31491E] tabular-nums"
+                >
+                  {phone}
+                </a>{' '}
+                pour finaliser votre affiliation ou convenir d'un rendez-vous technique.
+              </p>
+              <div
+                itemScope
+                itemType="https://schema.org/Organization"
+                className="p-3 rounded-xl bg-white border border-[#E6DEC9] text-[11px] text-[#242A20] space-y-1"
+              >
+                <meta itemProp="name" content={ADOIO_INFO.fullName} />
+                <div className="font-bold text-[#18230F]">Joindre directement le secrétariat ADOIO :</div>
+                <div className="flex flex-wrap items-center justify-center gap-3 pt-0.5">
+                  <a
+                    href={`tel:${ADOIO_INFO.phone.replace(/\s+/g, '')}`}
+                    itemProp="telephone"
+                    className="inline-flex items-center gap-1 font-semibold text-[#31491E] hover:underline tabular-nums"
+                  >
+                    <Phone className="w-3 h-3 text-[#E6AB3C]" />
+                    <span>{ADOIO_INFO.phone}</span>
+                  </a>
+                  <a
+                    href={`mailto:${ADOIO_INFO.email}`}
+                    itemProp="email"
+                    className="inline-flex items-center gap-1 font-semibold text-[#31491E] hover:underline"
+                  >
+                    <Mail className="w-3 h-3 text-[#E6AB3C]" />
+                    <span>{ADOIO_INFO.email}</span>
+                  </a>
+                </div>
+              </div>
             </div>
 
             <div className="pt-4">
@@ -220,11 +255,100 @@ export const AdhesionModal: React.FC<AdhesionModalProps> = ({ isOpen, onClose })
                 <span>Affiliation & Contact Officiel</span>
               </div>
               <h3 id="adhesion-modal-title" className="font-serif text-2xl font-bold text-[#18230F] mt-1">
-                Rejoindre l'Association ADOIO
+                Contacter & Rejoindre l'Association ADOIO
               </h3>
               <p className="text-xs text-[#436229] mt-1">
-                Participez activement au développement de l'oléiculture de la wilaya de Béjaïa et bénéficiez de nos formations, analyses et kits d'aide.
+                Appelez directement le secrétariat, écrivez-nous par e-mail en un clic ou remplissez le formulaire d'affiliation ci-dessous.
               </p>
+
+              {/* Direct Clickable Contact Block with Schema.org Microdata */}
+              <div
+                itemScope
+                itemType="https://schema.org/Organization"
+                className="mt-3 p-3.5 rounded-2xl bg-white border border-[#E6DEC9] shadow-2xs space-y-2.5"
+              >
+                <meta itemProp="name" content={ADOIO_INFO.fullName} />
+                <meta itemProp="url" content="https://ais-pre-cm2rpjmq4xkvkqhmdrimjg-541677789389.europe-west1.run.app" />
+                <div className="flex items-center justify-between border-b border-[#E6DEC9]/70 pb-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#31491E]">
+                    Coordonnées Directes ADOIO (Appel & E-mail en 1 clic)
+                  </span>
+                  <span className="text-[10px] font-semibold text-[#567B34] bg-[#E8F4D9] px-2 py-0.5 rounded-md">
+                    Permanence CAW
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <div className="p-2 rounded-xl bg-[#FAF7F2] border border-[#E6DEC9]/80 flex items-start gap-2.5">
+                    <Phone className="w-4 h-4 text-[#31491E] shrink-0 mt-0.5" />
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#567B34] block">
+                        Téléphones Officiels
+                      </span>
+                      <a
+                        href={`tel:${ADOIO_INFO.phone.replace(/\s+/g, '')}`}
+                        itemProp="telephone"
+                        className="font-bold text-[#18230F] hover:text-[#31491E] underline block tabular-nums"
+                        title="Appeler le secrétariat ADOIO"
+                      >
+                        {ADOIO_INFO.phone}
+                      </a>
+                      <a
+                        href={`tel:${ADOIO_INFO.mobile.replace(/\s+/g, '')}`}
+                        itemProp="telephone"
+                        className="font-semibold text-[#436229] hover:text-[#18230F] underline block tabular-nums"
+                        title="Appeler le mobile de permanence ADOIO"
+                      >
+                        {ADOIO_INFO.mobile}
+                      </a>
+                    </div>
+                  </div>
+
+                  <div className="p-2 rounded-xl bg-[#FAF7F2] border border-[#E6DEC9]/80 flex items-start gap-2.5">
+                    <Mail className="w-4 h-4 text-[#31491E] shrink-0 mt-0.5" />
+                    <div className="space-y-0.5 min-w-0">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#567B34] block">
+                        Courriels Officiels
+                      </span>
+                      <a
+                        href={`mailto:${ADOIO_INFO.email}`}
+                        itemProp="email"
+                        className="font-bold text-[#18230F] hover:text-[#31491E] underline block truncate"
+                        title="Envoyer un e-mail officiel à l'ADOIO"
+                      >
+                        {ADOIO_INFO.email}
+                      </a>
+                      <a
+                        href={`mailto:${ADOIO_INFO.contactSecondary}`}
+                        itemProp="email"
+                        className="font-semibold text-[#436229] hover:text-[#18230F] underline block truncate"
+                        title="Envoyer un e-mail au bureau de Béjaïa"
+                      >
+                        {ADOIO_INFO.contactSecondary}
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  itemProp="address"
+                  itemScope
+                  itemType="https://schema.org/PostalAddress"
+                  className="flex items-center gap-1.5 text-[11px] text-[#436229] pt-0.5"
+                >
+                  <MapPin className="w-3.5 h-3.5 text-[#E6AB3C] shrink-0" />
+                  <span>
+                    Siège :{' '}
+                    <strong className="text-[#18230F]" itemProp="streetAddress">
+                      Chambre d'Agriculture de Béjaïa
+                    </strong>
+                    , <span itemProp="postalCode">06000</span>{' '}
+                    <span itemProp="addressLocality">Béjaïa</span> -{' '}
+                    <span itemProp="addressCountry">Algérie</span>
+                  </span>
+                </div>
+              </div>
+
               {accountProfile?.adhesionReferenceId && (
                 <div className="mt-3 p-3 rounded-xl bg-[#E8F4D9] border border-[#8CBE5D]/60 flex items-center justify-between text-xs text-[#18230F]">
                   <span className="flex items-center gap-1.5 font-semibold">
@@ -433,9 +557,25 @@ export const AdhesionModal: React.FC<AdhesionModalProps> = ({ isOpen, onClose })
                 </div>
               )}
 
-              <div className="text-[11px] text-center text-[#567B34] flex items-center justify-center gap-1.5 pt-1">
-                <MapPin className="w-3.5 h-3.5 text-[#E6AB3C]" />
-                <span>Siège ADOIO : {ADOIO_INFO.headquarters}</span>
+              <div className="text-[11px] text-center text-[#567B34] flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pt-1">
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-[#E6AB3C]" />
+                  <span>{ADOIO_INFO.headquarters}</span>
+                </span>
+                <span>•</span>
+                <a
+                  href={`tel:${ADOIO_INFO.phone.replace(/\s+/g, '')}`}
+                  className="font-semibold text-[#31491E] hover:underline tabular-nums"
+                >
+                  {ADOIO_INFO.phone}
+                </a>
+                <span>•</span>
+                <a
+                  href={`mailto:${ADOIO_INFO.email}`}
+                  className="font-semibold text-[#31491E] hover:underline"
+                >
+                  {ADOIO_INFO.email}
+                </a>
               </div>
             </form>
           </div>

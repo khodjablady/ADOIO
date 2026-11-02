@@ -108,7 +108,13 @@ export const AdoioSection: React.FC<AdoioSectionProps> = ({ onOpenAdhesion }) =>
           </div>
 
           {/* Right: Contact & Headquarters card */}
-          <div className="lg:col-span-5 bg-gradient-to-br from-[#233416] to-[#18230F] text-[#FAF7F2] rounded-3xl p-6 sm:p-8 border border-[#8CBE5D]/30 flex flex-col justify-between space-y-6">
+          <div
+            itemScope
+            itemType="https://schema.org/Organization"
+            className="lg:col-span-5 bg-gradient-to-br from-[#233416] to-[#18230F] text-[#FAF7F2] rounded-3xl p-6 sm:p-8 border border-[#8CBE5D]/30 flex flex-col justify-between space-y-6"
+          >
+            <meta itemProp="name" content={ADOIO_INFO.fullName} />
+            <meta itemProp="url" content="https://ais-pre-cm2rpjmq4xkvkqhmdrimjg-541677789389.europe-west1.run.app" />
             <div className="space-y-5">
               <div className="flex items-center justify-between pb-3 border-b border-[#FAF7F2]/15">
                 <h3 className="font-serif text-xl font-bold text-[#FAF7F2]">Siège & Permanence</h3>
@@ -118,22 +124,42 @@ export const AdoioSection: React.FC<AdoioSectionProps> = ({ onOpenAdhesion }) =>
               </div>
 
               <div className="space-y-4 text-xs text-[#E8F4D9]">
-                <div className="flex items-start gap-3">
+                <div
+                  itemProp="address"
+                  itemScope
+                  itemType="https://schema.org/PostalAddress"
+                  className="flex items-start gap-3"
+                >
                   <MapPin className="w-4 h-4 text-[#E6AB3C] shrink-0 mt-1" />
                   <div>
                     <span className="font-semibold block text-[#FAF7F2]">Adresse officielle :</span>
-                    <span>{ADOIO_INFO.headquarters}</span>
+                    <span>
+                      <span itemProp="streetAddress">Chambre d'Agriculture de Béjaïa</span>,{' '}
+                      <span itemProp="postalCode">06000</span>,{' '}
+                      <span itemProp="addressLocality">Béjaïa</span> -{' '}
+                      <span itemProp="addressCountry">Algérie</span>
+                    </span>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
                   <Phone className="w-4 h-4 text-[#E6AB3C] shrink-0 mt-1" />
-                  <div>
-                    <span className="font-semibold block text-[#FAF7F2]">Téléphone & Secrétariat :</span>
-                    <a href={`tel:${ADOIO_INFO.phone}`} className="hover:text-white underline block">
+                  <div className="space-y-1">
+                    <span className="font-semibold block text-[#FAF7F2]">Téléphone & Secrétariat (Appel en 1 clic) :</span>
+                    <a
+                      href={`tel:${ADOIO_INFO.phone.replace(/\s+/g, '')}`}
+                      itemProp="telephone"
+                      className="hover:text-[#E6AB3C] underline font-semibold block tabular-nums transition-colors"
+                      title="Appeler le secrétariat ADOIO"
+                    >
                       {ADOIO_INFO.phone}
                     </a>
-                    <a href={`tel:${ADOIO_INFO.mobile}`} className="hover:text-white underline block">
+                    <a
+                      href={`tel:${ADOIO_INFO.mobile.replace(/\s+/g, '')}`}
+                      itemProp="telephone"
+                      className="hover:text-[#E6AB3C] underline font-semibold block tabular-nums transition-colors"
+                      title="Appeler la permanence mobile ADOIO"
+                    >
                       {ADOIO_INFO.mobile}
                     </a>
                   </div>
@@ -141,13 +167,23 @@ export const AdoioSection: React.FC<AdoioSectionProps> = ({ onOpenAdhesion }) =>
 
                 <div className="flex items-start gap-3">
                   <Mail className="w-4 h-4 text-[#E6AB3C] shrink-0 mt-1" />
-                  <div>
-                    <span className="font-semibold block text-[#FAF7F2]">Courriels de contact :</span>
-                    <a href={`mailto:${ADOIO_INFO.email}`} className="hover:text-white underline block">
+                  <div className="space-y-1">
+                    <span className="font-semibold block text-[#FAF7F2]">Courriels de contact (E-mail en 1 clic) :</span>
+                    <a
+                      href={`mailto:${ADOIO_INFO.email}`}
+                      itemProp="email"
+                      className="hover:text-[#E6AB3C] underline font-semibold block transition-colors"
+                      title="Envoyer un e-mail officiel à l'ADOIO"
+                    >
                       {ADOIO_INFO.email}
                     </a>
-                    <a href="mailto:adoio.bejaia@gmail.com" className="hover:text-white underline block">
-                      adoio.bejaia@gmail.com
+                    <a
+                      href={`mailto:${ADOIO_INFO.contactSecondary}`}
+                      itemProp="email"
+                      className="hover:text-[#E6AB3C] underline font-semibold block transition-colors"
+                      title="Envoyer un e-mail au secrétariat ADOIO Béjaïa"
+                    >
+                      {ADOIO_INFO.contactSecondary}
                     </a>
                   </div>
                 </div>
@@ -158,7 +194,7 @@ export const AdoioSection: React.FC<AdoioSectionProps> = ({ onOpenAdhesion }) =>
               onClick={onOpenAdhesion}
               className="w-full py-3 px-4 rounded-xl bg-[#E6AB3C] hover:bg-[#D09222] text-[#18230F] font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md hover:shadow-lg"
             >
-              <span>Rejoindre l'ADOIO / Formulaire d'Adhésion</span>
+              <span>Rejoindre l'ADOIO / Formulaire de Contact</span>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>

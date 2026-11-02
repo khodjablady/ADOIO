@@ -242,32 +242,68 @@ export const Footer: React.FC<FooterProps> = ({ onNavClick, onOpenAdhesion, onOp
           </div>
 
           {/* Contact Details */}
-          <div className="lg:col-span-3 space-y-3">
+          <div
+            itemScope
+            itemType="https://schema.org/Organization"
+            className="lg:col-span-3 space-y-3"
+          >
+            <meta itemProp="name" content={ADOIO_INFO.fullName} />
+            <meta itemProp="url" content="https://ais-pre-cm2rpjmq4xkvkqhmdrimjg-541677789389.europe-west1.run.app" />
             <h4 className="text-xs font-bold uppercase tracking-wider text-[#E6AB3C]">
               Coordonnées de l'Association
             </h4>
             <div className="space-y-2.5 text-xs text-[#E8F4D9]/85">
-              <div className="flex items-start gap-2">
+              <div
+                itemProp="address"
+                itemScope
+                itemType="https://schema.org/PostalAddress"
+                className="flex items-start gap-2"
+              >
                 <MapPin className="w-4 h-4 text-[#E6AB3C] shrink-0 mt-0.5" />
-                <span>{ADOIO_INFO.headquarters}</span>
+                <span>
+                  <span itemProp="streetAddress">Chambre d'Agriculture de Béjaïa</span>,{' '}
+                  <span itemProp="postalCode">06000</span>,{' '}
+                  <span itemProp="addressLocality">Béjaïa</span> -{' '}
+                  <span itemProp="addressCountry">Algérie</span>
+                </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Phone className="w-4 h-4 text-[#E6AB3C] shrink-0" />
-                <a href={`tel:${ADOIO_INFO.phone}`} className="hover:text-white underline">
+                <a
+                  href={`tel:${ADOIO_INFO.phone.replace(/\s+/g, '')}`}
+                  itemProp="telephone"
+                  className="hover:text-[#E6AB3C] underline font-semibold tabular-nums transition-colors"
+                  title="Appeler le secrétariat ADOIO"
+                >
                   {ADOIO_INFO.phone}
                 </a>
                 <span>/</span>
-                <a href={`tel:${ADOIO_INFO.mobile}`} className="hover:text-white underline">
+                <a
+                  href={`tel:${ADOIO_INFO.mobile.replace(/\s+/g, '')}`}
+                  itemProp="telephone"
+                  className="hover:text-[#E6AB3C] underline font-semibold tabular-nums transition-colors"
+                  title="Appeler le mobile ADOIO"
+                >
                   {ADOIO_INFO.mobile}
                 </a>
               </div>
               <div className="flex items-start gap-2">
                 <Mail className="w-4 h-4 text-[#E6AB3C] shrink-0 mt-0.5" />
                 <div className="space-y-0.5">
-                  <a href={`mailto:${ADOIO_INFO.email}`} className="hover:text-white underline block">
+                  <a
+                    href={`mailto:${ADOIO_INFO.email}`}
+                    itemProp="email"
+                    className="hover:text-[#E6AB3C] underline font-semibold block transition-colors"
+                    title="Envoyer un e-mail à infos@blady-product.com"
+                  >
                     {ADOIO_INFO.email}
                   </a>
-                  <a href={`mailto:${ADOIO_INFO.contactSecondary}`} className="hover:text-white underline block">
+                  <a
+                    href={`mailto:${ADOIO_INFO.contactSecondary}`}
+                    itemProp="email"
+                    className="hover:text-[#E6AB3C] underline font-semibold block transition-colors"
+                    title="Envoyer un e-mail à adoio.bejaia@gmail.com"
+                  >
                     {ADOIO_INFO.contactSecondary}
                   </a>
                 </div>

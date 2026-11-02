@@ -55,6 +55,10 @@ import {
   buildMillMobileMapUrl
 } from './MillQrCodeModal';
 import { MillQrScannerModal } from './MillQrScannerModal';
+import {
+  MillPrintPortal,
+  MillPrintableDocumentContent
+} from './MillPrintableSheet';
 
 const FAVORITES_STORAGE_KEY = 'adoio_favorite_mills_v1';
 
@@ -142,7 +146,7 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
   // Reviews state (persisted via Firestore)
   const [reviews, setReviews] = useState<MillReview[]>(() => getStoredReviews());
   const [activeModalMill, setActiveModalMill] = useState<OliveMill | null>(null);
-  const [modalTab, setModalTab] = useState<'info' | 'reviews'>('info');
+  const [modalTab, setModalTab] = useState<'info' | 'reviews' | 'print'>('info');
   const [copiedMillLink, setCopiedMillLink] = useState<boolean>(false);
   const [sharedMillId, setSharedMillId] = useState<string | null>(null);
   const [sharedDirectory, setSharedDirectory] = useState<boolean>(false);
@@ -635,7 +639,7 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
     maxDistanceKm,
   ]);
 
-  const handleOpenMill = (mill: OliveMill, tab: 'info' | 'reviews' = 'info') => {
+  const handleOpenMill = (mill: OliveMill, tab: 'info' | 'reviews' | 'print' = 'info') => {
     setActiveModalMill(mill);
     setModalTab(tab);
     syncMillUrlParam(mill.id);
@@ -643,20 +647,28 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
 
   const handlePrintMillSheet = () => {
     if (!activeModalMill) return;
+    setModalTab('print');
     document.body.classList.add('printing-mill-sheet');
-    const triggerPrint = () => {
+    setTimeout(() => {
       window.print();
       setTimeout(() => {
         document.body.classList.remove('printing-mill-sheet');
-      }, 300);
-    };
+      }, 350);
+    }, 100);
+  };
 
-    if (modalTab !== 'info') {
-      setModalTab('info');
-      setTimeout(triggerPrint, 120);
-    } else {
-      triggerPrint();
-    }
+  const handleQuickPrintFromCard = (mill: OliveMill, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActiveModalMill(mill);
+    setModalTab('print');
+    syncMillUrlParam(mill.id);
+    document.body.classList.add('printing-mill-sheet');
+    setTimeout(() => {
+      window.print();
+      setTimeout(() => {
+        document.body.classList.remove('printing-mill-sheet');
+      }, 350);
+    }, 180);
   };
 
   const activeMillStats: MillStats | null = useMemo(() => {
@@ -1841,6 +1853,16 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                         </button>
                         <button
                           type="button"
+                          onClick={(e) => handleQuickPrintFromCard(mill, e)}
+                          aria-label={`Imprimer la fiche de ${mill.name}`}
+                          title={`Imprimer la fiche complète (coordonnées, GPS et capacités) de ${mill.name}`}
+                          className="p-1.5 px-2 rounded-lg bg-[#FAF7F2] hover:bg-[#E8F4D9] text-[#233416] border border-[#E6DEC9] hover:border-[#8CBE5D] text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer active:scale-95"
+                        >
+                          <Printer className="w-3 h-3 text-[#31491E]" aria-hidden="true" />
+                          <span className="hidden sm:inline">Imprimer</span>
+                        </button>
+                        <button
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             const mapEl = document.getElementById('carte-interactive');
@@ -2160,6 +2182,18 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                   >
                     <Star className="w-4 h-4 text-[#E6AB3C]" />
                     <span>Avis & Notations des Oléiculteurs ({activeMillStats.totalReviews})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setModalTab('print')}
+                    className={`pb-3 text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer border-b-2 whitespace-nowrap ${
+                      modalTab === 'print'
+                        ? 'border-[#31491E] text-[#31491E]'
+                        : 'border-transparent text-gray-400 hover:text-[#18230F]'
+                    }`}
+                  >
+                    <Printer className="w-4 h-4 text-[#31491E]" />
+                    <span>Fiche Imprimable A4 (Contact & GPS)</span>
                   </button>
                 </div>
 
@@ -2505,6 +2539,45 @@ export const MillsDirectory: React.FC<MillsDirectoryProps> = ({ initialSearch = 
                     />
                   </div>
                 )}
+
+                {/* Tab 3: Clean A4 Printable Sheet Preview (Contact, GPS, QR Code & Technical Specs) */}
+                {modalTab === 'print' && (
+                  <div className="mill-modal-no-print space-y-4 animate-in fade-in duration-150">
+                    <div className="p-3.5 rounded-2xl bg-[#E8F4D9] border border-[#8CBE5D] flex flex-wrap items-center justify-between gap-3">
+                      <div className="text-xs text-[#18230F]">
+                        <span className="font-bold block">
+                          Aperçu avant impression — Fiche Officielle A4 (Contact, Localisation GPS & Capacités)
+                        </span>
+                        <span className="text-[#436229]">
+                          Mise en page épurée optimisée pour l'impression papier A4 ou l'enregistrement en PDF sans menus ni éléments superflus.
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handlePrintMillSheet}
+                        className="px-4 py-2 rounded-xl bg-[#233416] hover:bg-[#31491E] text-white text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer shadow-xs shrink-0"
+                      >
+                        <Printer className="w-4 h-4 text-[#E6AB3C]" aria-hidden="true" />
+                        <span>Lancer l'impression (A4 / PDF)</span>
+                      </button>
+                    </div>
+
+                    <MillPrintableDocumentContent
+                      mill={activeModalMill}
+                      stats={activeMillStats}
+                      distanceKm={activeModalMillDistanceKm}
+                      userLocationLabel={userLocation?.label}
+                    />
+                  </div>
+                )}
+
+                {/* Dedicated Root Print Portal for 100% Clean A4 Output */}
+                <MillPrintPortal
+                  mill={activeModalMill}
+                  stats={activeMillStats}
+                  distanceKm={activeModalMillDistanceKm}
+                  userLocationLabel={userLocation?.label}
+                />
 
                 {/* Modal Footer */}
                 <div className="mill-modal-no-print flex flex-wrap gap-3 pt-2 border-t border-[#E6DEC9]">

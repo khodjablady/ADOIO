@@ -260,7 +260,7 @@ html.dark .shadow-xl {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 12mm;
+    margin: 10mm;
   }
 
   header,
@@ -276,72 +276,31 @@ html.dark .shadow-xl {
   html.dark body {
     background: #ffffff !important;
     color: #18230f !important;
-    font-size: 11pt;
+    font-size: 10.5pt;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
-  /* When a mill modal is open or triggered via 'Imprimer la fiche', isolate only the mill sheet */
-  body.printing-mill-sheet #main-content > *:not(#carte-moulins),
-  body:has(.mill-modal-print-sheet) #main-content > *:not(#carte-moulins) {
+  /* When an individual huilerie detail modal is open or triggered via 'Imprimer la fiche',
+     isolate ONLY the dedicated #mill-printable-sheet portal at the root of document.body */
+  body:has(#mill-printable-sheet) > *:not(#mill-printable-sheet),
+  body.printing-mill-sheet > *:not(#mill-printable-sheet) {
     display: none !important;
   }
 
-  body.printing-mill-sheet #carte-moulins > *:not(#annuaire),
-  body:has(.mill-modal-print-sheet) #carte-moulins > *:not(#annuaire) {
-    display: none !important;
-  }
-
-  body.printing-mill-sheet .annuaire-screen-content,
-  body:has(.mill-modal-print-sheet) .annuaire-screen-content {
-    display: none !important;
-  }
-
-  #annuaire {
-    padding: 0 !important;
-    margin: 0 !important;
-    border: none !important;
-    background: #ffffff !important;
-  }
-
-  .mill-modal-print-overlay {
-    position: static !important;
-    inset: auto !important;
-    background: transparent !important;
-    backdrop-filter: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
+  #mill-printable-sheet {
     display: block !important;
-  }
-
-  .mill-modal-print-sheet {
-    position: static !important;
-    max-width: 100% !important;
     width: 100% !important;
-    max-height: none !important;
-    overflow: visible !important;
-    box-shadow: none !important;
-    border: 1px solid #d8ceb8 !important;
-    border-radius: 12px !important;
-    padding: 16px !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
     background: #ffffff !important;
     color: #18230f !important;
   }
 
-  .mill-modal-print-sheet * {
+  #mill-printable-sheet * {
     color: #18230f !important;
     border-color: #d8ceb8 !important;
-  }
-
-  .mill-print-section {
-    break-inside: avoid;
-    page-break-inside: avoid;
-    background: #ffffff !important;
-    box-shadow: none !important;
-  }
-
-  .print-only-mill-block {
-    display: block !important;
   }
 }
 
