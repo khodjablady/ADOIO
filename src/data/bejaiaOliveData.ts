@@ -455,7 +455,7 @@ export const OLIVE_VARIETIES: OliveVariety[] = [
 export const REPRESENTATIVE_MILLS: OliveMill[] = [
   {
     id: "mill-01",
-    name: "Huilerie Moderne de Seddouk (Blady Products)",
+    name: "SNC KHODJA ET CIE (Blady Products)",
     commune: "Seddouk",
     daira: "Seddouk",
     lat: 36.5560,
