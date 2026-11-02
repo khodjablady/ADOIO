@@ -94,6 +94,8 @@ export function resolveGalleryImagePath(
 
 /**
  * Extracts `.webp` and `-sm.webp` companion paths from a standard `.jpg`/`.jpeg`/`.png` path.
+ * Returns null for enhanced `/assets/aistudio/` and `/images/paysages/` master JPEGs so the
+ * high-definition enhanced photographic files are served directly without stale WebP overrides.
  */
 export function getWebpCompanionSources(
   imagePath: string
@@ -102,6 +104,8 @@ export function getWebpCompanionSources(
     !imagePath ||
     imagePath.startsWith('data:') ||
     imagePath.startsWith('blob:') ||
+    imagePath.startsWith('/assets/aistudio/') ||
+    imagePath.startsWith('/images/paysages/') ||
     !/\.(jpe?g|png|webp)$/i.test(imagePath)
   ) {
     return null;
@@ -298,8 +302,132 @@ export function estimateDataUrlBytes(dataUrl: string): number {
   return Math.max(0, Math.floor((base64.length * 3) / 4) - padding);
 }
 
+export interface PhotoEnhancementOptions {
+  exposureGain?: number;
+  contrastStrength?: number;
+  sharpenAmount?: number;
+  sharpenThreshold?: number;
+  vibrance?: number;
+}
+
 /**
- * Renders an HTMLImageElement onto an offscreen canvas at the target max dimensions
+ * Photographic Luminance (YCbCr) Enhancement Pipeline for uploaded images:
+ * Preserves 100% of subject identity, geometry, and composition while improving
+ * dynamic range, luminous exposure, S-curve contrast, and micro-detail sharpness
+ * without introducing chromatic or compression artifacts.
+ */
+export function enhanceImageDataPhotographic(
+  imageData: ImageData,
+  options: PhotoEnhancementOptions = {}
+): ImageData {
+  const {
+    exposureGain = 1.055,
+    contrastStrength = 1.13,
+    sharpenAmount = 0.62,
+    sharpenThreshold = 3.5,
+    vibrance = 1.07,
+  } = options;
+
+  const { data, width, height } = imageData;
+  const pixelCount = width * height;
+  const Y = new Float32Array(pixelCount);
+  const Cb = new Float32Array(pixelCount);
+  const Cr = new Float32Array(pixelCount);
+  const hist = new Uint32Array(256);
+
+  for (let i = 0; i < pixelCount; i++) {
+    const idx = i * 4;
+    if (data[idx + 3] < 10) continue;
+    const r = data[idx];
+    const g = data[idx + 1];
+    const b = data[idx + 2];
+
+    const yVal = 0.299 * r + 0.587 * g + 0.114 * b;
+    Y[i] = yVal;
+    Cb[i] = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
+    Cr[i] = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
+    hist[Math.max(0, Math.min(255, Math.round(yVal)))]++;
+  }
+
+  let cumulative = 0;
+  let minLuma = 0;
+  let maxLuma = 255;
+  const lowTarget = pixelCount * 0.004;
+  const highTarget = pixelCount * 0.996;
+
+  for (let b = 0; b < 256; b++) {
+    cumulative += hist[b];
+    if (cumulative <= lowTarget) minLuma = b;
+    if (cumulative <= highTarget) maxLuma = b;
+  }
+
+  const blackPoint = Math.min(16, Math.max(0, minLuma * 0.6));
+  const whitePoint = Math.max(240, Math.min(255, 255 - (255 - maxLuma) * 0.6));
+  const lumaSpan = Math.max(1, whitePoint - blackPoint);
+
+  const YMapped = new Float32Array(pixelCount);
+  for (let i = 0; i < pixelCount; i++) {
+    let norm = (Y[i] - blackPoint) / lumaSpan;
+    norm = Math.max(0, Math.min(1, norm));
+    norm = Math.pow(norm, 1 / exposureGain);
+    const centered = norm - 0.5;
+    const contrasted = 0.5 + centered * contrastStrength * (1 - 0.32 * centered * centered);
+    YMapped[i] = Math.max(0, Math.min(255, contrasted * 255));
+  }
+
+  const YSharpened = new Float32Array(pixelCount);
+  for (let y = 0; y < height; y++) {
+    const y0 = Math.max(0, y - 1) * width;
+    const y1 = y * width;
+    const y2 = Math.min(height - 1, y + 1) * width;
+
+    for (let x = 0; x < width; x++) {
+      const x0 = Math.max(0, x - 1);
+      const x1 = x;
+      const x2 = Math.min(width - 1, x + 1);
+
+      const blur =
+        (YMapped[y0 + x0] + 2 * YMapped[y0 + x1] + YMapped[y0 + x2] +
+          2 * YMapped[y1 + x0] + 4 * YMapped[y1 + x1] + 2 * YMapped[y1 + x2] +
+          YMapped[y2 + x0] + 2 * YMapped[y2 + x1] + YMapped[y2 + x2]) / 16;
+
+      const center = YMapped[y1 + x1];
+      const detail = center - blur;
+      const absDetail = Math.abs(detail);
+      let boost = 0;
+      if (absDetail > sharpenThreshold) {
+        const effectiveDetail = Math.sign(detail) * (absDetail - sharpenThreshold * 0.5);
+        const haloGuard = 1 - Math.pow(center / 127.5 - 1, 4) * 0.55;
+        boost = effectiveDetail * sharpenAmount * Math.max(0.25, haloGuard);
+      }
+      YSharpened[y1 + x1] = Math.max(0, Math.min(255, center + boost));
+    }
+  }
+
+  for (let i = 0; i < pixelCount; i++) {
+    const idx = i * 4;
+    if (data[idx + 3] < 10) continue;
+    const yFinal = YSharpened[i];
+    const cbOffset = Cb[i] - 128;
+    const crOffset = Cr[i] - 128;
+
+    const chromaMag = Math.sqrt(cbOffset * cbOffset + crOffset * crOffset) / 128;
+    const vibFactor = 1 + (vibrance - 1) * (1 - Math.min(1, chromaMag * 1.4));
+
+    const cbFinal = cbOffset * vibFactor;
+    const crFinal = crOffset * vibFactor;
+
+    data[idx] = Math.max(0, Math.min(255, Math.round(yFinal + 1.402 * crFinal)));
+    data[idx + 1] = Math.max(0, Math.min(255, Math.round(yFinal - 0.344136 * cbFinal - 0.714136 * crFinal)));
+    data[idx + 2] = Math.max(0, Math.min(255, Math.round(yFinal + 1.772 * cbFinal)));
+  }
+
+  return imageData;
+}
+
+/**
+ * Renders an HTMLImageElement onto an offscreen canvas at the target max dimensions,
+ * applies photographic luminance enhancement (exposure, contrast, unsharp mask),
  * and encodes it as compressed WebP (falling back to JPEG if WebP encoding is unsupported).
  */
 function encodeResizedVariant(
@@ -327,6 +455,14 @@ function encodeResizedVariant(
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(img, 0, 0, width, height);
+
+  try {
+    const imgData = ctx.getImageData(0, 0, width, height);
+    enhanceImageDataPhotographic(imgData);
+    ctx.putImageData(imgData, 0, 0);
+  } catch {
+    // Ignore CORS taint if any external image is drawn
+  }
 
   // Attempt WebP compression first
   let dataUrl = canvas.toDataURL('image/webp', spec.quality);

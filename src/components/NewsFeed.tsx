@@ -64,7 +64,7 @@ export const ADOIO_NEWS_ARTICLES: NewsArticle[] = [
     author: 'M. Kaci Mohamed',
     authorRole: 'Président de l’ADOIO · Siège CAW Béjaïa',
     featured: true,
-    image: '/images/paysages/3-Verger-Seddouk.jpg',
+    image: '/assets/aistudio/Oliveseddouk_2593a714.jpg',
     imageAlt: 'Vergers d’oliviers centenaires à Seddouk dans la vallée de la Soummam',
     imageCaption:
       'Fig. 1 — Vergers traditionnels de variété Chemlal à Seddouk au stade de véraison tournante.',
@@ -114,7 +114,7 @@ export const ADOIO_NEWS_ARTICLES: NewsArticle[] = [
     readTimeMin: 3,
     author: 'Cellule Technique Phytosanitaire',
     authorRole: 'ADOIO & Inspection Phytosanitaire (DSA)',
-    image: '/images/paysages/6-Verger-sidi-aich.jpg',
+    image: '/assets/aistudio/olivier-taille_5b611fff.jpg',
     imageAlt: 'Oliviers sur les coteaux de Sidi Aïch dans la vallée de la Soummam',
     imageCaption: 'Fig. 2 — Parcelles pilotes conduites en protection biologique intégrée à Sidi Aïch.',
     excerpt:
@@ -146,9 +146,9 @@ export const ADOIO_NEWS_ARTICLES: NewsArticle[] = [
     readTimeMin: 3,
     author: 'Comité du Concours & Jury COI',
     authorRole: 'Commission Qualité Organoleptique ADOIO',
-    image: '/images/paysages/4-Cueillette.jpg',
-    imageAlt: 'Récolte traditionnelle soignée des olives sur filets en Kabylie',
-    imageCaption: 'Fig. 3 — Sélection des olives saines à la parcelle pour les cuvées de concours.',
+    image: '/assets/aistudio/M_tdaille-or_41fd89c2.jpg',
+    imageAlt: 'Médaille d’Or du Concours Régional Goutte d’Or ADOIO 2026',
+    imageCaption: 'Fig. 3 — Médaille officielle du Concours Régional « Goutte d’Or ADOIO 2026 ».',
     excerpt:
       'Les producteurs individuels, coopératives et maîtres mouliniers de la wilaya peuvent désormais inscrire leurs lots issus de la nouvelle récolte. Chaque échantillon fait l’objet d’une double analyse physico-chimique et organoleptique à l’aveugle.',
     content: [
@@ -178,10 +178,10 @@ export const ADOIO_NEWS_ARTICLES: NewsArticle[] = [
     readTimeMin: 4,
     author: 'Équipe Agronomique Sol & Humus',
     authorRole: 'Pôle Valorisation des Sous-Produits ADOIO',
-    image: '/images/paysages/2-Banquettes.jpg',
-    imageAlt: 'Vergers d’oliviers aménagés en banquettes anti-érosives en montagne kabyle',
+    image: '/assets/aistudio/images_8bc725d8.png',
+    imageAlt: 'Cycle de l’économie circulaire appliquée aux sous-produits oléicoles',
     imageCaption:
-      'Fig. 4 — Amendement organique d’automne sur banquettes oléicoles contre l’érosion hydrique.',
+      'Fig. 4 — Cycle d’économie circulaire : valorisation et compostage des sous-produits oléicoles.',
     excerpt:
       'Avec plus de 42 000 tonnes de grignons générées chaque saison dans la wilaya, le compostage contrôlé en andains permet de restituer jusqu’à 35 kg d’humus stable par arbre tout en améliorant de 28 % la rétention en eau des sols pentus.',
     content: [

@@ -88,7 +88,7 @@ export const LANDSCAPES_DATA: LandscapeItem[] = [
     description: 'Ouvrages paysans en terrasses empierrées épousant les versants escarpés avec échappée vers la Méditerranée. Chef-d’œuvre d’ingénierie paysanne kabyle retenant la terre végétale et les pluies d’orage pour une concentration oléique exceptionnelle.',
     agronomicNote: 'Pentes supérieures à 35% protégées de l’érosion hydrique. Arbres rustiques produisant une huile aux notes herbacées intenses et forte teneur en polyphénols.',
     accentColor: '#6B8E23',
-    imageFileName: '/assets/aistudio/6-Verger-sidi-aich2_4fd7f2ad.jpg',
+    imageFileName: '/assets/aistudio/2-Banquettes3_39b8ccd4.jpg',
     imageAlt: 'Ouvrages paysans en terrasses empierrées épousant les versants escarpés avec échappée vers la Méditerranée',
     photoCredit: 'Terrasses de Chemini · Versants du Djurdjura',
     svgType: 'mountain_terraces'
@@ -431,6 +431,7 @@ interface LandscapePhotoProps {
   isLarge?: boolean;
   customSrc?: string | ResponsiveCustomImageBundle;
   lowBandwidthMode?: boolean;
+  hdClarityEnabled?: boolean;
 }
 
 const LandscapePhoto: React.FC<LandscapePhotoProps> = ({ 
@@ -439,6 +440,7 @@ const LandscapePhoto: React.FC<LandscapePhotoProps> = ({
   isLarge = false,
   customSrc,
   lowBandwidthMode = false,
+  hdClarityEnabled = true,
 }) => {
   const [hasError, setHasError] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -557,6 +559,14 @@ const LandscapePhoto: React.FC<LandscapePhotoProps> = ({
             height={responsiveAttrs.height}
             decoding="async"
             fetchPriority="low"
+            style={
+              hdClarityEnabled
+                ? {
+                    filter: 'url(#adoio-hd-photo-clarity) contrast(1.04) brightness(1.02) saturate(1.04)',
+                    imageRendering: 'auto',
+                  }
+                : undefined
+            }
             className={`w-full h-full object-cover transition-transform duration-700 ${
               isLoaded ? 'opacity-100' : 'opacity-0'
             } ${!isLarge ? 'group-hover:scale-105' : ''}`}
@@ -583,6 +593,8 @@ interface LandscapeLightboxViewerProps {
   onShare: (item: LandscapeItem) => void;
   isCopied: boolean;
   onCustomImageUpload: (landscapeId: string, file: File) => void;
+  hdClarityEnabled: boolean;
+  onToggleHdClarity: () => void;
 }
 
 const LandscapeLightboxViewer: React.FC<LandscapeLightboxViewerProps> = ({
@@ -596,7 +608,9 @@ const LandscapeLightboxViewer: React.FC<LandscapeLightboxViewerProps> = ({
   onSelect,
   onShare,
   isCopied,
-  onCustomImageUpload
+  onCustomImageUpload,
+  hdClarityEnabled,
+  onToggleHdClarity,
 }) => {
   const [zoom, setZoom] = useState<number>(1);
   const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -857,6 +871,22 @@ const LandscapeLightboxViewer: React.FC<LandscapeLightboxViewerProps> = ({
             )}
           </div>
 
+          {/* HD Clarity / Dynamic Range Toggle */}
+          <button
+            type="button"
+            onClick={onToggleHdClarity}
+            aria-pressed={hdClarityEnabled}
+            className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              hdClarityEnabled
+                ? 'bg-[#E6AB3C]/20 text-[#E6AB3C] border-[#E6AB3C]/60'
+                : 'bg-white/10 text-white/75 border-white/15 hover:bg-white/20'
+            }`}
+            title="Activer/Désactiver l'optimisation micro-netteté, contraste et plage dynamique HD"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-[#E6AB3C]" />
+            <span className="hidden md:inline">{hdClarityEnabled ? 'Netteté HD : Active' : 'Netteté HD : Standard'}</span>
+          </button>
+
           {/* Fiche Terroir / Agronomic Drawer Toggle */}
           <button
             onClick={() => setShowInfoDrawer((prev) => !prev)}
@@ -941,6 +971,9 @@ const LandscapeLightboxViewer: React.FC<LandscapeLightboxViewerProps> = ({
                 transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
                 transformOrigin: 'center center',
                 transition: isDragging ? 'none' : 'transform 0.15s ease-out',
+                filter: hdClarityEnabled
+                  ? 'url(#adoio-hd-photo-clarity) contrast(1.04) brightness(1.02) saturate(1.04)'
+                  : undefined,
               }}
               className={`max-w-full max-h-[72vh] md:max-h-[78vh] w-auto h-auto object-contain select-none transition-opacity duration-300 drop-shadow-2xl ${
                 isLoaded ? 'opacity-100' : 'opacity-0'
@@ -1165,6 +1198,7 @@ export const OliveLandscapesGallery: React.FC = () => {
   const [activeLandscape, setActiveLandscape] = useState<LandscapeItem | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [lowBandwidthMode, setLowBandwidthMode] = useState<boolean>(() => detectInitialLowBandwidth());
+  const [hdClarityEnabled, setHdClarityEnabled] = useState<boolean>(true);
 
   const [customImages, setCustomImages] = useState<Record<string, string | ResponsiveCustomImageBundle>>(() => {
     try {
@@ -1251,6 +1285,27 @@ export const OliveLandscapesGallery: React.FC = () => {
 
   return (
     <section id="galerie-paysages" className="py-16 sm:py-24 bg-[#FAF7F2] border-b border-[#E6DEC9] relative scroll-mt-28">
+      {/* Optical Micro-Sharpness & Dynamic Range SVG Filter Definition */}
+      <svg className="sr-only" width="0" height="0" aria-hidden="true">
+        <defs>
+          <filter id="adoio-hd-photo-clarity" colorInterpolationFilters="sRGB">
+            {/* Mild 3x3 unsharp-mask convolution kernel for crisp contours & micro-textures */}
+            <feConvolveMatrix
+              order="3 3"
+              kernelMatrix="0 -0.18 0 -0.18 1.72 -0.18 0 -0.18 0"
+              preserveAlpha="true"
+              result="sharpened"
+            />
+            {/* Subtle luminous dynamic range & exposure curve */}
+            <feComponentTransfer in="sharpened">
+              <feFuncR type="gamma" amplitude="1.02" exponent="0.96" offset="0" />
+              <feFuncG type="gamma" amplitude="1.02" exponent="0.96" offset="0" />
+              <feFuncB type="gamma" amplitude="1.02" exponent="0.96" offset="0" />
+            </feComponentTransfer>
+          </filter>
+        </defs>
+      </svg>
+
       {/* Background motif */}
       <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(#3B5323_1px,transparent_1px)] [background-size:24px_24px]"></div>
 
@@ -1364,20 +1419,37 @@ export const OliveLandscapesGallery: React.FC = () => {
             <span>Récolte & Traditions</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => setLowBandwidthMode((prev) => !prev)}
-            aria-pressed={lowBandwidthMode}
-            className={`ml-auto px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
-              lowBandwidthMode
-                ? 'bg-[#E6AB3C]/20 text-[#18230F] border-[#E6AB3C]'
-                : 'bg-[#FAF7F2] text-[#436229] border-[#E6DEC9] hover:border-[#8CBE5D]'
-            }`}
-            title="Activer l'aperçu vectoriel instantané et le chargement WebP basse consommation pour les connexions 2G/3G"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-[#B47A16]" />
-            <span>{lowBandwidthMode ? 'Mode Bas Débit 2G/3G : Actif' : 'Mode Bas Débit (2G/3G)'}</span>
-          </button>
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setHdClarityEnabled((prev) => !prev)}
+              aria-pressed={hdClarityEnabled}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                hdClarityEnabled
+                  ? 'bg-[#E8F4D9] text-[#18230F] border-[#8CBE5D]'
+                  : 'bg-[#FAF7F2] text-[#436229] border-[#E6DEC9] hover:border-[#8CBE5D]'
+              }`}
+              title="Optimisation photographique HD : micro-netteté des contours, contraste et plage dynamique lumineuse sans altérer le sujet"
+            >
+              <Eye className="w-3.5 h-3.5 text-[#31491E]" />
+              <span>{hdClarityEnabled ? 'Sublimation HD : Active' : 'Sublimation HD : Standard'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setLowBandwidthMode((prev) => !prev)}
+              aria-pressed={lowBandwidthMode}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                lowBandwidthMode
+                  ? 'bg-[#E6AB3C]/20 text-[#18230F] border-[#E6AB3C]'
+                  : 'bg-[#FAF7F2] text-[#436229] border-[#E6DEC9] hover:border-[#8CBE5D]'
+              }`}
+              title="Activer l'aperçu vectoriel instantané et le chargement WebP basse consommation pour les connexions 2G/3G"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#B47A16]" />
+              <span>{lowBandwidthMode ? 'Mode Bas Débit 2G/3G : Actif' : 'Mode Bas Débit (2G/3G)'}</span>
+            </button>
+          </div>
         </div>
 
         {/* Responsive Grid Layout */}
@@ -1398,6 +1470,7 @@ export const OliveLandscapesGallery: React.FC = () => {
                     item={landscape} 
                     customSrc={customImages[landscape.id]} 
                     lowBandwidthMode={lowBandwidthMode}
+                    hdClarityEnabled={hdClarityEnabled}
                   />
 
                   {/* Top Badges */}
@@ -1555,6 +1628,8 @@ export const OliveLandscapesGallery: React.FC = () => {
           onShare={handleShare}
           isCopied={copiedId === activeLandscape.id}
           onCustomImageUpload={handleCustomImageUpload}
+          hdClarityEnabled={hdClarityEnabled}
+          onToggleHdClarity={() => setHdClarityEnabled((prev) => !prev)}
         />
       )}
     </section>
