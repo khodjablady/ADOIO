@@ -278,24 +278,24 @@ export const Jubile25Logo: React.FC<Jubile25LogoProps> = ({
 
       {/* ================= CENTRAL NUMERALS "25" (RELIEF 3D) ================= */}
       <g filter="url(#number3DShadow)">
-        {/* Numeral "2" with ornate classical curve & serifs */}
+        {/* Numeral "2" with ornate classical curve & serifs (horizontally inverted to face right) */}
         <path
-          d="M 244 248 
-             C 222 237 194 244 178 264 
-             C 161 285 163 312 180 330 
-             C 195 345 220 362 246 380 
-             L 274 400 
-             L 168 400 
-             C 168 389 157 386 152 386
-             L 152 418 
+          d="M 192 248 
+             C 214 237 242 244 258 264 
+             C 275 285 273 312 256 330 
+             C 241 345 216 362 190 380 
+             L 162 400 
+             L 268 400 
+             C 268 389 279 386 284 386
              L 284 418 
-             L 284 396 
-             C 256 374 228 353 206 333 
-             C 193 320 191 300 202 285 
-             C 213 272 230 268 247 277 
-             C 260 285 266 299 260 312 
-             L 282 319 
-             C 291 297 282 266 258 253 Z"
+             L 152 418 
+             L 152 396 
+             C 180 374 208 353 230 333 
+             C 243 320 245 300 234 285 
+             C 223 272 206 268 189 277 
+             C 176 285 170 299 176 312 
+             L 154 319 
+             C 145 297 154 266 178 253 Z"
           fill="url(#numberSilverFill)"
           stroke="url(#numberGoldOutline)"
           strokeWidth="6"
@@ -303,7 +303,7 @@ export const Jubile25Logo: React.FC<Jubile25LogoProps> = ({
 
         {/* Inner Highlight Reflection on 2 */}
         <path
-          d="M 183 270 C 196 257 222 253 241 262 C 259 271 267 291 259 308"
+          d="M 253 270 C 240 257 214 253 195 262 C 177 271 169 291 177 308"
           stroke="#FFFFFF"
           strokeWidth="2.5"
           fill="none"
