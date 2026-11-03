@@ -27,7 +27,11 @@ import {
   Minimize,
   Download,
   Eye,
-  Move
+  Move,
+  LayoutGrid,
+  Play,
+  Pause,
+  Search
 } from 'lucide-react';
 import {
   buildResponsiveImageAttrs,
@@ -567,9 +571,9 @@ const LandscapePhoto: React.FC<LandscapePhotoProps> = ({
                   }
                 : undefined
             }
-            className={`w-full h-full object-cover transition-transform duration-700 ${
+            className={`w-full h-full object-cover transition-transform duration-700 ease-out will-change-transform ${
               isLoaded ? 'opacity-100' : 'opacity-0'
-            } ${!isLarge ? 'group-hover:scale-105' : ''}`}
+            } group-hover:scale-110`}
             onLoad={() => setIsLoaded(true)}
             onError={handleImageError}
             referrerPolicy="no-referrer"
@@ -620,6 +624,7 @@ const LandscapeLightboxViewer: React.FC<LandscapeLightboxViewerProps> = ({
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
   const [hasError, setHasError] = useState<boolean>(false);
+  const [isSlideshowPlaying, setIsSlideshowPlaying] = useState<boolean>(false);
 
   const primaryPath = resolveGalleryImagePath(item.imageFileName, customSrc);
   const [currentPath, setCurrentPath] = useState<string>(primaryPath);
@@ -706,11 +711,23 @@ const LandscapeLightboxViewer: React.FC<LandscapeLightboxViewerProps> = ({
         setShowInfoDrawer((prev) => !prev);
       } else if (e.key === 'f' || e.key === 'F') {
         toggleFullscreen();
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        setIsSlideshowPlaying((prev) => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [zoom, onClose, onPrev, onNext]);
+
+  // Automatic Slideshow timer in Lightbox
+  useEffect(() => {
+    if (!isSlideshowPlaying) return;
+    const timer = window.setInterval(() => {
+      onNext();
+    }, 4500);
+    return () => window.clearInterval(timer);
+  }, [isSlideshowPlaying, onNext]);
 
   // Mouse pan handlers
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -900,6 +917,33 @@ const LandscapeLightboxViewer: React.FC<LandscapeLightboxViewerProps> = ({
             <Info className="w-3.5 h-3.5 text-[#E6AB3C]" />
             <span className="hidden sm:inline">Fiche terroir</span>
           </button>
+
+          {/* Slideshow / Diaporama Toggle */}
+          <button
+            type="button"
+            onClick={() => setIsSlideshowPlaying((prev) => !prev)}
+            aria-pressed={isSlideshowPlaying}
+            className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              isSlideshowPlaying
+                ? 'bg-[#8CBE5D] text-[#18230F] border-[#8CBE5D]'
+                : 'bg-white/10 text-white border-white/15 hover:bg-white/20'
+            }`}
+            title="Lancer/Arrêter le diaporama plein écran (Barre d'espace)"
+          >
+            {isSlideshowPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 text-[#8CBE5D]" />}
+            <span className="hidden lg:inline">{isSlideshowPlaying ? 'Pause' : 'Diaporama'}</span>
+          </button>
+
+          {/* Direct Download Optimized Image */}
+          <a
+            href={lightboxResponsiveAttrs.src}
+            download={item.imageFileName.split('/').pop() || `${item.id}.jpg`}
+            onClick={(e) => e.stopPropagation()}
+            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/15 transition-all cursor-pointer hidden md:flex items-center justify-center"
+            title="Télécharger la photographie optimisée"
+          >
+            <Download className="w-4 h-4 text-[#8CBE5D]" />
+          </a>
 
           {/* Fullscreen System Toggle */}
           <button
@@ -1195,6 +1239,8 @@ const LandscapeLightboxViewer: React.FC<LandscapeLightboxViewerProps> = ({
 
 export const OliveLandscapesGallery: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'soummam' | 'terrasses' | 'centenaires' | 'recolte'>('all');
+  const [searchFilter, setSearchFilter] = useState<string>('');
+  const [gridLayout, setGridLayout] = useState<'standard' | 'bento'>('standard');
   const [activeLandscape, setActiveLandscape] = useState<LandscapeItem | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [lowBandwidthMode, setLowBandwidthMode] = useState<boolean>(() => detectInitialLowBandwidth());
@@ -1232,9 +1278,20 @@ export const OliveLandscapesGallery: React.FC = () => {
     }
   };
 
-  const filteredLandscapes = LANDSCAPES_DATA.filter(
-    item => selectedCategory === 'all' || item.category === selectedCategory
-  );
+  const normalizedQuery = searchFilter.trim().toLowerCase();
+  const filteredLandscapes = LANDSCAPES_DATA.filter((item) => {
+    const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
+    if (!matchesCategory) return false;
+    if (!normalizedQuery) return true;
+    return (
+      item.title.toLowerCase().includes(normalizedQuery) ||
+      item.kabyleTitle.toLowerCase().includes(normalizedQuery) ||
+      item.location.toLowerCase().includes(normalizedQuery) ||
+      item.daira.toLowerCase().includes(normalizedQuery) ||
+      item.dominantVariety.toLowerCase().includes(normalizedQuery) ||
+      item.description.toLowerCase().includes(normalizedQuery)
+    );
+  });
 
   const handleNext = () => {
     if (!activeLandscape) return;
@@ -1422,6 +1479,20 @@ export const OliveLandscapesGallery: React.FC = () => {
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <button
               type="button"
+              onClick={() => setGridLayout((prev) => (prev === 'standard' ? 'bento' : 'standard'))}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                gridLayout === 'bento'
+                  ? 'bg-[#31491E] text-white border-[#31491E]'
+                  : 'bg-[#FAF7F2] text-[#436229] border-[#E6DEC9] hover:border-[#8CBE5D]'
+              }`}
+              title="Basculer entre la grille 3 colonnes et la mosaïque panoramique"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>{gridLayout === 'bento' ? 'Vue Mosaïque Panoramique' : 'Grille 3 Colonnes'}</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setHdClarityEnabled((prev) => !prev)}
               aria-pressed={hdClarityEnabled}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
@@ -1452,22 +1523,56 @@ export const OliveLandscapesGallery: React.FC = () => {
           </div>
         </div>
 
+        {/* Search & Quick Lightbox Launch Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8">
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-4 h-4 text-[#567B34] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="search"
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              placeholder="Filtrer par commune, daïra ou variété (ex: Akbou, Seddouk, Chemlal)..."
+              aria-label="Rechercher un paysage oléicole de Béjaïa"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-[#E6DEC9] focus:border-[#31491E] focus:outline-none text-xs text-[#18230F] placeholder:text-[#567B34]/70 shadow-2xs"
+            />
+          </div>
+          <div className="flex items-center gap-3 text-xs text-[#436229]">
+            <span>
+              <strong>{filteredLandscapes.length}</strong> vergers affichés · Survol pour agrandir · Clic pour <strong>LightBox Plein Écran</strong>
+            </span>
+            {filteredLandscapes.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setActiveLandscape(filteredLandscapes[0])}
+                className="px-3.5 py-2 rounded-xl bg-[#31491E] hover:bg-[#233416] text-[#FAF7F2] font-bold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 shadow-xs"
+              >
+                <Maximize2 className="w-3.5 h-3.5 text-[#E6AB3C]" />
+                <span>Ouvrir le LightBox</span>
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Responsive Grid Layout */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-          {filteredLandscapes.map((landscape) => {
+          {filteredLandscapes.map((landscape, index) => {
             const isCopied = copiedId === landscape.id;
+            const isBentoWide = gridLayout === 'bento' && (index === 0 || index === 3);
             return (
               <div
                 key={landscape.id}
-                className="group bg-white rounded-3xl border border-[#E6DEC9] overflow-hidden shadow-xs hover:shadow-md hover:border-[#8CBE5D] transition-all duration-300 flex flex-col justify-between"
+                className={`group bg-white rounded-3xl border border-[#E6DEC9] overflow-hidden shadow-xs hover:shadow-xl hover:-translate-y-1.5 hover:border-[#8CBE5D] transition-all duration-300 flex flex-col justify-between ${
+                  isBentoWide ? 'lg:col-span-2' : ''
+                }`}
               >
                 {/* Visual Photo Thumbnail */}
                 <div 
-                  className="relative aspect-[16/10] overflow-hidden cursor-pointer bg-[#233416]"
+                  className={`relative ${isBentoWide ? 'aspect-[16/9]' : 'aspect-[16/10]'} overflow-hidden cursor-pointer bg-[#233416]`}
                   onClick={() => setActiveLandscape(landscape)}
                 >
                   <LandscapePhoto 
                     item={landscape} 
+                    isLarge={isBentoWide}
                     customSrc={customImages[landscape.id]} 
                     lowBandwidthMode={lowBandwidthMode}
                     hdClarityEnabled={hdClarityEnabled}
@@ -1484,24 +1589,26 @@ export const OliveLandscapesGallery: React.FC = () => {
                   </div>
 
                   {/* Hover Overlay with Magnify Button & Quick Replace Photo */}
-                  <div className="absolute inset-0 bg-[#18230F]/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-3">
-                    <span className="px-3.5 py-2 rounded-xl bg-white text-[#18230F] text-xs font-bold flex items-center gap-2 shadow-xl transform -translate-y-1 group-hover:translate-y-0 transition-transform">
-                      <Maximize2 className="w-4 h-4 text-[#31491E]" />
-                      <ZoomIn className="w-3.5 h-3.5 text-[#E6AB3C]" />
-                      <span>Plein écran & Zoom</span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        document.getElementById(`upload-${landscape.id}`)?.click();
-                      }}
-                      className="px-2.5 py-2 rounded-xl bg-[#233416]/90 hover:bg-[#233416] text-[#FAF7F2] text-xs font-bold shadow-lg border border-[#8CBE5D]/30 transition-all flex items-center gap-1.5 cursor-pointer transform -translate-y-1 group-hover:translate-y-0"
-                      title="Remplacer par une autre photo locale"
-                    >
-                      <Camera className="w-3.5 h-3.5 text-[#E6AB3C]" />
-                      <span className="text-[11px] hidden sm:inline">Changer</span>
-                    </button>
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#18230F]/80 via-[#18230F]/35 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+                    <div className="flex items-center justify-between gap-2 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                      <span className="px-3.5 py-2 rounded-xl bg-white text-[#18230F] text-xs font-bold flex items-center gap-2 shadow-xl">
+                        <Maximize2 className="w-4 h-4 text-[#31491E]" />
+                        <ZoomIn className="w-3.5 h-3.5 text-[#E6AB3C]" />
+                        <span>LightBox Plein Écran</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          document.getElementById(`upload-${landscape.id}`)?.click();
+                        }}
+                        className="px-2.5 py-2 rounded-xl bg-[#233416]/90 hover:bg-[#233416] text-[#FAF7F2] text-xs font-bold shadow-lg border border-[#8CBE5D]/30 transition-all flex items-center gap-1.5 cursor-pointer"
+                        title="Remplacer par une autre photo locale"
+                      >
+                        <Camera className="w-3.5 h-3.5 text-[#E6AB3C]" />
+                        <span className="text-[11px] hidden sm:inline">Changer</span>
+                      </button>
+                    </div>
                     <input
                       id={`upload-${landscape.id}`}
                       type="file"

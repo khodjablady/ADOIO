@@ -105,7 +105,6 @@ export function getWebpCompanionSources(
     imagePath.startsWith('data:') ||
     imagePath.startsWith('blob:') ||
     imagePath.startsWith('/assets/aistudio/') ||
-    imagePath.startsWith('/images/paysages/') ||
     !/\.(jpe?g|png|webp)$/i.test(imagePath)
   ) {
     return null;

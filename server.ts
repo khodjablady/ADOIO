@@ -13,7 +13,7 @@ import { GoogleGenAI } from '@google/genai';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = 3000;
 const RUNTIME_STORE_PATH = path.join(os.tmpdir(), 'adoio-runtime-store.json');
 
 interface RuntimeStoreData {
@@ -606,20 +606,23 @@ async function startServer() {
       `);
     });
 
-    const vite = await createViteServer({
+    const vitePromise = createViteServer({
       server: {
         middlewareMode: true,
-        hmr:
-          process.env.DISABLE_HMR === 'true'
-            ? false
-            : {
-                server: httpServer,
-              },
+        hmr: false,
         watch: process.env.DISABLE_HMR === 'true' ? null : undefined,
       },
       appType: 'spa',
     });
-    app.use(vite.middlewares);
+
+    app.use(async (req, res, next) => {
+      try {
+        const vite = await vitePromise;
+        vite.middlewares(req, res, next);
+      } catch (err) {
+        next(err);
+      }
+    });
   } else {
     const distPath = path.join(__dirname, 'dist');
     app.use(
