@@ -41,6 +41,26 @@ import {
 } from '../utils/responsiveImage';
 import { shareFinding } from '../utils/webShare';
 
+export const SLIDESHOW_INTERVAL_MS = 5000;
+
+export interface OrchardMarker {
+  id: string;
+  /** Horizontal position percentage on the photo (0–100) */
+  x: number;
+  /** Vertical position percentage on the photo (0–100) */
+  y: number;
+  /** Short badge label for the marker pin */
+  label: string;
+  /** Specific orchard location / sector & altitude */
+  orchardLocation: string;
+  /** Olive variety / cultivar grown in this parcel */
+  oliveVariety: string;
+  /** Estimated harvest date / optimal maturity window */
+  estimatedHarvestDate: string;
+  /** Expected oil yield & quality note */
+  yieldEstimate?: string;
+}
+
 export interface LandscapeItem {
   id: string;
   title: string;
@@ -49,6 +69,8 @@ export interface LandscapeItem {
   daira: string;
   altitude: string;
   dominantVariety: string;
+  estimatedHarvestDate: string;
+  markers: OrchardMarker[];
   category: 'soummam' | 'terrasses' | 'centenaires' | 'recolte';
   categoryLabel: string;
   description: string;
@@ -69,6 +91,29 @@ export const LANDSCAPES_DATA: LandscapeItem[] = [
     daira: 'Akbou',
     altitude: '180 m',
     dominantVariety: 'Chemlal de Kabylie (85%)',
+    estimatedHarvestDate: '15 Nov – 20 Déc 2026',
+    markers: [
+      {
+        id: 'marker-akbou-plaine',
+        x: 34,
+        y: 58,
+        label: 'Plaine d’Akbou',
+        orchardLocation: 'Plaine alluviale de Guendouza · Akbou (Alt. 180 m)',
+        oliveVariety: 'Chemlal de Kabylie (Achamlal · 85%)',
+        estimatedHarvestDate: '15 Novembre – 20 Décembre 2026',
+        yieldEstimate: '20 à 22 L/qx · Fruité vert équilibré',
+      },
+      {
+        id: 'marker-akbou-coteaux',
+        x: 72,
+        y: 44,
+        label: 'Coteaux Pollinisateurs',
+        orchardLocation: 'Versant Est de Bouzeroual · Akbou (Alt. 240 m)',
+        oliveVariety: 'Azeradj (Azaradj · Pollinisateur 15%)',
+        estimatedHarvestDate: '05 Novembre – 30 Novembre 2026',
+        yieldEstimate: '22 à 24 L/qx · Double fin précoce',
+      },
+    ],
     category: 'soummam',
     categoryLabel: 'Vallée de la Soummam',
     description: 'Vue sur les rangées d\'oliviers au feuillage argenté et la terre rouge fraîchement labourée en sillons au pied des crêtes de Kabylie. Ce couloir alluvionnaire fertile bénéficie d’un microclimat doux et de brouillards matinaux réguliers favorisant une floraison généreuse.',
@@ -87,6 +132,29 @@ export const LANDSCAPES_DATA: LandscapeItem[] = [
     daira: 'Chemini',
     altitude: '750 m',
     dominantVariety: 'Bouchouk & Aberkane',
+    estimatedHarvestDate: '25 Nov 2026 – 10 Jan 2027',
+    markers: [
+      {
+        id: 'marker-chemini-banquettes',
+        x: 28,
+        y: 56,
+        label: 'Banquettes d’Aït Soula',
+        orchardLocation: 'Terrasses en pierre sèche · Chemini (Alt. 750 m)',
+        oliveVariety: 'Bouchouk de Montagne & Chemlal',
+        estimatedHarvestDate: '25 Novembre – 30 Décembre 2026',
+        yieldEstimate: '18 à 20 L/qx · Très haute teneur en polyphénols',
+      },
+      {
+        id: 'marker-chemini-versant',
+        x: 68,
+        y: 48,
+        label: 'Versant Maritime',
+        orchardLocation: 'Terrasses suspendues face à la mer (Alt. 680 m)',
+        oliveVariety: 'Aberkane & Chemlal d’altitude',
+        estimatedHarvestDate: '10 Décembre 2026 – 10 Janvier 2027',
+        yieldEstimate: '19 à 21 L/qx · Maturation lente de montagne',
+      },
+    ],
     category: 'terrasses',
     categoryLabel: 'Terrasses de Montagne',
     description: 'Ouvrages paysans en terrasses empierrées épousant les versants escarpés avec échappée vers la Méditerranée. Chef-d’œuvre d’ingénierie paysanne kabyle retenant la terre végétale et les pluies d’orage pour une concentration oléique exceptionnelle.',
@@ -105,6 +173,29 @@ export const LANDSCAPES_DATA: LandscapeItem[] = [
     daira: 'Seddouk',
     altitude: '490 m',
     dominantVariety: 'Chemlal & Azeradj',
+    estimatedHarvestDate: '10 Nov – 15 Déc 2026',
+    markers: [
+      {
+        id: 'marker-seddouk-patriarche',
+        x: 46,
+        y: 52,
+        label: 'Olivier Centenaire',
+        orchardLocation: 'Verger historique de Seddouk Ouffella (Alt. 490 m)',
+        oliveVariety: 'Chemlal Centenaire (Franc de pied · 400+ ans)',
+        estimatedHarvestDate: '15 Novembre – 15 Décembre 2026',
+        yieldEstimate: '21 à 23 L/qx · Grand cru Vierge Extra',
+      },
+      {
+        id: 'marker-seddouk-plateau',
+        x: 74,
+        y: 62,
+        label: 'Plateau Calcaire',
+        orchardLocation: 'Coteaux d’Ighil N’Djama · Seddouk (Alt. 520 m)',
+        oliveVariety: 'Azeradj de Seddouk',
+        estimatedHarvestDate: '01 Novembre – 25 Novembre 2026',
+        yieldEstimate: '22 à 25 L/qx · Récolte précoce à la véraison',
+      },
+    ],
     category: 'centenaires',
     categoryLabel: 'Arbres Centenaires',
     description: 'Tronc torsadé et sculptural d\'un olivier vénérable quadri-centenaire dominant les collines de Seddouk. Malgré les sécheresses et les hivers rigoureux, ces arbres vénérables continuent de porter des récoltes régulières grâce à leur enracinement profond.',
@@ -123,6 +214,29 @@ export const LANDSCAPES_DATA: LandscapeItem[] = [
     daira: 'Tazmalt',
     altitude: '320 m',
     dominantVariety: 'Chemlal & Limli',
+    estimatedHarvestDate: '05 Nov – 10 Déc 2026',
+    markers: [
+      {
+        id: 'marker-tazmalt-filets',
+        x: 42,
+        y: 64,
+        label: 'Parcelle Tiwizi',
+        orchardLocation: 'Oliveraie pilote de Tazmalt · Haute Soummam (Alt. 320 m)',
+        oliveVariety: 'Limli Précoce & Chemlal',
+        estimatedHarvestDate: '05 Novembre – 05 Décembre 2026',
+        yieldEstimate: '20 à 23 L/qx · Acidité < 0,35% (Trituration 24h)',
+      },
+      {
+        id: 'marker-tazmalt-piemont',
+        x: 68,
+        y: 40,
+        label: 'Piémont Beni Mellikèche',
+        orchardLocation: 'Versants Sud du Djurdjura · Tazmalt Nord (Alt. 390 m)',
+        oliveVariety: 'Chemlal de la Haute Soummam',
+        estimatedHarvestDate: '15 Novembre – 10 Décembre 2026',
+        yieldEstimate: '19 à 21 L/qx · Cueillette au peigne sur filets',
+      },
+    ],
     category: 'recolte',
     categoryLabel: 'Récolte & Traditions',
     description: 'Prise de vue en hauteur de la cueillette traditionnelle avec grand filet ajouré vert déployé sous l\'arbre et caisses de transport. En novembre et décembre, les collines s’animent des chants traditionnels lors de la « Tiwizi » (entraide communautaire).',
@@ -141,6 +255,29 @@ export const LANDSCAPES_DATA: LandscapeItem[] = [
     daira: 'Aokas',
     altitude: '80 m à 350 m',
     dominantVariety: 'Aberkane & Chemlal',
+    estimatedHarvestDate: '01 Déc 2026 – 15 Jan 2027',
+    markers: [
+      {
+        id: 'marker-aokas-corniche',
+        x: 36,
+        y: 54,
+        label: 'Corniche d’Aokas',
+        orchardLocation: 'Falaises côtières d’Aokas & Tichy (Alt. 120 m)',
+        oliveVariety: 'Aberkane Maritime',
+        estimatedHarvestDate: '01 Décembre 2026 – 10 Janvier 2027',
+        yieldEstimate: '18 à 20 L/qx · Notes d’amande fraîche & pomme',
+      },
+      {
+        id: 'marker-aokas-cap-carbon',
+        x: 68,
+        y: 42,
+        label: 'Versants Cap Carbon',
+        orchardLocation: 'Corniche du Golfe de Béjaïa (Alt. 280 m)',
+        oliveVariety: 'Chemlal Côtière',
+        estimatedHarvestDate: '10 Décembre 2026 – 15 Janvier 2027',
+        yieldEstimate: '18 à 21 L/qx · Maturation prolongée par brise marine',
+      },
+    ],
     category: 'soummam',
     categoryLabel: 'Vallée de la Soummam',
     description: 'Rameaux d\'oliviers plongeant dans le bleu azur de la baie avec la présence du singe magot emblématique des falaises côtières. Les brises marines chargées d’iode apportent une fraîcheur tempérée qui prolonge la maturation des drupes jusqu’à la mi-janvier.',
@@ -159,6 +296,29 @@ export const LANDSCAPES_DATA: LandscapeItem[] = [
     daira: 'Sidi-Aïch',
     altitude: '240 m',
     dominantVariety: 'Chemlal & Bouchouk',
+    estimatedHarvestDate: '10 Nov – 15 Déc 2026',
+    markers: [
+      {
+        id: 'marker-sidi-aich-leflaye',
+        x: 35,
+        y: 60,
+        label: 'Plateau de Leflaye',
+        orchardLocation: 'Coteaux de Leflaye · Sidi-Aïch (Alt. 240 m)',
+        oliveVariety: 'Limli de la Soummam & Chemlal',
+        estimatedHarvestDate: '10 Novembre – 05 Décembre 2026',
+        yieldEstimate: '20 à 22 L/qx · Riche en antioxydants naturels',
+      },
+      {
+        id: 'marker-sidi-aich-timezrit',
+        x: 68,
+        y: 46,
+        label: 'Collines de Timezrit',
+        orchardLocation: 'Moyenne Soummam · Versant Nord (Alt. 360 m)',
+        oliveVariety: 'Bouchouk Soummam & Chemlal',
+        estimatedHarvestDate: '20 Novembre – 15 Décembre 2026',
+        yieldEstimate: '19 à 22 L/qx · Conduite en gobelet aéré',
+      },
+    ],
     category: 'terrasses',
     categoryLabel: 'Terrasses de Montagne',
     description: 'Panorama sur les collines et vergers de la moyenne Soummam, les hameaux traditionnels et le pic conique en arrière-plan. Un paysage vallonné où l’olivier cohabite harmonieusement avec le figuier de Barbarie et les amandiers.',
@@ -429,6 +589,127 @@ function detectInitialLowBandwidth(): boolean {
   }
 }
 
+interface OrchardMarkersOverlayProps {
+  markers: OrchardMarker[];
+  activeMarkerId: string | null;
+  onSelectMarker: (markerId: string | null) => void;
+  compact?: boolean;
+}
+
+const OrchardMarkersOverlay: React.FC<OrchardMarkersOverlayProps> = ({
+  markers,
+  activeMarkerId,
+  onSelectMarker,
+  compact = false,
+}) => {
+  const activeMarker = markers.find((m) => m.id === activeMarkerId) || null;
+
+  return (
+    <div className="absolute inset-0 z-20 pointer-events-none">
+      {/* Interactive Hotspot Pins */}
+      {markers.map((marker, idx) => {
+        const isSelected = marker.id === activeMarkerId;
+        return (
+          <button
+            key={marker.id}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectMarker(isSelected ? null : marker.id);
+            }}
+            style={{ left: `${marker.x}%`, top: `${marker.y}%` }}
+            aria-label={`Afficher les métadonnées du verger : ${marker.label}`}
+            aria-expanded={isSelected}
+            title={`${marker.label} · Cliquer pour afficher l'emplacement, la variété et la date de récolte estimée`}
+            className={`pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 flex items-center gap-1.5 rounded-full transition-all duration-200 cursor-pointer shadow-lg ${
+              isSelected
+                ? 'bg-[#E6AB3C] text-[#18230F] ring-4 ring-white/80 scale-110 z-30 px-2.5 py-1'
+                : 'bg-[#18230F]/90 hover:bg-[#E6AB3C] text-[#FAF7F2] hover:text-[#18230F] border border-[#E6AB3C]/80 hover:scale-110 z-20 px-2 py-1'
+            }`}
+          >
+            <span className="relative flex h-2 w-2 shrink-0">
+              {!isSelected && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8CBE5D] opacity-80" />
+              )}
+              <span
+                className={`relative inline-flex rounded-full h-2 w-2 ${
+                  isSelected ? 'bg-[#18230F]' : 'bg-[#E6AB3C]'
+                }`}
+              />
+            </span>
+            <MapPin className="w-3 h-3 shrink-0" />
+            <span className={`font-bold tracking-tight whitespace-nowrap ${compact ? 'text-[10px]' : 'text-[11px]'}`}>
+              {compact ? `Verger #${idx + 1}` : marker.label}
+            </span>
+          </button>
+        );
+      })}
+
+      {/* Interactive Metadata Tooltip */}
+      {activeMarker && (
+        <div
+          role="tooltip"
+          onClick={(e) => e.stopPropagation()}
+          className="pointer-events-auto absolute left-3 right-3 bottom-3 sm:left-4 sm:right-auto sm:w-80 bg-[#18230F]/95 backdrop-blur-md text-[#FAF7F2] rounded-2xl p-3.5 border border-[#E6AB3C]/60 shadow-2xl z-30 animate-in fade-in zoom-in-95 duration-150"
+        >
+          <div className="flex items-start justify-between gap-2 pb-2 mb-2 border-b border-white/15">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#E6AB3C] shrink-0" />
+              <span className="text-xs font-extrabold text-[#E6AB3C] tracking-wide">
+                {activeMarker.label}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectMarker(null);
+              }}
+              aria-label="Fermer l'infobulle du verger"
+              className="p-1 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="space-y-2 text-[11px] leading-snug">
+            <div className="flex items-start gap-2">
+              <MapPin className="w-3.5 h-3.5 text-[#8CBE5D] shrink-0 mt-0.5" />
+              <div>
+                <span className="text-white/60 block text-[10px]">Emplacement du verger</span>
+                <span className="font-semibold text-white">{activeMarker.orchardLocation}</span>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2">
+              <Trees className="w-3.5 h-3.5 text-[#8CBE5D] shrink-0 mt-0.5" />
+              <div>
+                <span className="text-white/60 block text-[10px]">Variété d’olive</span>
+                <span className="font-semibold text-[#E8F4D9]">{activeMarker.oliveVariety}</span>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2">
+              <Calendar className="w-3.5 h-3.5 text-[#E6AB3C] shrink-0 mt-0.5" />
+              <div>
+                <span className="text-white/60 block text-[10px]">Date de récolte estimée</span>
+                <span className="font-bold text-[#E6AB3C]">{activeMarker.estimatedHarvestDate}</span>
+              </div>
+            </div>
+
+            {activeMarker.yieldEstimate && (
+              <div className="pt-1.5 mt-1 border-t border-white/10 text-[10px] text-white/80 flex items-center justify-between">
+                <span>Potentiel oléicole :</span>
+                <span className="font-semibold text-[#8CBE5D]">{activeMarker.yieldEstimate}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 interface LandscapePhotoProps {
   item: LandscapeItem;
   className?: string;
@@ -436,6 +717,7 @@ interface LandscapePhotoProps {
   customSrc?: string | ResponsiveCustomImageBundle;
   lowBandwidthMode?: boolean;
   hdClarityEnabled?: boolean;
+  showMarkers?: boolean;
 }
 
 const LandscapePhoto: React.FC<LandscapePhotoProps> = ({ 
@@ -445,11 +727,13 @@ const LandscapePhoto: React.FC<LandscapePhotoProps> = ({
   customSrc,
   lowBandwidthMode = false,
   hdClarityEnabled = true,
+  showMarkers = true,
 }) => {
   const [hasError, setHasError] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isInView, setIsInView] = useState(false);
   const [manualLoadRequested, setManualLoadRequested] = useState(false);
+  const [activeMarkerId, setActiveMarkerId] = useState<string | null>(null);
   const cardMediaRef = useRef<HTMLDivElement | null>(null);
 
   const primaryPath = resolveGalleryImagePath(item.imageFileName, customSrc);
@@ -459,7 +743,8 @@ const LandscapePhoto: React.FC<LandscapePhotoProps> = ({
     setCurrentPath(resolveGalleryImagePath(item.imageFileName, customSrc));
     setHasError(false);
     setIsLoaded(false);
-  }, [item.imageFileName, customSrc]);
+    setActiveMarkerId(null);
+  }, [item.id, item.imageFileName, customSrc]);
 
   // Granular per-card IntersectionObserver so heavy gallery photos only load one card at a time
   useEffect(() => {
@@ -581,6 +866,15 @@ const LandscapePhoto: React.FC<LandscapePhotoProps> = ({
           />
         </picture>
       )}
+
+      {showMarkers && item.markers.length > 0 && (
+        <OrchardMarkersOverlay
+          markers={item.markers}
+          activeMarkerId={activeMarkerId}
+          onSelectMarker={setActiveMarkerId}
+          compact={!isLarge}
+        />
+      )}
     </div>
   );
 };
@@ -599,6 +893,7 @@ interface LandscapeLightboxViewerProps {
   onCustomImageUpload: (landscapeId: string, file: File) => void;
   hdClarityEnabled: boolean;
   onToggleHdClarity: () => void;
+  initialAutoPlay?: boolean;
 }
 
 const LandscapeLightboxViewer: React.FC<LandscapeLightboxViewerProps> = ({
@@ -615,6 +910,7 @@ const LandscapeLightboxViewer: React.FC<LandscapeLightboxViewerProps> = ({
   onCustomImageUpload,
   hdClarityEnabled,
   onToggleHdClarity,
+  initialAutoPlay = false,
 }) => {
   const [zoom, setZoom] = useState<number>(1);
   const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -624,7 +920,8 @@ const LandscapeLightboxViewer: React.FC<LandscapeLightboxViewerProps> = ({
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
   const [hasError, setHasError] = useState<boolean>(false);
-  const [isSlideshowPlaying, setIsSlideshowPlaying] = useState<boolean>(false);
+  const [isSlideshowPlaying, setIsSlideshowPlaying] = useState<boolean>(initialAutoPlay);
+  const [activeLightboxMarkerId, setActiveLightboxMarkerId] = useState<string | null>(null);
 
   const primaryPath = resolveGalleryImagePath(item.imageFileName, customSrc);
   const [currentPath, setCurrentPath] = useState<string>(primaryPath);
@@ -639,6 +936,7 @@ const LandscapeLightboxViewer: React.FC<LandscapeLightboxViewerProps> = ({
     setZoom(1);
     setPan({ x: 0, y: 0 });
     setIsDragging(false);
+    setActiveLightboxMarkerId(null);
   }, [item.id, item.imageFileName, customSrc]);
 
   const handleImageError = () => {
@@ -720,14 +1018,14 @@ const LandscapeLightboxViewer: React.FC<LandscapeLightboxViewerProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [zoom, onClose, onPrev, onNext]);
 
-  // Automatic Slideshow timer in Lightbox
+  // Automatic Slideshow timer in Lightbox (5-second interval)
   useEffect(() => {
-    if (!isSlideshowPlaying) return;
+    if (!isSlideshowPlaying || landscapes.length <= 1) return;
     const timer = window.setInterval(() => {
       onNext();
-    }, 4500);
+    }, SLIDESHOW_INTERVAL_MS);
     return () => window.clearInterval(timer);
-  }, [isSlideshowPlaying, onNext]);
+  }, [isSlideshowPlaying, landscapes.length, onNext]);
 
   // Mouse pan handlers
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -918,7 +1216,7 @@ const LandscapeLightboxViewer: React.FC<LandscapeLightboxViewerProps> = ({
             <span className="hidden sm:inline">Fiche terroir</span>
           </button>
 
-          {/* Slideshow / Diaporama Toggle */}
+          {/* Slideshow / Diaporama Toggle (5s) */}
           <button
             type="button"
             onClick={() => setIsSlideshowPlaying((prev) => !prev)}
@@ -928,10 +1226,10 @@ const LandscapeLightboxViewer: React.FC<LandscapeLightboxViewerProps> = ({
                 ? 'bg-[#8CBE5D] text-[#18230F] border-[#8CBE5D]'
                 : 'bg-white/10 text-white border-white/15 hover:bg-white/20'
             }`}
-            title="Lancer/Arrêter le diaporama plein écran (Barre d'espace)"
+            title="Lancer/Arrêter le diaporama automatique (intervalle de 5 secondes · Barre d'espace)"
           >
             {isSlideshowPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 text-[#8CBE5D]" />}
-            <span className="hidden lg:inline">{isSlideshowPlaying ? 'Pause' : 'Diaporama'}</span>
+            <span className="hidden lg:inline">{isSlideshowPlaying ? 'Pause (5s)' : 'Diaporama (5s)'}</span>
           </button>
 
           {/* Direct Download Optimized Image */}
@@ -1026,6 +1324,16 @@ const LandscapeLightboxViewer: React.FC<LandscapeLightboxViewerProps> = ({
               onError={handleImageError}
             />
           </picture>
+        )}
+
+        {/* Interactive Orchard Markers in Fullscreen Lightbox (when unzoomed) */}
+        {zoom === 1 && item.markers.length > 0 && (
+          <OrchardMarkersOverlay
+            markers={item.markers}
+            activeMarkerId={activeLightboxMarkerId}
+            onSelectMarker={setActiveLightboxMarkerId}
+            compact={false}
+          />
         )}
 
         {/* Left / Right Navigation Chevrons */}
@@ -1242,9 +1550,14 @@ export const OliveLandscapesGallery: React.FC = () => {
   const [searchFilter, setSearchFilter] = useState<string>('');
   const [gridLayout, setGridLayout] = useState<'standard' | 'bento'>('standard');
   const [activeLandscape, setActiveLandscape] = useState<LandscapeItem | null>(null);
+  const [lightboxAutoPlay, setLightboxAutoPlay] = useState<boolean>(false);
+  const [isAutoPlaying, setIsAutoPlaying] = useState<boolean>(true);
+  const [isHoverPaused, setIsHoverPaused] = useState<boolean>(false);
+  const [slideshowIndex, setSlideshowIndex] = useState<number>(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [lowBandwidthMode, setLowBandwidthMode] = useState<boolean>(() => detectInitialLowBandwidth());
   const [hdClarityEnabled, setHdClarityEnabled] = useState<boolean>(true);
+  const [showMarkers, setShowMarkers] = useState<boolean>(true);
 
   const [customImages, setCustomImages] = useState<Record<string, string | ResponsiveCustomImageBundle>>(() => {
     try {
@@ -1293,18 +1606,51 @@ export const OliveLandscapesGallery: React.FC = () => {
     );
   });
 
+  // Reset slide index when filters change
+  useEffect(() => {
+    setSlideshowIndex(0);
+  }, [selectedCategory, normalizedQuery]);
+
+  // Automatic 5-second slideshow interval in the gallery
+  useEffect(() => {
+    if (!isAutoPlaying || isHoverPaused || Boolean(activeLandscape) || filteredLandscapes.length <= 1) {
+      return;
+    }
+    const intervalId = window.setInterval(() => {
+      setSlideshowIndex((prev) => (prev + 1) % filteredLandscapes.length);
+    }, SLIDESHOW_INTERVAL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [isAutoPlaying, isHoverPaused, activeLandscape, filteredLandscapes.length]);
+
+  const safeSlideshowIndex =
+    filteredLandscapes.length > 0 ? slideshowIndex % filteredLandscapes.length : 0;
+  const featuredSlide = filteredLandscapes[safeSlideshowIndex] || null;
+
+  const handleNextSlide = () => {
+    if (filteredLandscapes.length === 0) return;
+    setSlideshowIndex((prev) => (prev + 1) % filteredLandscapes.length);
+  };
+
+  const handlePrevSlide = () => {
+    if (filteredLandscapes.length === 0) return;
+    setSlideshowIndex((prev) => (prev - 1 + filteredLandscapes.length) % filteredLandscapes.length);
+  };
+
   const handleNext = () => {
-    if (!activeLandscape) return;
+    if (!activeLandscape || filteredLandscapes.length === 0) return;
     const currentIndex = filteredLandscapes.findIndex(l => l.id === activeLandscape.id);
     const nextIndex = (currentIndex + 1) % filteredLandscapes.length;
     setActiveLandscape(filteredLandscapes[nextIndex]);
+    setSlideshowIndex(nextIndex);
   };
 
   const handlePrev = () => {
-    if (!activeLandscape) return;
+    if (!activeLandscape || filteredLandscapes.length === 0) return;
     const currentIndex = filteredLandscapes.findIndex(l => l.id === activeLandscape.id);
     const prevIndex = (currentIndex - 1 + filteredLandscapes.length) % filteredLandscapes.length;
     setActiveLandscape(filteredLandscapes[prevIndex]);
+    setSlideshowIndex(prevIndex);
   };
 
   const handleShare = async (landscape: LandscapeItem) => {
@@ -1479,6 +1825,21 @@ export const OliveLandscapesGallery: React.FC = () => {
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <button
               type="button"
+              onClick={() => setShowMarkers((prev) => !prev)}
+              aria-pressed={showMarkers}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                showMarkers
+                  ? 'bg-[#E8F4D9] text-[#18230F] border-[#8CBE5D]'
+                  : 'bg-[#FAF7F2] text-[#436229] border-[#E6DEC9] hover:border-[#8CBE5D]'
+              }`}
+              title="Afficher ou masquer les marqueurs interactifs des vergers sur les photos"
+            >
+              <MapPin className="w-3.5 h-3.5 text-[#31491E]" />
+              <span>{showMarkers ? 'Marqueurs Vergers : Actifs' : 'Marqueurs Vergers : Masqués'}</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setGridLayout((prev) => (prev === 'standard' ? 'bento' : 'standard'))}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
                 gridLayout === 'bento'
@@ -1536,39 +1897,252 @@ export const OliveLandscapesGallery: React.FC = () => {
               className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-[#E6DEC9] focus:border-[#31491E] focus:outline-none text-xs text-[#18230F] placeholder:text-[#567B34]/70 shadow-2xs"
             />
           </div>
-          <div className="flex items-center gap-3 text-xs text-[#436229]">
-            <span>
-              <strong>{filteredLandscapes.length}</strong> vergers affichés · Survol pour agrandir · Clic pour <strong>LightBox Plein Écran</strong>
-            </span>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-[#436229]">
+            <button
+              type="button"
+              onClick={() => setIsAutoPlaying((prev) => !prev)}
+              aria-pressed={isAutoPlaying}
+              className={`px-3.5 py-2 rounded-xl font-bold flex items-center gap-1.5 transition-all cursor-pointer border shadow-2xs ${
+                isAutoPlaying
+                  ? 'bg-[#E8F4D9] text-[#18230F] border-[#8CBE5D]'
+                  : 'bg-white text-[#31491E] border-[#E6DEC9] hover:bg-[#E8F4D9]/50'
+              }`}
+              title="Activer ou mettre en pause le diaporama automatique (intervalle de 5 secondes)"
+            >
+              {isAutoPlaying ? (
+                <>
+                  <Pause className="w-3.5 h-3.5 text-[#31491E]" />
+                  <span>Diaporama Auto (5s) : Actif</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-3.5 h-3.5 text-[#31491E]" />
+                  <span>Lancer le Diaporama (5s)</span>
+                </>
+              )}
+            </button>
+
             {filteredLandscapes.length > 0 && (
               <button
                 type="button"
-                onClick={() => setActiveLandscape(filteredLandscapes[0])}
+                onClick={() => {
+                  setLightboxAutoPlay(true);
+                  setActiveLandscape(featuredSlide || filteredLandscapes[0]);
+                }}
                 className="px-3.5 py-2 rounded-xl bg-[#31491E] hover:bg-[#233416] text-[#FAF7F2] font-bold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 shadow-xs"
+                title="Ouvrir le LightBox plein écran avec lecture automatique toutes les 5 secondes"
               >
                 <Maximize2 className="w-3.5 h-3.5 text-[#E6AB3C]" />
-                <span>Ouvrir le LightBox</span>
+                <span>LightBox & Diaporama Plein Écran</span>
               </button>
             )}
           </div>
         </div>
+
+        {/* Featured Automatic Slideshow Stage (5-second interval) */}
+        {featuredSlide && (
+          <div
+            className="mb-10 rounded-3xl border border-[#E6DEC9] bg-white shadow-sm overflow-hidden"
+            onMouseEnter={() => setIsHoverPaused(true)}
+            onMouseLeave={() => setIsHoverPaused(false)}
+            aria-roledescription="carousel"
+            aria-label="Diaporama automatique des paysages oléicoles de Béjaïa (intervalle 5 secondes)"
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-12">
+              {/* Visual Stage (7 cols) */}
+              <div
+                className="group relative lg:col-span-7 aspect-[16/10] sm:aspect-[16/9] bg-[#18230F] overflow-hidden cursor-pointer"
+                onClick={() => {
+                  setLightboxAutoPlay(isAutoPlaying);
+                  setActiveLandscape(featuredSlide);
+                }}
+              >
+                <LandscapePhoto
+                  item={featuredSlide}
+                  isLarge={true}
+                  customSrc={customImages[featuredSlide.id]}
+                  lowBandwidthMode={lowBandwidthMode}
+                  hdClarityEnabled={hdClarityEnabled}
+                  showMarkers={showMarkers}
+                />
+
+                {/* Top Diaporama Status & Counter */}
+                <div className="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between gap-2 z-10 pointer-events-none">
+                  <div className="px-3 py-1 rounded-full bg-[#18230F]/85 backdrop-blur-md text-[#FAF7F2] text-[11px] font-bold border border-white/15 flex items-center gap-2">
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        isAutoPlaying && !isHoverPaused
+                          ? 'bg-[#8CBE5D] animate-ping'
+                          : 'bg-[#E6AB3C]'
+                      }`}
+                    />
+                    <span>
+                      {isAutoPlaying
+                        ? isHoverPaused
+                          ? 'Diaporama en pause au survol (5s)'
+                          : 'Diaporama automatique · 5s'
+                        : 'Diaporama en pause'}
+                    </span>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full bg-[#E6AB3C] text-[#18230F] text-[11px] font-extrabold shadow-xs tabular-nums">
+                    {safeSlideshowIndex + 1} / {filteredLandscapes.length}
+                  </span>
+                </div>
+
+                {/* Prev / Next Controls on Stage */}
+                {filteredLandscapes.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePrevSlide();
+                      }}
+                      aria-label="Paysage précédent"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 p-2.5 rounded-2xl bg-[#18230F]/75 hover:bg-[#8CBE5D] text-white hover:text-[#18230F] border border-white/20 transition-all cursor-pointer z-20 shadow-lg"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleNextSlide();
+                      }}
+                      aria-label="Paysage suivant"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 rounded-2xl bg-[#18230F]/75 hover:bg-[#8CBE5D] text-white hover:text-[#18230F] border border-white/20 transition-all cursor-pointer z-20 shadow-lg"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </>
+                )}
+
+                {/* Bottom Overlay with Slide Dots */}
+                <div className="absolute bottom-3 left-3.5 right-3.5 flex items-center justify-between gap-3 z-20">
+                  <div className="flex items-center gap-1.5 bg-[#18230F]/75 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/15">
+                    {filteredLandscapes.map((slide, idx) => (
+                      <button
+                        key={slide.id}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSlideshowIndex(idx);
+                        }}
+                        aria-label={`Aller à la diapositive ${idx + 1} : ${slide.title}`}
+                        className={`h-2 rounded-full transition-all cursor-pointer ${
+                          idx === safeSlideshowIndex
+                            ? 'w-6 bg-[#E6AB3C]'
+                            : 'w-2 bg-white/50 hover:bg-white'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="px-3 py-1.5 rounded-xl bg-white/95 text-[#18230F] text-xs font-bold flex items-center gap-1.5 shadow-md">
+                    <Maximize2 className="w-3.5 h-3.5 text-[#31491E]" />
+                    <span>Agrandir en LightBox</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Terroir Details Panel for Active Slide (5 cols) */}
+              <div className="lg:col-span-5 p-6 sm:p-8 flex flex-col justify-between bg-gradient-to-br from-white to-[#FAF7F2]">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-2 text-xs text-[#567B34] font-semibold">
+                    <span className="flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-[#E6AB3C]" />
+                      <span>{featuredSlide.location}</span>
+                    </span>
+                    <span className="text-[#31491E] font-bold">Alt. {featuredSlide.altitude}</span>
+                  </div>
+
+                  <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#18230F] leading-snug">
+                    {featuredSlide.title}
+                  </h3>
+                  <p className="text-xs text-[#6F9D44] font-serif italic">
+                    « {featuredSlide.kabyleTitle} » · Daïra de {featuredSlide.daira}
+                  </p>
+
+                  <p className="text-xs sm:text-sm text-[#436229] leading-relaxed pt-1">
+                    {featuredSlide.description}
+                  </p>
+
+                  <div className="p-3.5 rounded-2xl bg-[#E8F4D9]/65 border border-[#8CBE5D]/30 text-xs text-[#233416] leading-relaxed">
+                    <strong className="block text-[#18230F] mb-0.5">
+                      Cépage dominant : {featuredSlide.dominantVariety}
+                    </strong>
+                    {featuredSlide.agronomicNote}
+                  </div>
+                </div>
+
+                <div className="pt-5 mt-5 border-t border-[#E6DEC9] flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsAutoPlaying((prev) => !prev)}
+                      className="px-3.5 py-2 rounded-xl bg-[#FAF7F2] hover:bg-[#E8F4D9] text-[#18230F] border border-[#E6DEC9] text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      {isAutoPlaying ? (
+                        <>
+                          <Pause className="w-3.5 h-3.5 text-[#31491E]" />
+                          <span>Pause</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-3.5 h-3.5 text-[#31491E]" />
+                          <span>Lecture (5s)</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleNextSlide}
+                      className="px-3 py-2 rounded-xl bg-[#FAF7F2] hover:bg-[#E8F4D9] text-[#18230F] border border-[#E6DEC9] text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <span>Suivant</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLightboxAutoPlay(false);
+                      setActiveLandscape(featuredSlide);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-[#31491E] hover:bg-[#233416] text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5 text-[#E6AB3C]" />
+                    <span>Voir en plein écran</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Responsive Grid Layout */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
           {filteredLandscapes.map((landscape, index) => {
             const isCopied = copiedId === landscape.id;
             const isBentoWide = gridLayout === 'bento' && (index === 0 || index === 3);
+            const isCurrentSlide = featuredSlide?.id === landscape.id;
             return (
               <div
                 key={landscape.id}
-                className={`group bg-white rounded-3xl border border-[#E6DEC9] overflow-hidden shadow-xs hover:shadow-xl hover:-translate-y-1.5 hover:border-[#8CBE5D] transition-all duration-300 flex flex-col justify-between ${
-                  isBentoWide ? 'lg:col-span-2' : ''
-                }`}
+                className={`group bg-white rounded-3xl border overflow-hidden shadow-xs hover:shadow-xl hover:-translate-y-1.5 hover:border-[#8CBE5D] transition-all duration-300 flex flex-col justify-between ${
+                  isCurrentSlide
+                    ? 'border-[#8CBE5D] ring-2 ring-[#8CBE5D]/40'
+                    : 'border-[#E6DEC9]'
+                } ${isBentoWide ? 'lg:col-span-2' : ''}`}
               >
                 {/* Visual Photo Thumbnail */}
                 <div 
                   className={`relative ${isBentoWide ? 'aspect-[16/9]' : 'aspect-[16/10]'} overflow-hidden cursor-pointer bg-[#233416]`}
-                  onClick={() => setActiveLandscape(landscape)}
+                  onClick={() => {
+                    setSlideshowIndex(index);
+                    setLightboxAutoPlay(false);
+                    setActiveLandscape(landscape);
+                  }}
                 >
                   <LandscapePhoto 
                     item={landscape} 
@@ -1576,6 +2150,7 @@ export const OliveLandscapesGallery: React.FC = () => {
                     customSrc={customImages[landscape.id]} 
                     lowBandwidthMode={lowBandwidthMode}
                     hdClarityEnabled={hdClarityEnabled}
+                    showMarkers={showMarkers}
                   />
 
                   {/* Top Badges */}
@@ -1589,8 +2164,8 @@ export const OliveLandscapesGallery: React.FC = () => {
                   </div>
 
                   {/* Hover Overlay with Magnify Button & Quick Replace Photo */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#18230F]/80 via-[#18230F]/35 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-                    <div className="flex items-center justify-between gap-2 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#18230F]/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4 pointer-events-none z-10">
+                    <div className="flex items-center justify-between gap-2 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 pointer-events-auto">
                       <span className="px-3.5 py-2 rounded-xl bg-white text-[#18230F] text-xs font-bold flex items-center gap-2 shadow-xl">
                         <Maximize2 className="w-4 h-4 text-[#31491E]" />
                         <ZoomIn className="w-3.5 h-3.5 text-[#E6AB3C]" />
@@ -1648,6 +2223,10 @@ export const OliveLandscapesGallery: React.FC = () => {
                     <div className="flex items-center justify-between text-[11px]">
                       <span className="text-[#6F9D44] font-medium">Cépage dominant :</span>
                       <span className="font-bold text-[#18230F] truncate max-w-[170px]">{landscape.dominantVariety}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-[#6F9D44] font-medium">Récolte estimée :</span>
+                      <span className="font-bold text-[#B47A16]">{landscape.estimatedHarvestDate}</span>
                     </div>
                     <div className="flex items-center justify-between text-[11px]">
                       <span className="text-[#6F9D44] font-medium">Daïra :</span>
@@ -1728,15 +2307,23 @@ export const OliveLandscapesGallery: React.FC = () => {
           landscapes={filteredLandscapes}
           customSrc={customImages[activeLandscape.id]}
           customImages={customImages}
-          onClose={() => setActiveLandscape(null)}
+          onClose={() => {
+            setActiveLandscape(null);
+            setLightboxAutoPlay(false);
+          }}
           onNext={handleNext}
           onPrev={handlePrev}
-          onSelect={(landscape) => setActiveLandscape(landscape)}
+          onSelect={(landscape) => {
+            const idx = filteredLandscapes.findIndex((l) => l.id === landscape.id);
+            if (idx >= 0) setSlideshowIndex(idx);
+            setActiveLandscape(landscape);
+          }}
           onShare={handleShare}
           isCopied={copiedId === activeLandscape.id}
           onCustomImageUpload={handleCustomImageUpload}
           hdClarityEnabled={hdClarityEnabled}
           onToggleHdClarity={() => setHdClarityEnabled((prev) => !prev)}
+          initialAutoPlay={lightboxAutoPlay}
         />
       )}
     </section>
