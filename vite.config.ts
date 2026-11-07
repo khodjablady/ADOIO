@@ -309,6 +309,9 @@ export default defineConfig(() => {
         '@': path.resolve(import.meta.dirname, '.'),
       },
     },
+    optimizeDeps: {
+      entries: ['index.html'],
+    },
     server: {
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },

@@ -7,8 +7,7 @@ import { createServer as createHttpServer } from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import zlib from 'zlib';
-import { createServer as createViteServer } from 'vite';
-import { GoogleGenAI } from '@google/genai';
+import type { GoogleGenAI } from '@google/genai';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -179,9 +178,10 @@ function sanitizeText(value: unknown, fallback: string, maxLen = 240): string {
   return trimmed ? trimmed.slice(0, maxLen) : fallback;
 }
 
-function getGenAIClient(): GoogleGenAI {
+async function getGenAIClient(): Promise<GoogleGenAI> {
+  const { GoogleGenAI: GenAIConstructor } = await import('@google/genai');
   const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY || 'missing-api-key';
-  return new GoogleGenAI({
+  return new GenAIConstructor({
     apiKey,
     httpOptions: {
       headers: {
@@ -507,7 +507,7 @@ async function startServer() {
         parts: [{ text: trimmedMessage }],
       });
 
-      const aiClient = getGenAIClient();
+      const aiClient = await getGenAIClient();
 
       if (stream) {
         res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
@@ -588,6 +588,15 @@ async function startServer() {
     });
   });
 
+  httpServer.on('error', (err: NodeJS.ErrnoException) => {
+    console.error('Erreur serveur HTTP:', err.message);
+  });
+
+  // Bind to port 3000 immediately before loading Vite so health checks succeed in <120ms
+  httpServer.listen(PORT, '0.0.0.0', () => {
+    console.log(`Serveur Olive Béjaïa ADOIO démarré sur http://0.0.0.0:${PORT}`);
+  });
+
   if (process.env.NODE_ENV !== 'production') {
     app.get(['/dev-sw.js', '/sw.js'], (_req, res) => {
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
@@ -606,14 +615,16 @@ async function startServer() {
       `);
     });
 
-    const vitePromise = createViteServer({
-      server: {
-        middlewareMode: true,
-        hmr: false,
-        watch: process.env.DISABLE_HMR === 'true' ? null : undefined,
-      },
-      appType: 'spa',
-    });
+    const vitePromise = import('vite').then(({ createServer: createViteServer }) =>
+      createViteServer({
+        server: {
+          middlewareMode: true,
+          hmr: false,
+          watch: process.env.DISABLE_HMR === 'true' ? null : undefined,
+        },
+        appType: 'spa',
+      })
+    );
 
     app.use(async (req, res, next) => {
       try {
@@ -642,14 +653,6 @@ async function startServer() {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
-
-  httpServer.on('error', (err: NodeJS.ErrnoException) => {
-    console.error('Erreur serveur HTTP:', err.message);
-  });
-
-  httpServer.listen(PORT, '0.0.0.0', () => {
-    console.log(`Serveur Olive Béjaïa ADOIO démarré sur http://0.0.0.0:${PORT}`);
-  });
 }
 
 startServer().catch((err) => {

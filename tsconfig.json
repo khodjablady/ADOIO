@@ -24,5 +24,12 @@
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "tests",
+    "playwright.config.ts",
+    "firestore.rules.test.ts"
+  ]
 }
